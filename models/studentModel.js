@@ -1,73 +1,225 @@
 const mongoose = require("mongoose");
-const studentSchema = new mongoose.Schema({
-  studentid: {
-    required: true,
-    unique: true,
-    type: String,
-    trim: true,
+
+const studentSchema = new mongoose.Schema(
+  {
+    studentid: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    firstname: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    middlename: {
+      type: String,
+      trim: true,
+    },
+    lastname: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    dob: {
+      type: Date,
+      required: true,
+    },
+    birthplace: {
+      type: String,
+      trim: true,
+    },
+    bloodgroup: {
+      type: String,
+      enum: ["a+", "a-", "b+", "b-", "ab+", "ab-", "o+", "o-"],
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "others"],
+      required: true,
+    },
+    category: {
+      type: String,
+      required: true,
+    },
+    nationality: {
+      type: String,
+      required: true,
+    },
+    aadharno: {
+      type: String,
+      required: true,
+      unique: true,
+      match: /^[0-9]{12}$/,
+    },
+    photo: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: Boolean,
+      default: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      default: "student@123",
+    },
+
+    parent: {
+      parentid: {
+        type: String,
+        required: true,
+        unique: true,
+      },
+      fathername: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      mothername: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      guardianname: {
+        type: String,
+        trim: true,
+      },
+      relationwithstudent: {
+        type: String,
+        enum: ["father", "mother", "guardian", "other"],
+      },
+      primarycontact: {
+        type: String,
+        required: true,
+        match: /^[0-9]{10}$/,
+      },
+      alternatecontact: {
+        type: String,
+        match: /^[0-9]{10}$/,
+      },
+      emailaddress: {
+        type: String,
+        match: /.+\@.+\..+/,
+      },
+      occupation: {
+        type: String,
+      },
+      annualincome: {
+        type: Number,
+      },
+    },
+
+    address: {
+      addressid: {
+        type: String,
+        required: true,
+        unique: true,
+      },
+      addressline1: {
+        type: String,
+        required: true,
+      },
+      addressline2: {
+        type: String,
+      },
+      city: {
+        type: String,
+        required: true,
+      },
+      postalcode: {
+        type: String,
+        required: true,
+      },
+      district: {
+        type: String,
+      },
+      state: {
+        type: String,
+        required: true,
+      },
+      country: {
+        type: String,
+        required: true,
+      },
+    },
+
+    admission: {
+      admissionno: {
+        type: String,
+        required: true,
+        unique: true,
+      },
+      grno: {
+        type: String,
+        unique: true,
+        required: true,
+      },
+      admissionstd: {
+        type: Number,
+        required: true,
+      },
+      admissiondivision: {
+        type: String,
+      },
+      academicyear: {
+        type: String,
+        required: true,
+      },
+      admissiontype: {
+        type: String,
+        enum: ["regular", "transfer", "other"],
+      },
+      lastschoolname: {
+        type: String,
+      },
+      laststandardattended: {
+        type: String,
+      },
+      board: {
+        type: String,
+      },
+      mediuminstruction: {
+        type: String,
+      },
+      lcno: {
+        type: String,
+      },
+      admissiondate: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+
+    transport: {
+      transportid: {
+        type: String,
+        required: true,
+        unique: true,
+      },
+      transportstatus: {
+        type: String,
+        enum: ["yes", "no"],
+        required: true,
+      },
+      pickuppoint: {
+        type: String,
+      },
+      droppoint: {
+        type: String,
+      },
+      modetransport: {
+        type: String,
+        enum: ["bus", "van", "rickshaw", "self", "other"],
+      },
+    },
   },
-  firstname: {
-    required: true,
-    trim: true,
-    type: String,
-  },
-  middlename: {
-    trim: true,
-    type: String,
-  },
-  lastname: {
-    required: true,
-    trim: true,
-    type: String,
-  },
-  dob: {
-    type: Date,
-    required: true,
-  },
-  birthplace: {
-    type: String,
-    trim: true,
-  },
-  bloodgroup: {
-    type: String,
-    enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
-    required: true,
-  },
-  gender: {
-    type: String,
-    enum: ["Female", "Male", "Others"],
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true
-  },
-  nationality: {
-    type: String,
-    required: true
-  },
-  aadharno: {
-    type: String,
-    required: true,
-    unique: true,
-    match: /^[0-9]{12}$/
-  },
-  photo: {
-    type: String,
-    default: ""
-  },
-  status: {
-    type: Boolean,
-    default: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    default: 'student@123'
-  }
-}
-,{
-    timestamps: true
+  {
+    timestamps: true,
   }
 );
-module.exports = mongoose.model("Student", studentSchema);
+
+module.exports = mongoose.model("student", studentSchema);
