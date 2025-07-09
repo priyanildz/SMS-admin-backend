@@ -8,4 +8,5 @@ router.post('/registeradmin',adminController.Register)
 router.post('/addstudent',studentController.createUser)
 router.get('/students',studentController.getStudents)
 router.get('/staff',staffController.getStaff)
+router.post('/addstaff',staffController.addStaff)
 module.exports = router;

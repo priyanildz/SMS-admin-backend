@@ -7,7 +7,6 @@ const staffSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
-      
     },
     firstname: { type: String, required: true, trim: true,  },
     middlename: { type: String, trim: true,  },
@@ -15,8 +14,7 @@ const staffSchema = new mongoose.Schema(
     dob: { type: Date, required: true },
     maritalstatus: {
       type: String,
-      enum: ["single", "married", "widowed"],
-      
+      enum: ["single", "married", "widowed"],      
     },
     bloodgroup: {
       type: String,

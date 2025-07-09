@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const staffLeaveSchema = new mongoose.Schema({
   staffid: { type: String, required: true, ref: "staff" },
-  messageid: { type: String, required: true },
   subject: { type: String, lowercase: true },
   message: { type: String, lowercase: true },
   status: { type: String, enum: ["pending", "approved", "rejected"], lowercase: true }
