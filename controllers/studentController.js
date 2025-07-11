@@ -2,6 +2,7 @@ const User = require('../models/studentModel')
 exports.createUser = async (req, res) =>{
     try
     {
+        console.log('received msg: ',req.body)
         const user = new User(req.body)
         const saved = await user.save()
         res.status(200).json({message:'student created'})

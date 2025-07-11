@@ -90,7 +90,7 @@ const studentSchema = new mongoose.Schema(
       },
       relationwithstudent: {
         type: String,
-        enum: ["father", "mother", "guardian", "other"],
+        enum: ["father", "mother", "guardian", "other",""],
       },
       primarycontact: {
         type: String,
@@ -159,7 +159,7 @@ const studentSchema = new mongoose.Schema(
         required: true,
       },
       admissionstd: {
-        type: Number,
+        type: String,
         required: true,
       },
       admissiondivision: {
@@ -171,7 +171,7 @@ const studentSchema = new mongoose.Schema(
       },
       admissiontype: {
         type: String,
-        enum: ["regular", "transfer", "other"],
+        enum: ["regular", "transfer", "other",""],
       },
       lastschoolname: {
         type: String,
@@ -197,12 +197,11 @@ const studentSchema = new mongoose.Schema(
     transport: {
       transportid: {
         type: String,
-        required: true,
         unique: true,
       },
       transportstatus: {
         type: String,
-        enum: ["yes", "no"],
+        // enum: ["yes", "no"],
         required: true,
       },
       pickuppoint: {
@@ -213,7 +212,7 @@ const studentSchema = new mongoose.Schema(
       },
       modetransport: {
         type: String,
-        enum: ["bus", "van", "rickshaw", "self", "other"],
+        enum: ["bus", "van", "rickshaw", "self", "other",""],
       },
     },
   },
