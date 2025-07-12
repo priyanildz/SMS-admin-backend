@@ -19,6 +19,7 @@ const timetableSchema = new mongoose.Schema({
     type: String,
   },
   classteacher: {
+    // fetch krne ke liye
     type: mongoose.Schema.Types.ObjectId,
     ref: "staff",
   },

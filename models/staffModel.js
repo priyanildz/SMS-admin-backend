@@ -46,3 +46,4 @@ const staffSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("staff", staffSchema);
+// table ka naam == model ka naam
