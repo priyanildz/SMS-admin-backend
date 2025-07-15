@@ -25,3 +25,17 @@ exports.getStudents = async (req, res) =>
         res.status(500).json({error:error.message})
     }
 }
+exports.getNewStudents = async (req,res) =>{
+    try {
+        const students = await User.find({
+            "admission.admissiondate":{
+                $gte: new Date("2024-01-01")
+            }
+        })
+        console.log(students)
+        return res.status(200).send({students})
+    } catch (error) {
+        console.log(error)
+        return res.status(500).send({message:"Error: "+error})
+    }
+}

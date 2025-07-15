@@ -9,4 +9,5 @@ router.post('/addstudent',studentController.createUser)
 router.get('/students',studentController.getStudents)
 router.get('/staff',staffController.getStaff)
 router.post('/addstaff',staffController.addStaff)
+router.get("/newstudent",studentController.getNewStudents)
 module.exports = router;
