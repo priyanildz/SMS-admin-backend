@@ -33,7 +33,7 @@ exports.getNewStudents = async (req,res) =>{
             }
         })
         console.log(students)
-        return res.status(200).send({students})
+        return res.status(200).send(students)
     } catch (error) {
         console.log(error)
         return res.status(500).send({message:"Error: "+error})
