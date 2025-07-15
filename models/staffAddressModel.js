@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const staffAddressSchema = new mongoose.Schema({
-  addressid: { type: String, required: true, unique: true, default: Date.now() },
   staffid: { type: String, required: true, ref: "staff" },
   // insertion 
   addressline1: { type: String, required: true, lowercase: true },

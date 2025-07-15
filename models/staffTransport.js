@@ -5,7 +5,7 @@ const staffTransportSchema = new mongoose.Schema({
   transportstatus: { type: String, enum: ["yes", "no"], lowercase: true },
   pickuppoint: { type: String, lowercase: true },
   droppoint: { type: String, lowercase: true },
-  modetransport: { type: String, enum: ["bus", "van", "rickshaw", "self", "other"], lowercase: true }
+  modetransport: { type: String, lowercase: true }
 });
 
 module.exports = mongoose.model("staff_transport", staffTransportSchema);
