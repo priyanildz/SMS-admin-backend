@@ -14,16 +14,12 @@ const staffSchema = new mongoose.Schema(
     dob: { type: Date, required: true },
     maritalstatus: {
       type: String,
-      enum: ["single", "married", "widowed"],      
     },
     bloodgroup: {
-      type: String,
-      enum: ["a+", "a-", "b+", "b-", "ab+", "ab-", "o+", "o-"],
-      
+      type: String,      
     },
     gender: {
       type: String,
-      enum: ["male", "female", "others"],
       required: true,
       
     },
