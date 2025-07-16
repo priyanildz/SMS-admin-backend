@@ -6,6 +6,7 @@ const staffRole = require("../models/staffRole");
 const staffBank = require("../models/staffBank");
 const staffTransport = require("../models/staffTransport");
 const staffDocs = require("../models/staffDocument");
+const staffLeave = require("../models/staffLeave");
 
 // list all staff
 exports.getStaff = async (req, res) => {
@@ -114,5 +115,62 @@ exports.addStaff = async (req, res) => {
   }
 };
 
-// list of all staff leave requests
-exports.getLeave = async (req, res) => {};
+// add leave request for staff
+exports.addLeave = async (req, res) => {
+  try {
+    const leave = new staffLeave(req.body);
+    await leave.save();
+
+    return res.status(200).json({ message: "request sent successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getRequests = async (req, res) => {
+  try {
+    const requests = await staffLeave.find(); // all leave requests
+    const staffList = await Staff.find({}, "staffid firstname lastname dept position _id");
+
+    const staffMap = {};
+    staffList.forEach((staff) => {
+      if (staff.staffid) {
+        staffMap[staff.staffid.toString()] = staff;
+      }
+    });
+
+    const merged = requests.map((r) => {
+      const staffInfo = staffMap[r.staffid] || {};
+      return {
+        _id: r._id,
+        subject: r.subject,
+        message: r.message,
+        status: r.status,
+        submitted_at: r.submitted_at,
+        from: r.from,
+        to: r.to,
+        staffid: r.staffid,
+        firstname: staffInfo.firstname || "",
+        lastname: staffInfo.lastname || "",
+        dept: staffInfo.dept || "",
+        position: staffInfo.position || "",
+      };
+    });
+
+    return res.status(200).json(merged);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateRequests = async () =>
+{
+  try
+  {
+    
+  }
+  catch(error)
+  {
+    return res.status(500).json({ error: error.message });
+  }
+}

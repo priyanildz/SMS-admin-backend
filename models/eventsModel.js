@@ -1,5 +1,6 @@
+const mongoose = require("mongoose");
 const EventSchema = new mongoose.Schema({
-  eventName: {
+  eventname: {
     type: String,
     required: true,
   },
@@ -7,11 +8,12 @@ const EventSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  staffId: {
-    type: mongoose.Schema.Types.ObjectId,
+  staffid: {
+    type: String,
     ref: "staff",
     required: true,
   },
+  managedby: String,
   standard: String,
   division: String,
   participants: [
