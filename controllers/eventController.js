@@ -8,6 +8,8 @@ exports.addEvent = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// list of all events
 exports.getEvents = async (req, res) => {
   try {
     const response = await Event.find();

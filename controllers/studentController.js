@@ -32,7 +32,7 @@ exports.getNewStudents = async (req,res) =>{
                 $gte: new Date("2024-01-01")
             }
         })
-        console.log(students)
+        // console.log(students)
         return res.status(200).send(students)
     } catch (error) {
         console.log(error)

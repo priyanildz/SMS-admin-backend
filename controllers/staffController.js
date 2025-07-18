@@ -127,6 +127,7 @@ exports.addLeave = async (req, res) => {
   }
 };
 
+// get all leave requests
 exports.getRequests = async (req, res) => {
   try {
     const requests = await staffLeave.find(); // all leave requests
@@ -163,14 +164,15 @@ exports.getRequests = async (req, res) => {
   }
 };
 
-exports.updateRequests = async () =>
-{
-  try
-  {
-    
+// update request status
+exports.updateRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const response = await Event.findByIdAndUpdate(id, { status });
+    await response.save();
+    return res.status(200).json({ message: "updated event successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message }); 
   }
-  catch(error)
-  {
-    return res.status(500).json({ error: error.message });
-  }
-}
+};

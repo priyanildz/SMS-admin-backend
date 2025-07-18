@@ -11,7 +11,6 @@ const EventSchema = new mongoose.Schema({
   staffid: {
     type: String,
     ref: "staff",
-    required: true,
   },
   managedby: String,
   standard: String,
