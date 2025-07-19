@@ -16,4 +16,6 @@ router.get('/getrequests',staffController.getRequests)
 router.post('/addevent',eventController.addEvent)
 router.get('/events',eventController.getEvents)
 router.put('/update-req/:id',staffController.updateRequest)
+router.post('/lcstudent/:studentid',studentController.addLcStudents)
+router.get("/lcstudent",studentController.getLCStudents)
 module.exports = router;
