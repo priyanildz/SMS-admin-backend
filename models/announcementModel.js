@@ -4,7 +4,7 @@ const AnnouncementSchema = new mongoose.Schema({
   announcementId: {
     type: String,
     required: true,
-    unique: true,
+    default: Date.now()
   },
   priority: {
     type: Number, 

@@ -169,10 +169,29 @@ exports.updateRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const response = await Event.findByIdAndUpdate(id, { status });
-    await response.save();
-    return res.status(200).json({ message: "updated event successfully" });
+    const validStatuses = ['pending', 'approved', 'rejected','Pending',"Approved","Rejected"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status. Must be one of: Pending, Approved, Rejected" });
+    }
+
+    console.log('requested id', id)
+    console.log('status',status)
+    const updatedRequest = await staffLeave.findByIdAndUpdate(
+      id, 
+      { status }, 
+      { new: true } 
+    );
+    console.log('updated req',updatedRequest)
+    if (!updatedRequest) {
+      return res.status(404).json({ error: "staff request not found" });
+    }
+
+    return res.status(200).json({ 
+      message: "staff request updated successfully",
+      request: updatedRequest 
+    });
   } catch (error) {
+    console.error("Error updating event:", error);
     return res.status(500).json({ error: error.message }); 
   }
 };
