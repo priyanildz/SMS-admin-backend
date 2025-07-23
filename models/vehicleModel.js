@@ -1,20 +1,24 @@
+const mongoose = require("mongoose")
 const VehicleSchema = new mongoose.Schema({
   vid: {
     type: String,
     required: true,
     unique: true,
   },
-  vehicleName: String,
-  capacity: Number,
-  regNo: String,
-  assignedRoute: String,
+  vehiclename: String,
+  capacity: String,
+  regno: Number,
+  assignedroute: String,
   status: {
     type: String,
     enum: ["active", "inactive"],
     default: "active"
   },
   type: String,
-  vehicleNo: String
+  vehicleno: {
+    type: String,
+    required: true
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model("vehicle", VehicleSchema);

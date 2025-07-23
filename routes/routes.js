@@ -5,6 +5,7 @@ const adminController = require("../controllers/adminController");
 const staffController = require("../controllers/staffController");
 const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
+const transportController = require('../controllers/transportController')
 router.post("/loginadmin", adminController.Login);
 router.post("/registeradmin", adminController.Register);
 router.post("/addstudent", studentController.createUser);
@@ -20,5 +21,7 @@ router.put("/update-req/:id", staffController.updateRequest);
 router.post("/lcstudent/:studentid", studentController.addLcStudents);
 router.get("/lcstudent", studentController.getLCStudents);
 router.post("/add-announcement", announcementController.addAnnouncement);
-router.get("/get-announcement",announcementController.getAnnouncement)
+router.get("/get-announcement",announcementController.getAnnouncement);
+router.post('/add-vehicle',transportController.addVehicle);
+router.get('/vehicles',transportController.getVehicle)
 module.exports = router;
