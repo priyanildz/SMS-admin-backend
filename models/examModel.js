@@ -25,8 +25,7 @@ const ExamTimetableSchema = new mongoose.Schema({
     type: String,
   },
   examgap: {
-    type: Number, 
-    default: 1,
+    type: String
   }
 }, { timestamps: true });
 

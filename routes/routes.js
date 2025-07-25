@@ -6,6 +6,7 @@ const staffController = require("../controllers/staffController");
 const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
 const transportController = require("../controllers/transportController");
+const examController = require("../controllers/examController")
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -66,4 +67,10 @@ router.post("/add-driver", transportController.addDriver);
 
 // display all drivers connected with vid of vehicle
 router.get("/drivers", transportController.getDrivers);
+
+// creating exam timetable
+router.post('/add-etimetable',examController.addETimetable)
+
+// display all exam schedules
+router.get('/etimetable',examController.getETimetable)
 module.exports = router;
