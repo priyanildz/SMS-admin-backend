@@ -4,11 +4,10 @@ const AnnouncementSchema = new mongoose.Schema({
   announcementId: {
     type: String,
     required: true,
-    default: Date.now()
   },
   priority: {
-    type: Number, 
-    default: 1,
+    type: String, 
+    default: "1",
   },
   title: {
     type: String,
@@ -16,7 +15,7 @@ const AnnouncementSchema = new mongoose.Schema({
   },
   visibility: {
     type: String,
-    enum: ["all", "students", "teacher", "admin"],
+    enum: ["all", "students", "staff", "admin"],
     required: true,
   },
   department: {
