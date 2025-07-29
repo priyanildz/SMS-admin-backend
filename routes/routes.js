@@ -7,6 +7,8 @@ const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
 const transportController = require("../controllers/transportController");
 const examController = require("../controllers/examController")
+const testController = require("../controllers/testController")
+const classroomController = require("../controllers/classroomController")
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -73,4 +75,16 @@ router.post('/add-etimetable',examController.addETimetable)
 
 // display all exam schedules
 router.get('/etimetable',examController.getETimetable)
+
+// add term results
+router.post('/add-test',testController.addTermResult)
+
+// get all term results
+router.get('/term-results', testController.getTermResults)
+
+// get term result by id
+router.get('/term-result/:id', testController.getResultsById)
+
+// add classroom
+router.post('/add-classroom',classroomController.addClassroom)
 module.exports = router;
