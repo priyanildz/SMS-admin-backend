@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const TermAssessmentSchema = new mongoose.Schema({
   assessmentid: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   classroomid: {
     type: mongoose.Schema.Types.ObjectId,

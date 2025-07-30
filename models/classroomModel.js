@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 const Classroom = mongoose.Schema({
-  classroomid: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   standard: {
     type: String,
     required: true,
