@@ -77,25 +77,19 @@ exports.getLCStudents = async (req, res) => {
   }
 };
 
-exports.getClassStudents = async (req,res) =>{
+exports.getStudentByStd = async (req, res) => {
   try {
-    const {std , div} = req.body;
-    console.log(typeof(div))
-    if(!std || !div ){
-      return res.status(500).send({message: 'Please provide complete info'})
+    const { standard, division } = req.body;
+    if (!standard || !division) {
+      return res
+        .status(400)
+        .json({ error: "Standard and Division are required" });
     }
-    const students = await User.find({
-      "admission.admissionstd": std,
-      "admission.admissiondivision": div
-    })
-    console.log(students.flat())
-    console.log(students.length)
-    if(students.length <= 0){
-      return res.status(404).send({message: "No Students found"})
-    }
-    return res.status(200).json(students.flat())
+
+    // for now admission std and division is used
+    const response = await User.find({ "admission.admissionstd": standard, "admission.admissiondivision": division });
+    return res.status(200).json(response);
   } catch (error) {
-    console.log(error)
-    return res.status(500).send({message: "Error:"+error})
+    return res.status(500).json({ error: error.message });
   }
-}
+};

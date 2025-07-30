@@ -88,6 +88,6 @@ router.get('/term-result/:id', testController.getResultsById)
 // add classroom
 router.post('/add-classroom',classroomController.addClassroom)
 
-//display classroom students
-router.post('/classroom',studentController.getClassStudents)
+// get students based on std & div
+router.post('/student', studentController.getStudentByStd)
 module.exports = router;
