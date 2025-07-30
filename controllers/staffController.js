@@ -7,6 +7,7 @@ const staffBank = require("../models/staffBank");
 const staffTransport = require("../models/staffTransport");
 const staffDocs = require("../models/staffDocument");
 const staffLeave = require("../models/staffLeave");
+const ResignedStaff = require("../models/resignedStaffModel");
 
 // list all staff
 exports.getStaff = async (req, res) => {
@@ -193,5 +194,52 @@ exports.updateRequest = async (req, res) => {
   } catch (error) {
     console.error("Error updating event:", error);
     return res.status(500).json({ error: error.message }); 
+  }
+};
+
+exports.getNewStaffsDetailed = async (req, res) => {
+  try {
+    const staffRoles = await staffRole.find({
+      joiningdate: {
+        $gte: new Date("2025-01-01"),
+      },
+    });
+
+    const staffIds = staffRoles.map((role) => role.staffid);
+
+    const detailedStaffs = await Staff.find({ staffid: { $in: staffIds } });
+
+    return res.status(200).json(detailedStaffs);
+  } catch (error) {
+    console.error("Error fetching new detailed staffs:", error);
+    return res.status(500).json({ message: "Error: " + error.message });
+  }
+};
+exports.addResignedStaff = async (req, res) => {
+  try {
+    const { staffid } = req.params;
+
+    if (!staffid) {
+      return res.status(400).send({ message: "Please provide staffid" });
+    }
+
+    const staff = await StaffRole.findOne({ staffid });
+
+    if (!staff) {
+      return res.status(404).send({ message: "No staff found with this ID" });
+    }
+
+    const resignedStaff = new ResignedStaff({
+      staffid,
+      resignationDate: new Date(),
+      reason: req.body.reason || "Not specified",
+    });
+
+    await resignedStaff.save();
+
+    return res.status(200).send({ message: "Staff resignation recorded" });
+  } catch (error) {
+    console.log("Error occurred:", error);
+    return res.status(500).send({ message: "Error: " + error });
   }
 };

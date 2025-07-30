@@ -76,3 +76,26 @@ exports.getLCStudents = async (req, res) => {
     return res.status(500).send({ message: "Error: " + error });
   }
 };
+
+exports.getClassStudents = async (req,res) =>{
+  try {
+    const {std , div} = req.body;
+    console.log(typeof(div))
+    if(!std || !div ){
+      return res.status(500).send({message: 'Please provide complete info'})
+    }
+    const students = await User.find({
+      "admission.admissionstd": std,
+      "admission.admissiondivision": div
+    })
+    console.log(students.flat())
+    console.log(students.length)
+    if(students.length <= 0){
+      return res.status(404).send({message: "No Students found"})
+    }
+    return res.status(200).json(students.flat())
+  } catch (error) {
+    console.log(error)
+    return res.status(500).send({message: "Error:"+error})
+  }
+}

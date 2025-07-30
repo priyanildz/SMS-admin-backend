@@ -73,4 +73,7 @@ router.post('/add-etimetable',examController.addETimetable)
 
 // display all exam schedules
 router.get('/etimetable',examController.getETimetable)
+
+//display classroom students
+router.post('/classroom',studentController.getClassStudents)
 module.exports = router;
