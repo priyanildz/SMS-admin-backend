@@ -1,4 +1,5 @@
 const termAssessment = require("../models/termAssessment");
+const Staff = require("../models/staffModel")
 const classroom = require("../models/classroomModel");
 exports.addTermResult = async (req, res) => {
   try {
@@ -33,7 +34,12 @@ exports.getResultsById = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await termAssessment.findOne({ _id: id });
-    return res.status(200).json(response);
+
+    const staffDetails = await Staff.findById(response.staffid)
+    return res.status(200).json({
+      ...response._doc,
+      staffDetails
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

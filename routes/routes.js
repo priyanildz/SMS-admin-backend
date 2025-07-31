@@ -87,4 +87,7 @@ router.get('/term-result/:id', testController.getResultsById)
 
 // add classroom
 router.post('/add-classroom',classroomController.addClassroom)
+
+// modify announcement
+router.put('/modify-announcement/:id',announcementController.updateAnnouncement)
 module.exports = router;

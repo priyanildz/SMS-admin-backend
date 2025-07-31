@@ -11,8 +11,18 @@ const staffLeave = require("../models/staffLeave");
 // list all staff
 exports.getStaff = async (req, res) => {
   try {
-    const staff = await Staff.find();
-    return res.status(200).json(staff);
+    const staffList = await Staff.find();
+    const roleList = await staffRole.find();
+
+    const combined = staffList.map(staff => {
+      const role = roleList.find(role => role.staffid.toString() === staff.staffid.toString());
+      return {
+        ...staff._doc,
+        role: role || null
+      };
+    });
+
+    return res.status(200).json(combined);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
