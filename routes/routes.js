@@ -90,4 +90,7 @@ router.post('/add-classroom',classroomController.addClassroom)
 
 // modify announcement
 router.put('/modify-announcement/:id',announcementController.updateAnnouncement)
+
+// get students based on std & div
+router.post('/student', studentController.getStudentByStd)
 module.exports = router;

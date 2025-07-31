@@ -76,3 +76,20 @@ exports.getLCStudents = async (req, res) => {
     return res.status(500).send({ message: "Error: " + error });
   }
 };
+
+exports.getStudentByStd = async (req, res) => {
+  try {
+    const { standard, division } = req.body;
+    if (!standard || !division) {
+      return res
+        .status(400)
+        .json({ error: "Standard and Division are required" });
+    }
+
+    // for now admission std and division is used
+    const response = await User.find({ "admission.admissionstd": standard, "admission.admissiondivision": division });
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
