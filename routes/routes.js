@@ -9,6 +9,7 @@ const transportController = require("../controllers/transportController");
 const examController = require("../controllers/examController")
 const testController = require("../controllers/testController")
 const classroomController = require("../controllers/classroomController")
+const assessmentController = require("../controllers/assessmentController")
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -93,4 +94,10 @@ router.put('/modify-announcement/:id',announcementController.updateAnnouncement)
 
 // get students based on std & div
 router.post('/student', studentController.getStudentByStd)
+
+// add assessment in classroom module
+router.post('/add-assessment',assessmentController.addAssessment)
+
+// get all assessments 
+router.get('/assessment',assessmentController.getAssessment)
 module.exports = router;
