@@ -102,6 +102,9 @@ router.post('/add-assessment',assessmentController.addAssessment)
 // get all assessments 
 router.get('/assessment',assessmentController.getAssessment)
 
+// get new staff's list
+router.post('/newstaffs',staffController.getNewStaffsDetailed)
+
 // edit an assessment
 router.put('/edit-assessment/:_id', assessmentController.editAssessment)
 
