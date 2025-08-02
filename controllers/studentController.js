@@ -93,3 +93,14 @@ exports.getStudentByStd = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+//for attendence
+exports.addAttendence = async (req,res) =>{
+  try {
+    const {std , div , students} = req.body;
+    
+  } catch (error) {
+    console.log(error)
+    res.status(500).send({message: 'Internal Server Error!:- '+error})
+  }
+}
