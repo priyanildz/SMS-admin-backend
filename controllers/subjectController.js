@@ -12,3 +12,15 @@ exports.addSubjectAllot = async (req, res) =>
         return res.status(500).json({error: error.message})
     }
 }
+exports.getAllocations = async (req, res) =>
+{
+    try
+    {
+        const response = await subjectAllocation.find();
+        return res.status(200).json(response)
+    }
+    catch(error)
+    {
+        return res.status(500).json({error: error.message})
+    }
+}

@@ -6,11 +6,11 @@ const staffController = require("../controllers/staffController");
 const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
 const transportController = require("../controllers/transportController");
-const examController = require("../controllers/examController")
-const testController = require("../controllers/testController")
-const classroomController = require("../controllers/classroomController")
-const assessmentController = require("../controllers/assessmentController")
-const subjectController = require("../controllers/subjectController")
+const examController = require("../controllers/examController");
+const testController = require("../controllers/testController");
+const classroomController = require("../controllers/classroomController");
+const assessmentController = require("../controllers/assessmentController");
+const subjectController = require("../controllers/subjectController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -30,7 +30,7 @@ router.get("/staff", staffController.getStaff);
 // adding staff endpoint
 router.post("/addstaff", staffController.addStaff);
 
-// displaying new students 
+// displaying new students
 router.get("/newstudent", studentController.getNewStudents);
 
 // adding leave request of staff
@@ -73,41 +73,47 @@ router.post("/add-driver", transportController.addDriver);
 router.get("/drivers", transportController.getDrivers);
 
 // creating exam timetable
-router.post('/add-etimetable',examController.addETimetable)
+router.post("/add-etimetable", examController.addETimetable);
 
 // display all exam schedules
-router.get('/etimetable',examController.getETimetable)
+router.get("/etimetable", examController.getETimetable);
 
 // add term results
-router.post('/add-test',testController.addTermResult)
+router.post("/add-test", testController.addTermResult);
 
 // get all term results
-router.get('/term-results', testController.getTermResults)
+router.get("/term-results", testController.getTermResults);
 
 // get term result by id
-router.get('/term-result/:id', testController.getResultsById)
+router.get("/term-result/:id", testController.getResultsById);
 
 // add classroom
-router.post('/add-classroom',classroomController.addClassroom)
+router.post("/add-classroom", classroomController.addClassroom);
 
 // modify announcement
-router.put('/modify-announcement/:id',announcementController.updateAnnouncement)
+router.put(
+  "/modify-announcement/:id",
+  announcementController.updateAnnouncement
+);
 
 // get students based on std & div
-router.post('/student', studentController.getStudentByStd)
+router.post("/student", studentController.getStudentByStd);
 
 // add assessment in classroom module
-router.post('/add-assessment',assessmentController.addAssessment)
+router.post("/add-assessment", assessmentController.addAssessment);
 
-// get all assessments 
-router.get('/assessment',assessmentController.getAssessment)
+// get all assessments
+router.get("/assessment", assessmentController.getAssessment);
 
 // get new staff's list
-router.post('/newstaffs',staffController.getNewStaffsDetailed)
+router.post("/newstaffs", staffController.getNewStaffsDetailed);
 
 // edit an assessment
-router.put('/edit-assessment/:_id', assessmentController.editAssessment)
+router.put("/edit-assessment/:_id", assessmentController.editAssessment);
 
 // add subject allotment
-router.post('/allot-subject',subjectController.addSubjectAllot)
+router.post("/allot-subject", subjectController.addSubjectAllot);
+
+// get all allotments
+router.get("/allotments", subjectController.getAllocations);
 module.exports = router;
