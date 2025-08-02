@@ -10,6 +10,7 @@ const examController = require("../controllers/examController")
 const testController = require("../controllers/testController")
 const classroomController = require("../controllers/classroomController")
 const assessmentController = require("../controllers/assessmentController")
+const subjectController = require("../controllers/subjectController")
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -100,4 +101,10 @@ router.post('/add-assessment',assessmentController.addAssessment)
 
 // get all assessments 
 router.get('/assessment',assessmentController.getAssessment)
+
+// edit an assessment
+router.put('/edit-assessment/:_id', assessmentController.editAssessment)
+
+// add subject allotment
+router.post('/allot-subject',subjectController.addSubjectAllot)
 module.exports = router;

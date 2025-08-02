@@ -29,3 +29,15 @@ exports.addHomework = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// edit assessment
+exports.editAssessment = async (req, res) => {
+  try {
+    const { _id } = req.params;
+    const response = await assessment.findByIdAndUpdate(_id, req.body, {new: true});
+    // console.log(response)
+    return res.status(200).json({ message: "assessment added successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
