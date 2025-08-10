@@ -1,5 +1,6 @@
 const StudentLC = require("../models/StudentLCModel");
 const User = require("../models/studentModel");
+const studentsAttendence = require("../models/studentAttendence")
 exports.createUser = async (req, res) => {
   try {
     // console.log('received msg: ',req.body)
@@ -95,12 +96,22 @@ exports.getStudentByStd = async (req, res) => {
 };
 
 //for attendence
-exports.addAttendence = async (req,res) =>{
+exports.addAttendence = async (req, res) => {
   try {
-    const {std , div , students} = req.body;
-    
+    const { std, div, students } = req.body;
+
+    if (!std || !div || !students || !Array.isArray(students) || students.length === 0) {
+      return res.status(400).send({ message: 'Please Provide complete data!' })
+    }
+    const studentsData = new studentsAttendence({
+      std,
+      div,
+      students
+    })
+    await studentsAttendence.save()
+    return res.status(201).send({ message: "Students Attendence Added!" })
   } catch (error) {
     console.log(error)
-    res.status(500).send({message: 'Internal Server Error!:- '+error})
+    res.status(500).send({ message: 'Internal Server Error!:- ' + error })
   }
 }

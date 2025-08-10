@@ -1,12 +1,12 @@
 const mongoose = require('mongoose')
 
-const studentAttendence = new mongoose.Schema({
-    date:{
+const studentAttendance = new mongoose.Schema({
+    date: {
         type: Date,
         required: true,
-        default: Date.now()
+        default: Date.now
     },
-    std:{
+    std: {
         type: String,
         required: true
     },
@@ -14,23 +14,25 @@ const studentAttendence = new mongoose.Schema({
         type: String,
         required: true
     },
-    students:{
-        studentid:{
-            type: String,
-            required: true,
-            ref: "studentid"
-        },
-        studentname:{
-            type: String,
-            required: true
-        },
-        remark:{
-            type:String,
-            required:true,
-            enum: ['P','A']
+    students: [
+        {
+            studentid: {
+                type: mongoose.Schema.Types.ObjectId,
+                required: true,
+                ref: "student"
+            },
+            studentname: {
+                type: String,
+                required: true
+            },
+            remark: {
+                type: String,
+                required: true,
+                enum: ['P', 'A']
+            }
         }
-    }
+    ]
+});
 
-})
 
-module.exports = mongoose.model("studentAttendence",studentAttendence)
+module.exports = mongoose.model("studentAttendence", studentAttendence)
