@@ -1,38 +1,38 @@
-const FeesInfoSchema = new mongoose.Schema({
-  feeid: {
-    type: String,
-    required: true,
-    unique: true,
+const mongoose = require("mongoose");
+
+const FeesInfoSchema = new mongoose.Schema(
+  {
+    standard: {
+      type: String,
+      required: true,
+    },
+    section: {
+      type: String,
+      enum: ["pre", "primary", "secondary"],
+      required: true,
+    },
+    categories: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+        },
+      },
+    ],
+    total: {
+      type: Number,
+      required: true,
+    },
+    monthlyfee: Number,
+    quarterlyfee: Number,
+    halfYearlyfee: Number,
+    annualfee: Number,
   },
-  standard: {
-    type: String,
-    required: true,
-  },
-  section: {
-    type: String,
-    enum: ["pre", "primary", "secondary"],
-    required: true,
-  },
-  categories: {
-    type: Object, 
-    required: true,
-  },
-  total: {
-    type: Number,
-    required: true,
-  },
-  monthlyfee: {
-    type: Number,
-  },
-  quarterlyfee: {
-    type: Number,
-  },
-  halfYearlyfee: {
-    type: Number,
-  },
-  annualfee: {
-    type: Number,
-  }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("fee", FeesInfoSchema);
