@@ -1,8 +1,4 @@
 const FeeRecordSchema = new mongoose.Schema({
-  feeId: {
-    type: String,
-    required: true,
-  },
   studentid: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "student",

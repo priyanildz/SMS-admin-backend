@@ -11,6 +11,7 @@ const testController = require("../controllers/testController");
 const classroomController = require("../controllers/classroomController");
 const assessmentController = require("../controllers/assessmentController");
 const subjectController = require("../controllers/subjectController");
+const feeController = require("../controllers/feeController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -116,6 +117,18 @@ router.post("/allot-subject", subjectController.addSubjectAllot);
 
 // get all allotments
 router.get("/allotments", subjectController.getAllocations);
+
+// post req for fees structure
+router.post("/add-fee", feeController.addFee);
+
+// get req to list all structures
+router.get("/fees", feeController.getFees);
+
+// add category
+router.post("/add-category", feeController.addCategory);
+
+// get all categories
+router.get("/categories", feeController.getCategory);
 
 //students attendence
 router.post("/studentAttendence", studentController.addAttendence)
