@@ -35,4 +35,4 @@ const studentAttendance = new mongoose.Schema({
 });
 
 
-module.exports = mongoose.model("studentAttendence", studentAttendence)
+module.exports = mongoose.model("studentAttendence", studentAttendance)

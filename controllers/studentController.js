@@ -108,7 +108,7 @@ exports.addAttendence = async (req, res) => {
       div,
       students
     })
-    await studentsAttendence.save()
+    await studentsData.save()
     return res.status(201).send({ message: "Students Attendence Added!" })
   } catch (error) {
     console.log(error)

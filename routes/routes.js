@@ -116,4 +116,7 @@ router.post("/allot-subject", subjectController.addSubjectAllot);
 
 // get all allotments
 router.get("/allotments", subjectController.getAllocations);
+
+//students attendence
+router.post("/studentAttendence", studentController.addAttendence)
 module.exports = router;
