@@ -1,4 +1,5 @@
 const Fee = require("../models/feeModel");
+const Category = require("../models/categoryModel")
 
 // add fees structure
 exports.addFee = async (req, res) => {
@@ -21,3 +22,28 @@ exports.getFees = async (req, res) => {
   }
 };
 
+exports.addCategory = async (req, res) =>
+{
+  try{
+    const response = new Category(req.body);
+    await response.save()
+    return res.status(200).json({message:'added category successfully'})
+  }
+  catch(error)
+  {
+    return res.status(500).json({error: error.message})
+  }
+}
+
+exports.getCategory = async (req, res) =>
+{
+  try
+  {
+    const response = await Category.find();
+    return res.status(200).json(response);
+  }
+  catch(error)
+  {
+    return res.status(500).json({error: error.message})
+  }
+}

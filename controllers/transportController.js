@@ -47,3 +47,13 @@ exports.getDrivers = async (req, res) =>
     return res.status(500).json({error:error.message})
   }
 }
+// exports.addSupervisor = async (req, res) =>
+// {
+//   try{
+//     const response = new driverModel(req.body)
+//   }
+//   catch(error)
+//   {
+//     console.error(error)
+//   }
+// }

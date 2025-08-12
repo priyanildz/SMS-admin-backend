@@ -6,11 +6,6 @@ const FeesInfoSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    section: {
-      type: String,
-      enum: ["pre", "primary", "secondary"],
-      required: true,
-    },
     categories: [
       {
         name: {
