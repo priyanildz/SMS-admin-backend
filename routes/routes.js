@@ -12,7 +12,7 @@ const classroomController = require("../controllers/classroomController");
 const assessmentController = require("../controllers/assessmentController");
 const subjectController = require("../controllers/subjectController");
 const feeController = require("../controllers/feeController");
-
+const syllabusTrackerController = require("../controllers/syllabusTrackerController")
 // login endpoint
 router.post("/loginadmin", adminController.Login);
 
@@ -132,4 +132,10 @@ router.get("/categories", feeController.getCategory);
 
 //students attendence
 router.post("/studentAttendence", studentController.addAttendence)
+
+//get Syllabus Tracker data
+router.get("/getCurrentSyllabus", syllabusTrackerController.getCurrentSyllabus)
+
+//add Syllabus Tracker data
+router.post("/addSyllabus", syllabusTrackerController.addSyllabus)
 module.exports = router;
