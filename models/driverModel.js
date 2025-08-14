@@ -1,7 +1,8 @@
 const mongoose = require("mongoose")
 const DriverSchema = new mongoose.Schema({
-  vehicle_No: {
-    type: String,
+  vid: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "vehicle",
     required: true,
   },
   driverName: {
