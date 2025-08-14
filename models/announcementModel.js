@@ -23,11 +23,16 @@ const AnnouncementSchema = new mongoose.Schema({
   },
   schedule: {
     type: Date,
+    required: true
   },
   status: {
     type: String,
     enum: ["draft", "sent"],
     default: "draft",
+  },
+  description:{
+    type: String,
+    required: true
   }
 }, { timestamps: true });
 
