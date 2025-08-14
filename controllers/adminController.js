@@ -2,6 +2,7 @@ const Admin = require('../models/loginModel')
 const bcrypt = require('bcryptjs');
 exports.Login = async (req, res) =>
 {
+
     try
     {
         const {username, password} = req.body;
@@ -15,6 +16,7 @@ exports.Login = async (req, res) =>
     }
     catch(error)
     {
+        console.log(error)
         return res.status(500).json({error:'internal server error'})
     }
 }
