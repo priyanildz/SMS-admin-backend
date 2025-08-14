@@ -28,13 +28,24 @@ exports.addDriver = async (req, res) => {
     return res.status(500).json({ error: error.message })
   }
 }
-
 exports.getDrivers = async (req, res) => {
   try {
-    const response = await driverModel.find().populate("vid");
-    return res.status(200).json(response)
+    const drivers = await driverModel.find();
+    const vehicles = await vehicleModel.find();
+
+    const merged = drivers.map(driver => {
+      const vehicle = vehicles.find(v => 
+        v.vid?.toString() === driver.vid?.toString()
+      );
+
+      return {
+        ...driver.toObject(),
+        vehicles: vehicle || {} // agar vehicle na mile to empty object
+      };
+    });
+
+    return res.status(200).json(merged);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-  catch (error) {
-    return res.status(500).json({ error: error.message })
-  }
-}
+};
