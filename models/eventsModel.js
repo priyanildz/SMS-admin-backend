@@ -15,11 +15,7 @@ const EventSchema = new mongoose.Schema({
   managedby: String,
   standard: String,
   division: String,
-  participants: [
-    {
-      studentId: { type: mongoose.Schema.Types.ObjectId, ref: "student" }
-    }
-  ]
+  participants: [String]
 }, { timestamps: true });
 
 module.exports = mongoose.model("event", EventSchema);
