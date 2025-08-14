@@ -13,6 +13,8 @@ const assessmentController = require("../controllers/assessmentController");
 const subjectController = require("../controllers/subjectController");
 const feeController = require("../controllers/feeController");
 const syllabusTrackerController = require("../controllers/syllabusTrackerController")
+const routeController = require("../controllers/routeController")
+
 // login endpoint
 router.post("/loginadmin", adminController.Login);
 
@@ -138,4 +140,10 @@ router.get("/getCurrentSyllabus", syllabusTrackerController.getCurrentSyllabus)
 
 //add Syllabus Tracker data
 router.post("/addSyllabus", syllabusTrackerController.addSyllabus)
+
+// add route
+router.post('/add-route', routeController.addRoute)
+
+// get routes
+router.get('/routes', routeController.getRoutes)
 module.exports = router;

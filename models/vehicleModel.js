@@ -8,7 +8,7 @@ const VehicleSchema = new mongoose.Schema({
   vehiclename: String,
   capacity: String,
   regno: Number,
-  assignedroute: String,
+  // assignedroute: String,
   status: {
     type: String,
     enum: ["active", "inactive"],
