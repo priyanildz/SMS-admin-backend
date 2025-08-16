@@ -1,7 +1,7 @@
 const SupervisorSchema = new mongoose.Schema({
   examtype: {
     type: String,
-    enum: ["semester 1", "finals"],
+    enum: ["mid-term", "finals", "unit test", "quarterly"],
     required: true,
   },
   examdate: {
