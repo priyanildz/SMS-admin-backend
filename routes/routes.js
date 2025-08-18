@@ -12,8 +12,8 @@ const classroomController = require("../controllers/classroomController");
 const assessmentController = require("../controllers/assessmentController");
 const subjectController = require("../controllers/subjectController");
 const feeController = require("../controllers/feeController");
-const syllabusTrackerController = require("../controllers/syllabusTrackerController")
-const routeController = require("../controllers/routeController")
+const syllabusTrackerController = require("../controllers/syllabusTrackerController");
+const routeController = require("../controllers/routeController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -133,17 +133,23 @@ router.post("/add-category", feeController.addCategory);
 router.get("/categories", feeController.getCategory);
 
 //students attendence
-router.post("/studentAttendence", studentController.addAttendence)
+router.post("/studentAttendence", studentController.addAttendence);
 
 //get Syllabus Tracker data
-router.get("/getCurrentSyllabus", syllabusTrackerController.getCurrentSyllabus)
+router.get("/getCurrentSyllabus", syllabusTrackerController.getCurrentSyllabus);
 
 //add Syllabus Tracker data
-router.post("/addSyllabus", syllabusTrackerController.addSyllabus)
+router.post("/addSyllabus", syllabusTrackerController.addSyllabus);
 
 // add route
-router.post('/add-route', routeController.addRoute)
+router.post("/add-route", routeController.addRoute);
 
 // get routes
-router.get('/routes', routeController.getRoutes)
+router.get("/routes", routeController.getRoutes);
+
+// add student assigning to route
+router.post("/add-student-route", routeController.assignStudent);
+
+// get students list
+router.get("/students-route", routeController.getAssignedStudents);
 module.exports = router;

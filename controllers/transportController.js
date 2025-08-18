@@ -35,7 +35,7 @@ exports.getDrivers = async (req, res) => {
 
     const merged = drivers.map(driver => {
       const vehicle = vehicles.find(v => 
-        v.vid?.toString() === driver.vid?.toString()
+        v.vehicleno?.toString() === driver.vid?.toString()
       );
 
       return {

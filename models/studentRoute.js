@@ -1,4 +1,4 @@
-const StudentRouteSchema = new mongoose.Schema(
+ const StudentRouteSchema = new mongoose.Schema(
   {
     vid: {
       type: mongoose.Schema.Types.ObjectId,
