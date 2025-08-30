@@ -152,4 +152,7 @@ router.post("/add-student-route", routeController.assignStudent);
 
 // get students list
 router.get("/students-route", routeController.getAssignedStudents);
+
+//get student by ID
+router.post("/student-by-id",studentController.getStudentById)
 module.exports = router;

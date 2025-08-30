@@ -115,3 +115,22 @@ exports.addAttendence = async (req, res) => {
     res.status(500).send({ message: 'Internal Server Error!:- ' + error })
   }
 }
+
+exports.getStudentById = async(req,res) =>{
+try {
+  const { id } = req.body;
+  console.log(id)
+  if(!id){
+    return res.status(500).send({message: 'Please give complete data'})
+  }
+  const data = await User.findById(id)
+  if(!data){
+    return res.status(404).send({message: 'User not found!'})
+  }
+  console.log(data)
+  return res.status(200).send(data)
+} catch (error) {
+  console.log(error)
+  return res.status(500).send({message: error})
+}
+}
