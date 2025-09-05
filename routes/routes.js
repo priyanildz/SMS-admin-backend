@@ -14,6 +14,7 @@ const subjectController = require("../controllers/subjectController");
 const feeController = require("../controllers/feeController");
 const syllabusTrackerController = require("../controllers/syllabusTrackerController");
 const routeController = require("../controllers/routeController");
+const subjectManagement = require("../controllers/subjectManagement");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -152,4 +153,11 @@ router.post("/add-student-route", routeController.assignStudent);
 
 // get students list
 router.get("/students-route", routeController.getAssignedStudents);
+
+// add subjects
+router.post("/add-subject", subjectManagement.addSubject);
+
+// get subjects by standard
+router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
+
 module.exports = router;
