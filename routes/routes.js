@@ -15,6 +15,7 @@ const feeController = require("../controllers/feeController");
 const syllabusTrackerController = require("../controllers/syllabusTrackerController");
 const routeController = require("../controllers/routeController");
 const subjectManagement = require("../controllers/subjectManagement");
+const roleController = require("../controllers/roleController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -163,4 +164,17 @@ router.post("/add-subject", subjectManagement.addSubject);
 // get subjects by standard
 router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
 
+// edit staff
+router.put("/edit-staff/:id", staffController.editStaff);
+
+// staff by id
+router.get("/staff/:id", staffController.getStaffById);
+
+router.post('/assign-role', roleController.assignRole);
+
+router.get('/roles', roleController.getRoles);
+
+router.post('/attendance', studentController.getAttendance);
+
+router.get('/all-attendance', studentController.getAllAttendance);
 module.exports = router;

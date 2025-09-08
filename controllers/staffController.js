@@ -366,3 +366,17 @@ exports.editStaff = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+exports.getStaffById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const staff = await Staff.findById(id);
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+    const role = await staffRole.findOne({ staffid: staff.staffid });
+    return res.status(200).json({ ...staff._doc, role: role || null });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

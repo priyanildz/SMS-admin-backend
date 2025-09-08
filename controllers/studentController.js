@@ -1,6 +1,6 @@
 const StudentLC = require("../models/StudentLCModel");
 const User = require("../models/studentModel");
-const studentsAttendence = require("../models/studentAttendence")
+const studentsAttendence = require("../models/studentAttendence");
 exports.createUser = async (req, res) => {
   try {
     // console.log('received msg: ',req.body)
@@ -88,7 +88,10 @@ exports.getStudentByStd = async (req, res) => {
     }
 
     // for now admission std and division is used
-    const response = await User.find({ "admission.admissionstd": standard, "admission.admissiondivision": division });
+    const response = await User.find({
+      "admission.admissionstd": standard,
+      "admission.admissiondivision": division,
+    });
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -98,39 +101,80 @@ exports.getStudentByStd = async (req, res) => {
 //for attendence
 exports.addAttendence = async (req, res) => {
   try {
-    const { std, div, students } = req.body;
+    const { std, div, students, date } = req.body;
 
-    if (!std || !div || !students || !Array.isArray(students) || students.length === 0) {
-      return res.status(400).send({ message: 'Please Provide complete data!' })
+    if (
+      !std ||
+      !div ||
+      !students ||
+      !Array.isArray(students) ||
+      students.length === 0
+    ) {
+      return res.status(400).send({ message: "Please Provide complete data!" });
     }
     const studentsData = new studentsAttendence({
       std,
       div,
-      students
-    })
-    await studentsData.save()
-    return res.status(201).send({ message: "Students Attendence Added!" })
+      students,
+      date
+    });
+    await studentsData.save();
+    return res.status(201).send({ message: "Students Attendence Added!" });
   } catch (error) {
-    console.log(error)
-    res.status(500).send({ message: 'Internal Server Error!:- ' + error })
+    console.log(error);
+    res.status(500).send({ message: "Internal Server Error!:- " + error });
   }
-}
+};
 
-exports.getStudentById = async(req,res) =>{
-try {
-  const { id } = req.body;
-  console.log(id)
-  if(!id){
-    return res.status(500).send({message: 'Please give complete data'})
+exports.getStudentById = async (req, res) => {
+  try {
+    const { id } = req.body;
+    console.log(id);
+    if (!id) {
+      return res.status(500).send({ message: "Please give complete data" });
+    }
+    const data = await User.findById(id);
+    if (!data) {
+      return res.status(404).send({ message: "User not found!" });
+    }
+    console.log(data);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error });
   }
-  const data = await User.findById(id)
-  if(!data){
-    return res.status(404).send({message: 'User not found!'})
+};
+
+// in studentController.js
+exports.getAttendance = async (req, res) => {
+  try {
+    const { std, div, date } = req.body;      
+    if (!std || !div || !date) {
+      return res.status(400).send({ message: "Please provide complete data!" });
+    }
+    console.log(std, div, date);
+    const attendance = await studentsAttendence.findOne({
+      std,
+      div,
+      date
+    });
+    if (!attendance) {
+      return res.status(404).send({ message: "No attendance found!" });
+    }
+
+    return res.status(200).send(attendance);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: "Internal Server Error!:- " + error });
   }
-  console.log(data)
-  return res.status(200).send(data)
-} catch (error) {
-  console.log(error)
-  return res.status(500).send({message: error})
-}
-}
+};
+
+exports.getAllAttendance = async (req, res) => {
+  try {
+    const attendance = await studentsAttendence.find();
+    return res.status(200).send(attendance);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: "Internal Server Error!:- " + error });
+  }
+};

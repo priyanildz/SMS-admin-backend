@@ -1,11 +1,6 @@
 const mongoose = require("mongoose");
 
 const AssignRoleSchema = new mongoose.Schema({
-  role_id: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   staff: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "staff", 
@@ -18,10 +13,6 @@ const AssignRoleSchema = new mongoose.Schema({
   roleassigned: {
     type: String,
     required: true,
-  },
-  priority: {
-    type: Number, 
-    default: 1,
   }
 }, { timestamps: true });
 
