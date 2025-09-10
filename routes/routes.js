@@ -7,6 +7,7 @@ const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
 const transportController = require("../controllers/transportController");
 const examController = require("../controllers/examController");
+const paymentController = require("../controllers/paymentController");
 const testController = require("../controllers/testController");
 const classroomController = require("../controllers/classroomController");
 const assessmentController = require("../controllers/assessmentController");
@@ -177,4 +178,18 @@ router.get('/roles', roleController.getRoles);
 router.post('/attendance', studentController.getAttendance);
 
 router.get('/all-attendance', studentController.getAllAttendance);
+
+router.get('/combined-fees', feeController.getCombinedFees);
+
+router.get("/payment-entries", paymentController.getPaymentEntries);
+
+router.post("/add-payment-entry", paymentController.addPaymentEntry);
+
+// update payment entry with new installment
+router.put("/update-payment-entry/:id", paymentController.updatePaymentEntry);
+
+// filter transactions
+router.get("/filter-transactions", paymentController.filterTransactions);
+
+router.get('/dashboard-metrics', paymentController.getMetrices);
 module.exports = router;
