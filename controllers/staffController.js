@@ -15,11 +15,13 @@ exports.getStaff = async (req, res) => {
     const staffList = await Staff.find();
     const roleList = await staffRole.find();
 
-    const combined = staffList.map(staff => {
-      const role = roleList.find(role => role.staffid.toString() === staff.staffid.toString());
+    const combined = staffList.map((staff) => {
+      const role = roleList.find(
+        (role) => role.staffid.toString() === staff.staffid.toString()
+      );
       return {
         ...staff._doc,
-        role: role || null
+        role: role || null,
       };
     });
 
@@ -142,7 +144,10 @@ exports.addLeave = async (req, res) => {
 exports.getRequests = async (req, res) => {
   try {
     const requests = await staffLeave.find(); // all leave requests
-    const staffList = await Staff.find({}, "staffid firstname lastname dept position _id");
+    const staffList = await Staff.find(
+      {},
+      "staffid firstname lastname dept position _id"
+    );
 
     const staffMap = {};
     staffList.forEach((staff) => {
@@ -180,30 +185,41 @@ exports.updateRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['pending', 'approved', 'rejected','Pending',"Approved","Rejected"];
+    const validStatuses = [
+      "pending",
+      "approved",
+      "rejected",
+      "Pending",
+      "Approved",
+      "Rejected",
+    ];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status. Must be one of: Pending, Approved, Rejected" });
+      return res
+        .status(400)
+        .json({
+          error: "Invalid status. Must be one of: Pending, Approved, Rejected",
+        });
     }
 
-    console.log('requested id', id)
-    console.log('status',status)
+    console.log("requested id", id);
+    console.log("status", status);
     const updatedRequest = await staffLeave.findByIdAndUpdate(
-      id, 
-      { status }, 
-      { new: true } 
+      id,
+      { status },
+      { new: true }
     );
-    console.log('updated req',updatedRequest)
+    console.log("updated req", updatedRequest);
     if (!updatedRequest) {
       return res.status(404).json({ error: "staff request not found" });
     }
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: "staff request updated successfully",
-      request: updatedRequest 
+      request: updatedRequest,
     });
   } catch (error) {
     console.error("Error updating event:", error);
-    return res.status(500).json({ error: error.message }); 
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -251,5 +267,116 @@ exports.addResignedStaff = async (req, res) => {
   } catch (error) {
     console.log("Error occurred:", error);
     return res.status(500).send({ message: "Error: " + error });
+  }
+};
+
+// edit staff
+exports.editStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const staff = await Staff.findByIdAndUpdate(id, {
+      staffid: data.staffid,
+      firstname: data.firstname,
+      middlename: data.middlename,
+      lastname: data.lastname,
+      dob: data.dob,
+      maritalstatus: data.maritalstatus,
+      bloodgroup: data.bloodgroup,
+      gender: data.gender,
+      category: data.category,
+      nationality: data.nationality,
+      aadharno: data.aadharno,
+      photo: data.photo,
+      status: data.status,
+      phoneno: data.phoneno,
+      alternatephoneno: data.alternatephoneno,
+      password: data.password,
+      emailaddress: data.emailaddress,
+    });
+    await staff.save();
+
+    const staffadd = new staffAddress({
+      staffid: data.staffid,
+      addressline1: data.addressline1,
+      addressline2: data.addressline2,
+      city: data.city,
+      postalcode: data.postalcode,
+      district: data.district,
+      state: data.state,
+      country: data.country,
+    });
+    await staffadd.save();
+
+    const staffeduc = new staffEductaion({
+      staffid: data.staffid,
+      highestqualification: data.highestqualification,
+      yearofpassing: data.yearofpassing,
+      specialization: data.specialization,
+      certificates: data.certificates,
+      universityname: data.universityname,
+    });
+    await staffeduc.save();
+
+    const staffexp = new staffExperience({
+      staffid: data.staffid,
+      totalexperience: data.totalexperience,
+      designation: data.designation,
+      previousemployer: data.previousemployer,
+      subjectstaught: data.subjectstaught,
+      reasonforleaving: data.reasonforleaving,
+    });
+    await staffexp.save();
+
+    const staffrole = new staffRole({
+      staffid: data.staffid,
+      position: staff.position,
+      dept: data.dept,
+      preferredgrades: data.preferredgrades,
+      joiningdate: data.joiningdate,
+    });
+    await staffrole.save();
+
+    const staffbank = new staffBank({
+      staffid: data.staffid,
+      bankname: data.bankname,
+      branchname: data.branchname,
+      accno: data.accno,
+      ifccode: data.ifccode,
+      panno: data.panno,
+    });
+    await staffbank.save();
+
+    const stafftransport = new staffTransport({
+      staffid: data.staffid,
+      transportstatus: data.transportstatus,
+      pickuppoint: data.pickuppoint,
+      droppoint: data.droppoint,
+      modetransport: data.modetransport,
+    });
+    await stafftransport.save();
+
+    const docs = new staffDocs({
+      staffid: data.staffid,
+      documentsurl: data.documentsurl,
+    });
+    await docs.save();
+    return res.status(200).json({ message: "staff updated successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getStaffById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const staff = await Staff.findById(id);
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+    const role = await staffRole.findOne({ staffid: staff.staffid });
+    return res.status(200).json({ ...staff._doc, role: role || null });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };

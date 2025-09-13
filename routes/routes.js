@@ -7,6 +7,7 @@ const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
 const transportController = require("../controllers/transportController");
 const examController = require("../controllers/examController");
+const paymentController = require("../controllers/paymentController");
 const testController = require("../controllers/testController");
 const classroomController = require("../controllers/classroomController");
 const assessmentController = require("../controllers/assessmentController");
@@ -14,6 +15,8 @@ const subjectController = require("../controllers/subjectController");
 const feeController = require("../controllers/feeController");
 const syllabusTrackerController = require("../controllers/syllabusTrackerController");
 const routeController = require("../controllers/routeController");
+const subjectManagement = require("../controllers/subjectManagement");
+const roleController = require("../controllers/roleController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -155,4 +158,38 @@ router.get("/students-route", routeController.getAssignedStudents);
 
 //get student by ID
 router.post("/student-by-id",studentController.getStudentById)
+
+// add subjects
+router.post("/add-subject", subjectManagement.addSubject);
+
+// get subjects by standard
+router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
+
+// edit staff
+router.put("/edit-staff/:id", staffController.editStaff);
+
+// staff by id
+router.get("/staff/:id", staffController.getStaffById);
+
+router.post('/assign-role', roleController.assignRole);
+
+router.get('/roles', roleController.getRoles);
+
+router.post('/attendance', studentController.getAttendance);
+
+router.get('/all-attendance', studentController.getAllAttendance);
+
+router.get('/combined-fees', feeController.getCombinedFees);
+
+router.get("/payment-entries", paymentController.getPaymentEntries);
+
+router.post("/add-payment-entry", paymentController.addPaymentEntry);
+
+// update payment entry with new installment
+router.put("/update-payment-entry/:id", paymentController.updatePaymentEntry);
+
+// filter transactions
+router.get("/filter-transactions", paymentController.filterTransactions);
+
+router.get('/dashboard-metrics', paymentController.getMetrices);
 module.exports = router;
