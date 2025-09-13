@@ -26,6 +26,9 @@ exports.getNewStudents = async (req, res) => {
       "admission.admissiondate": {
         $gte: new Date("2024-01-01"),
       },
+      status: {
+        $ne: false
+      }
     });
     // console.log(students)
     return res.status(200).send(students);
@@ -38,43 +41,37 @@ exports.getNewStudents = async (req, res) => {
 exports.addLcStudents = async (req, res) => {
   try {
     const { studentid } = req.params;
-    if (studentid == {}) {
-      return res.status(500).send({ message: "Please provide studentid" });
+    const newLcStudent = await User.findByIdAndUpdate(
+       studentid,          //student id
+      {
+        status: false     //update statement
+      },
+      {
+        new: true
+      }
+    )
+    if(!newLcStudent){
+      return res.status(404).send({message: 'No student Found with this idea!'})
     }
-    const student = await User.find({ studentid });
-    if (student.length <= 0) {
-      return res.status(404).send({ message: "No student found with this id" });
-    }
-    const studentlc = new StudentLC({
-      lc_no: String(Date.now()),
-      studentid: studentid,
-    });
-    await studentlc.save();
-    return res.status(200).send({ message: "student LC added" });
+   return res.status(200).send({message: 'LC studented updated'})
   } catch (error) {
-    console.log("error occured: ", error);
-    return res.status(500).send({ message: "error: " + error });
+    console.log(error)
+    return res.status(500).send({error: 'Error While adding new lc student: ',error})
   }
 };
 
 exports.getLCStudents = async (req, res) => {
   try {
-    const lcstudent = await StudentLC.find();
-    if (lcstudent.length <= 0) {
-      return res.status(404).send({ message: "no lc students." });
+    const lcStudents = await User.find({
+      status: false
+    })
+    if (lcStudents.length === 0) {
+      return res.status(200).send({ message: 'No Students.' })
     }
-    var students = [];
-    for (const element of lcstudent) {
-      const data = await User.find({
-        studentid: element.studentid,
-      });
-      students.push(data);
-    }
-    // console.warn(students);
-    return res.status(200).json(students.flat());
+    return res.status(200).send(lcStudents)
   } catch (error) {
-    console.log("Error: " + error);
-    return res.status(500).send({ message: "Error: " + error });
+    console.log("Error In lC students: ", error)
+    return res.status(500).send({ error: error })
   }
 };
 
@@ -116,21 +113,21 @@ exports.addAttendence = async (req, res) => {
   }
 }
 
-exports.getStudentById = async(req,res) =>{
-try {
-  const { id } = req.body;
-  console.log(id)
-  if(!id){
-    return res.status(500).send({message: 'Please give complete data'})
+exports.getStudentById = async (req, res) => {
+  try {
+    const { id } = req.body;
+    console.log(id)
+    if (!id) {
+      return res.status(500).send({ message: 'Please give complete data' })
+    }
+    const data = await User.findById(id)
+    if (!data) {
+      return res.status(404).send({ message: 'User not found!' })
+    }
+    console.log(data)
+    return res.status(200).send(data)
+  } catch (error) {
+    console.log(error)
+    return res.status(500).send({ message: error })
   }
-  const data = await User.findById(id)
-  if(!data){
-    return res.status(404).send({message: 'User not found!'})
-  }
-  console.log(data)
-  return res.status(200).send(data)
-} catch (error) {
-  console.log(error)
-  return res.status(500).send({message: error})
-}
 }
