@@ -17,6 +17,7 @@ const syllabusTrackerController = require("../controllers/syllabusTrackerControl
 const routeController = require("../controllers/routeController");
 const subjectManagement = require("../controllers/subjectManagement");
 const roleController = require("../controllers/roleController");
+const questionPaperController = require("../controllers/questionPaperController");
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -157,7 +158,7 @@ router.post("/add-student-route", routeController.assignStudent);
 router.get("/students-route", routeController.getAssignedStudents);
 
 //get student by ID
-router.post("/student-by-id",studentController.getStudentById)
+router.post("/student-by-id", studentController.getStudentById);
 
 // add subjects
 router.post("/add-subject", subjectManagement.addSubject);
@@ -171,15 +172,15 @@ router.put("/edit-staff/:id", staffController.editStaff);
 // staff by id
 router.get("/staff/:id", staffController.getStaffById);
 
-router.post('/assign-role', roleController.assignRole);
+router.post("/assign-role", roleController.assignRole);
 
-router.get('/roles', roleController.getRoles);
+router.get("/roles", roleController.getRoles);
 
-router.post('/attendance', studentController.getAttendance);
+router.post("/attendance", studentController.getAttendance);
 
-router.get('/all-attendance', studentController.getAllAttendance);
+router.get("/all-attendance", studentController.getAllAttendance);
 
-router.get('/combined-fees', feeController.getCombinedFees);
+router.get("/combined-fees", feeController.getCombinedFees);
 
 router.get("/payment-entries", paymentController.getPaymentEntries);
 
@@ -191,5 +192,14 @@ router.put("/update-payment-entry/:id", paymentController.updatePaymentEntry);
 // filter transactions
 router.get("/filter-transactions", paymentController.filterTransactions);
 
-router.get('/dashboard-metrics', paymentController.getMetrices);
+router.get("/dashboard-metrics", paymentController.getMetrices);
+
+router.get(
+  "/sets/:standard/:subject",
+  questionPaperController.getSets
+);
+
+router.post("/add-set", questionPaperController.createSets);
+
+router.post("/schedule", questionPaperController.addSchedule);
 module.exports = router;
