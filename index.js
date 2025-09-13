@@ -12,7 +12,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization','auth']
 }));
 
-connectDB();
+
 
 //for body data
 app.use(express.json());
@@ -21,6 +21,10 @@ app.use(authMiddleware) //check auth
 
 app.use("/api", routes) //all routes (entry point)
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
+const startServer = async() =>{
+  await connectDB();
+  app.listen(5000,()=>{
+    console.log("Server Started at 5000")
+  })
+}
+startServer();
