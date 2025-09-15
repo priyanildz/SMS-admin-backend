@@ -18,6 +18,11 @@ const routeController = require("../controllers/routeController");
 const subjectManagement = require("../controllers/subjectManagement");
 const roleController = require("../controllers/roleController");
 const questionPaperController = require("../controllers/questionPaperController");
+const proxyController = require("../controllers/proxyController");
+
+// proxy endpoints
+router.post("/add-proxy", proxyController.createProxy);
+router.get("/proxies", proxyController.getProxies);
 
 // login endpoint
 router.post("/loginadmin", adminController.Login);
@@ -202,4 +207,5 @@ router.get(
 router.post("/add-set", questionPaperController.createSets);
 
 router.post("/schedule", questionPaperController.addSchedule);
+
 module.exports = router;
