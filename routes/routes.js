@@ -24,6 +24,9 @@ const proxyController = require("../controllers/proxyController");
 router.post("/add-proxy", proxyController.createProxy);
 router.get("/proxies", proxyController.getProxies);
 
+//edit student
+router.put("/edit-student/:id", studentController.editStudent);
+
 // login endpoint
 router.post("/loginadmin", adminController.Login);
 

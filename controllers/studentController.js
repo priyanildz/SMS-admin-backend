@@ -175,3 +175,23 @@ exports.getAllAttendance = async (req, res) => {
     return res.status(500).send({ message: "Internal Server Error!:- " + error });
   }
 };
+
+// edit student
+exports.editStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body; 
+    const updatedStudent = await User.findByIdAndUpdate(
+      id,
+      updatedData,
+      { new: true }
+    );
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    res.status(200).json({ message: "Student updated successfully", updatedStudent });
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
