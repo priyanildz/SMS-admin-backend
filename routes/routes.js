@@ -19,7 +19,16 @@ const subjectManagement = require("../controllers/subjectManagement");
 const roleController = require("../controllers/roleController");
 const questionPaperController = require("../controllers/questionPaperController");
 const proxyController = require("../controllers/proxyController");
+const timetableController = require("../controllers/timetableController");
 
+router.get(
+  "/:standard/:division/validate",
+  timetableController.validateTimetable
+);
+router.get("/timetables", timetableController.getTimetable);
+
+router.post("/timetables/generate", timetableController.generateTimetable);
+router.put("/:id/arrange", timetableController.arrangeTimetable);
 // proxy endpoints
 router.post("/add-proxy", proxyController.createProxy);
 router.get("/proxies", proxyController.getProxies);
@@ -171,6 +180,8 @@ router.post("/student-by-id", studentController.getStudentById);
 // add subjects
 router.post("/add-subject", subjectManagement.addSubject);
 
+router.get('/subjects',subjectManagement.getAllSubjects)
+
 // get subjects by standard
 router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
 
@@ -202,13 +213,11 @@ router.get("/filter-transactions", paymentController.filterTransactions);
 
 router.get("/dashboard-metrics", paymentController.getMetrices);
 
-router.get(
-  "/sets/:standard/:subject",
-  questionPaperController.getSets
-);
+router.get("/sets/:standard/:subject", questionPaperController.getSets);
 
 router.post("/add-set", questionPaperController.createSets);
 
 router.post("/schedule", questionPaperController.addSchedule);
 
+router.put("/update-vehicle/:id", transportController.updateVehicle);
 module.exports = router;

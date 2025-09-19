@@ -32,3 +32,16 @@ exports.getSubjectsByStandard = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+exports.getAllSubjects = async (req, res) =>
+{
+  try
+  {
+    const response = await subjectModel.find();
+    return res.status(200).json(response);
+  }
+  catch(error)
+  {
+    return res.status(500).error({error: error.message})
+  }
+}

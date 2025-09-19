@@ -49,3 +49,18 @@ exports.getDrivers = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+exports.updateVehicle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body; 
+    const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { new: true });
+    if (!vehicle) {
+      return res.status(404).json({ message: "Vehicle not found" });
+    }
+    return res.status(200).json({ message: "Vehicle updated successfully", vehicle });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
