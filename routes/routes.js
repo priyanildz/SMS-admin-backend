@@ -20,6 +20,7 @@ const roleController = require("../controllers/roleController");
 const questionPaperController = require("../controllers/questionPaperController");
 const proxyController = require("../controllers/proxyController");
 const timetableController = require("../controllers/timetableController");
+const blockController = require("../controllers/academicBlockController")
 
 router.get(
   "/:standard/:division/validate",
@@ -220,4 +221,8 @@ router.post("/add-set", questionPaperController.createSets);
 router.post("/schedule", questionPaperController.addSchedule);
 
 router.put("/update-vehicle/:id", transportController.updateVehicle);
+
+router.get('/academic-blocks', blockController.getBlocks);
+
+router.post('/add-academicblock', blockController.addBlock);
 module.exports = router;
