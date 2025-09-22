@@ -1,3 +1,4 @@
+const mongoose = require("mongoose")
 const SupervisorSchema = new mongoose.Schema({
   examtype: {
     type: String,
@@ -5,7 +6,7 @@ const SupervisorSchema = new mongoose.Schema({
     required: true,
   },
   examdate: {
-    type: Date,
+    type: String,
     required: true,
   },
   timeslot: {

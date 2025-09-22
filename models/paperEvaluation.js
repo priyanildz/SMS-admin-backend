@@ -1,3 +1,4 @@
+const mongoose = require("mongoose")
 const PaperEvaluationSchema = new mongoose.Schema({
   assignedteacher: {
     type: mongoose.Schema.Types.ObjectId,
@@ -21,8 +22,9 @@ const PaperEvaluationSchema = new mongoose.Schema({
     required: true,
   },
   assignedby: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "staff"
+    // type: mongoose.Schema.Types.ObjectId,
+    // ref: "staff"
+    type: String
   }
 }, { timestamps: true });
 

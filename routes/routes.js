@@ -20,8 +20,16 @@ const roleController = require("../controllers/roleController");
 const questionPaperController = require("../controllers/questionPaperController");
 const proxyController = require("../controllers/proxyController");
 const timetableController = require("../controllers/timetableController");
-const blockController = require("../controllers/academicBlockController")
+const blockController = require("../controllers/academicBlockController");
+const capacityController = require("../controllers/capacityController");
+const paperEvaluationController = require("../controllers/paperEvaluationController");
+const supervisiorController = require("../controllers/supervisorController");
+const reportController = require("../controllers/reportController");
+const eblockController = require("../controllers/eblockController")
+// const recheckingController = require("../controllers/recheckingController")
 
+// router.post("/assign-recheck", recheckingController.addRechecking);
+// router.get("/recheck", recheckingController.getRechecking);
 router.get(
   "/:standard/:division/validate",
   timetableController.validateTimetable
@@ -181,7 +189,7 @@ router.post("/student-by-id", studentController.getStudentById);
 // add subjects
 router.post("/add-subject", subjectManagement.addSubject);
 
-router.get('/subjects',subjectManagement.getAllSubjects)
+router.get("/subjects", subjectManagement.getAllSubjects);
 
 // get subjects by standard
 router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
@@ -222,7 +230,29 @@ router.post("/schedule", questionPaperController.addSchedule);
 
 router.put("/update-vehicle/:id", transportController.updateVehicle);
 
-router.get('/academic-blocks', blockController.getBlocks);
+router.get("/academic-blocks", blockController.getBlocks);
 
-router.post('/add-academicblock', blockController.addBlock);
+router.post("/add-academicblock", blockController.addBlock);
+
+router.post("/add-capacity", capacityController.addCapacity);
+
+router.get("/capacity", capacityController.getCapacity);
+
+router.post("/assign-paper", paperEvaluationController.addEval);
+
+router.get("/assigned-papers", paperEvaluationController.getEval);
+
+router.post("/add-supervisior", supervisiorController.addSupervisior);
+
+router.get("/get-supervisior", supervisiorController.getSupervisior);
+
+router.post("/add-report", reportController.addReport);
+
+router.get("/reports", reportController.getReport);
+
+router.post('/assign-eblock', eblockController.addeblock)
+
+router.get('/eblock', eblockController.geteblock)
+
+
 module.exports = router;

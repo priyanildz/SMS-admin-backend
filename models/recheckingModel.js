@@ -25,8 +25,8 @@ const RecheckingRequestSchema = new mongoose.Schema({
     ref: "staff"
   },
   assignedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "staff"
+    type: String,
+    default:'admin'
   }
 }, { timestamps: true });
 
