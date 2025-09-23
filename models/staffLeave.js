@@ -11,8 +11,8 @@ const staffLeaveSchema = new mongoose.Schema({
     default: "pending",
   },
   submitted_at: { type: Date, default: Date.now() },
-  from: { type: Date },
-  to: { type: Date },
+  from: { type: String },
+  to: { type: String },
 });
 
 module.exports = mongoose.model("staff_leave", staffLeaveSchema);

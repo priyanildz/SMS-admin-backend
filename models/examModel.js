@@ -22,21 +22,24 @@ const ExamTimetableSchema = new mongoose.Schema(
             type: String,
             required: true,
           },
-          date:{
+          date: {
             type: Date,
-            required: true
+            required: true,
           },
           starttime: {
             type: String,
-            required: true
+            required: true,
           },
           endtime: {
             type: String,
-            required: true
+            required: true,
           },
         },
       ],
       required: true,
+    },
+    enddate: {
+      type: String,
     },
   },
   { timestamps: true }

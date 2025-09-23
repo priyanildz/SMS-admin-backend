@@ -25,11 +25,14 @@ const capacityController = require("../controllers/capacityController");
 const paperEvaluationController = require("../controllers/paperEvaluationController");
 const supervisiorController = require("../controllers/supervisorController");
 const reportController = require("../controllers/reportController");
-const eblockController = require("../controllers/eblockController")
-// const recheckingController = require("../controllers/recheckingController")
+const eblockController = require("../controllers/eblockController");
+const recheckingController = require("../controllers/recheckingController")
+const vehicleSupController = require("../controllers/vehicleSupervisorController");
 
-// router.post("/assign-recheck", recheckingController.addRechecking);
-// router.get("/recheck", recheckingController.getRechecking);
+router.post("/assign-recheck", recheckingController.addRechecking);
+router.get("/recheck", recheckingController.getRechecking);
+router.post("/add-vsupervisior", vehicleSupController.registerStaff);
+router.get("/vsupervisior", vehicleSupController.getAllStaff);
 router.get(
   "/:standard/:division/validate",
   timetableController.validateTimetable
@@ -250,9 +253,8 @@ router.post("/add-report", reportController.addReport);
 
 router.get("/reports", reportController.getReport);
 
-router.post('/assign-eblock', eblockController.addeblock)
+router.post("/assign-eblock", eblockController.addeblock);
 
-router.get('/eblock', eblockController.geteblock)
-
+router.get("/eblock", eblockController.geteblock);
 
 module.exports = router;

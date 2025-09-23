@@ -1,3 +1,4 @@
+const mongoose = require("mongoose")
 const RecheckingRequestSchema = new mongoose.Schema({
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,

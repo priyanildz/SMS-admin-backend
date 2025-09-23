@@ -11,7 +11,7 @@ const VehicleSchema = new mongoose.Schema({
   // assignedroute: String,
   status: {
     type: String,
-    enum: ["active", "inactive"],
+    enum: ["active", "inactive","Active","Inactive"],
     default: "active"
   },
   type: String,
