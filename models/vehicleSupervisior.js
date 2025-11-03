@@ -35,6 +35,10 @@ const StaffSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  photo: {
+    type: String,
+    default: null, // It's not required, so default to null
+  },
   createdAt: {
     type: Date,
     default: Date.now,

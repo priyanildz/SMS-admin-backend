@@ -90,7 +90,7 @@ const studentSchema = new mongoose.Schema(
       },
       relationwithstudent: {
         type: String,
-        enum: ["father", "mother", "guardian", "other",""],
+        enum: ["father", "mother", "guardian", "other", ""],
       },
       primarycontact: {
         type: String,
@@ -171,7 +171,7 @@ const studentSchema = new mongoose.Schema(
       },
       admissiontype: {
         type: String,
-        enum: ["regular", "transfer", "other",""],
+        enum: ["regular", "transfer", "other", ""],
       },
       lastschoolname: {
         type: String,
@@ -212,8 +212,36 @@ const studentSchema = new mongoose.Schema(
       },
       modetransport: {
         type: String,
-        enum: ["bus", "van", "rickshaw", "self", "other",""],
+        enum: ["bus", "van", "rickshaw", "self", "other", ""],
       },
+      // ➕ Newly added fields
+      busnumber: {
+        type: String,
+        trim: true,
+      },
+      busroute: {
+        type: String,
+        trim: true,
+      },
+      drivername: {
+        type: String,
+        trim: true,
+      },
+      supervisorname: {
+        type: String,
+        trim: true,
+      },
+      contactdetails: {
+        type: String,
+        match: /^[0-9]{10}$/, // Validate 10-digit number
+      },
+    },
+
+    academicHistory: {
+      year: { type: String, trim: true }, // Removed required:true if it's optional
+      standard: { type: String, trim: true },
+      division: { type: String, trim: true },
+      // Add other relevant fields for a single history record if needed
     },
   },
   {

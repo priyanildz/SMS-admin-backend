@@ -1,15 +1,16 @@
 const mongoose = require("mongoose");
-require("dotenv").config();
+
+// REMOVED: require("dotenv").config(); - This should only be in index.js
 
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // Removed deprecated options: useNewUrlParser and useUnifiedTopology
     });
     console.log("MongoDB Atlas Connected");
   } catch (err) {
     console.error("MongoDB Connection Error:", err.message);
+    process.exit(1);
   }
 };
 

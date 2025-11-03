@@ -210,6 +210,8 @@ router.get("/roles", roleController.getRoles);
 router.post("/attendance", studentController.getAttendance);
 
 router.get("/all-attendance", studentController.getAllAttendance);
+// router.js (You need to add this to your main router file)
+router.get("/staff/:staffid/subjects", staffController.getStaffSubjects);
 
 router.get("/combined-fees", feeController.getCombinedFees);
 
@@ -245,9 +247,9 @@ router.post("/assign-paper", paperEvaluationController.addEval);
 
 router.get("/assigned-papers", paperEvaluationController.getEval);
 
-router.post("/add-supervisior", supervisiorController.addSupervisior);
+router.post("/add-supervisor", supervisiorController.addSupervisor);
 
-router.get("/get-supervisior", supervisiorController.getSupervisior);
+router.get("/get-supervisor", supervisiorController.getSupervisor);
 
 router.post("/add-report", reportController.addReport);
 
@@ -256,5 +258,17 @@ router.get("/reports", reportController.getReport);
 router.post("/assign-eblock", eblockController.addeblock);
 
 router.get("/eblock", eblockController.geteblock);
+
+// ADD STAFF ATTENDANCE (New Route)
+router.post("/add-attendance", staffController.addAttendance);
+
+// Example in your staffRoutes.js or equivalent file:
+router.get("/staff/:staffid/attendance", staffController.getStaffAttendance);
+
+// UPDATE STAFF ATTENDANCE (New Route)
+router.put("/update-attendance", staffController.updateAttendance);
+
+// Add the route for fetching staff-specific timetable data
+router.get("/staff/:staffid/timetable", staffController.getStaffTimetable);
 
 module.exports = router;
