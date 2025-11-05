@@ -24,14 +24,25 @@ app.use(cors({
 // for body data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(authMiddleware) //check auth
 
-app.use("/api", routes) //all routes (entry point)
-
-// Add a simple root route for Vercel to ping and confirm the function is running
+// 🛑 STEP 1: ADD UNPROTECTED TEST ROUTE HERE
+// When you visit the Vercel URL (e.g., /api/), this route runs first 
+// and confirms the server is alive BEFORE the authentication check runs.
 app.get('/', (req, res) => {
-    res.status(200).send('API is running.');
+    res.status(200).send('API is running successfully! Authentication will apply to all subsequent routes.');
 });
+
+
+// 🛑 STEP 2: APPLY AUTH MIDDLEWARE TO EVERYTHING ELSE
+// Any requests that make it past this point (e.g., /api/users) will require the 'auth' header.
+app.use(authMiddleware) 
+
+
+// 🛑 STEP 3: APPLY ALL OTHER ROUTES
+// Note: Since all your specific API routes are mounted under "/api" here, 
+// and the Vercel rewrite routes the root (/) to this entire file, 
+// the full URL for your routes will be: https://your-domain.vercel.app/api/route-name
+app.use("/api", routes) 
 
 
 // !!! REMOVE app.listen() !!!
