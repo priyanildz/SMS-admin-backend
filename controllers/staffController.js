@@ -611,7 +611,6 @@
 //     }
 // };
 
-
 const Staff = require("../models/staffModel");
 const staffAddress = require("../models/staffAddressModel");
 const staffEductaion = require("../models/staffEducationModel");
@@ -624,9 +623,10 @@ const staffLeave = require("../models/staffLeave");
 const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
 
-// NOTE: You will need a model for allocated subjects. Assuming SubjectAllotment is available.
-// Example: const SubjectAllotment = require("../models/subjectAllotmentModel"); 
-// Since the model is not provided, we will use a placeholder query.
+// 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
+// If your model is named differently, update the line below accordingly.
+// const SubjectAllotment = require("../models/subjectAllotmentModel"); 
+// For now, using a placeholder logic inside the function.
 
 // Helper function to create/update sub-documents using upsert
 const upsertStaffSubDoc = async (Model, staffid, data, fieldsToUpdate) => {
@@ -1224,13 +1224,13 @@ exports.getHealthStatus = (req, res) => {
 exports.addResignedStaff = async (req, res) => {
     try {
         const { staffid } = req.params;
-    
+        
         if (!staffid) {
             return res.status(400).send({ message: "Please provide staffid" });
         }
     
         const staff = await staffRole.findOne({ staffid });
-    
+        
         if (!staff) {
             return res.status(404).send({ message: "No staff found with this ID" });
         }
