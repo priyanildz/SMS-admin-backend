@@ -9,8 +9,6 @@ const staffDocs = require("../models/staffDocument");
 const staffLeave = require("../models/staffLeave");
 const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
-const staffExperience = require("../models/staffExperienceModel"); 
-const staffRole = require("../models/staffRole"); 
 
 // Helper function to create/update sub-documents using upsert
 const upsertStaffSubDoc = async (Model, staffid, data, fieldsToUpdate) => {
@@ -31,61 +29,6 @@ const upsertStaffSubDoc = async (Model, staffid, data, fieldsToUpdate) => {
             runValidators: true 
         }
     );
-};
-
-// =========================================================================
-// GET STAFF HISTORY (Updated to fetch real data)
-// =========================================================================
-exports.getStaffHistory = async (req, res) => {
-    try {
-        const staffId = req.params.staffid;
-
-        // 1. Fetch Staff Role (for joining date/current role)
-        const staffCurrentRole = await staffRole.findOne({ staffid: staffId }).lean();
-
-        // 2. Fetch Staff Experience (for previous roles)
-        const staffPreviousExperience = await staffExperience.findOne({ staffid: staffId }).lean();
-        
-        const history = [];
-
-        // 3. Add Joining Event (from Staff Role)
-        if (staffCurrentRole && staffCurrentRole.joiningdate) {
-            history.push({
-                id: 'join',
-                label: `Joined as ${staffCurrentRole.position || 'Staff'} in the ${staffCurrentRole.dept || 'N/A'} Department.`,
-                date: staffCurrentRole.joiningdate, // Assuming joiningdate is a Date object or ISO string
-            });
-        }
-
-        // 4. Add Previous Employer History (from Staff Experience)
-        if (staffPreviousExperience && staffPreviousExperience.previousemployer) {
-             // Since staffExperience is a single document detailing TOTAL experience, 
-             // we create a single history event summarizing it.
-             const totalExp = staffPreviousExperience.totalexperience || 'N/A';
-
-             history.push({
-                id: 'exp',
-                label: `Previous Experience: ${totalExp} years. Last designation: ${staffPreviousExperience.designation || 'N/A'} at ${staffPreviousExperience.previousemployer || 'N/A'}.`,
-                // We use the current date as a placeholder for when this record was added/verified,
-                // or you might use a dedicated 'verificationDate' field if available.
-                date: new Date().toISOString(), 
-            });
-        }
-        
-        // 5. Sort by date (oldest first)
-        history.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-
-        if (history.length > 0) {
-            return res.status(200).json(history);
-        } else {
-            return res.status(200).json([]);
-        }
-    } catch (error) {
-        console.error("Error fetching staff history:", error);
-        // It's crucial to return 500 here if a DB error occurs, not just a successful empty array.
-        return res.status(500).json({ message: "Internal Server Error" }); 
-    }
 };
 
 // =========================================================================
