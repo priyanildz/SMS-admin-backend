@@ -271,4 +271,6 @@ router.put("/update-attendance", staffController.updateAttendance);
 // Add the route for fetching staff-specific timetable data
 router.get("/staff/:staffid/timetable", staffController.getStaffTimetable);
 
+router.get("/staff/:staffid/history", staffController.getStaffHistory);
+
 module.exports = router;
