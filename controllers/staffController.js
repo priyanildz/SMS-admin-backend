@@ -672,8 +672,8 @@ exports.getStaffHistory = async (req, res) => {
              
              history.push({
                 id: 'exp',
-                label: `Verified ${totalExp} years of prior service.`,
-                // Use a recent date since there's no start/end date for previous job in this schema
+                label: `Verified ${totalExp} years of prior service. Last employer: ${experienceData.previousemployer}.`,
+                // We use a recent date since there's no specific start/end date for previous job in this schema
                 date: new Date().toISOString(), 
                 details: experienceData, // Pass the full experience object for the Details popup
             });
