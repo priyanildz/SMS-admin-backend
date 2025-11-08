@@ -1118,7 +1118,7 @@ exports.getStaffSubjects = async (req, res) => {
 };
 
 // =========================================================================
-// GET STAFF TIMETABLE (MODIFIED TO FETCH REAL DATA) 🚀
+// GET STAFF TIMETABLE (MODIFIED AND FIXED FOR 500 ERROR) 🚀
 // =========================================================================
 exports.getStaffTimetable = async (req, res) => {
     try {
@@ -1135,59 +1135,69 @@ exports.getStaffTimetable = async (req, res) => {
             return res.status(404).json({ message: "Staff not found." });
         }
 
-        const staffMongoId = staffMember._id;
+        const staffMongoId = staffMember._id; // This is a Mongoose ObjectId
 
-        // 2. Query the Timetable model. Find all entries where the staff member 
-        // is the class teacher OR is assigned as a teacher in any period.
+        // 2. Query the Timetable model.
+        // We ensure the query is fast by filtering on indexed fields.
         const allTimetables = await Timetable.find({
             $or: [
                 { classteacher: staffMongoId },
                 { 'timetable.periods.teacher': staffMongoId }
             ]
-        }).lean(); // Use .lean() for faster query results
+        }).lean(); 
 
         if (!allTimetables || allTimetables.length === 0) {
             return res.status(200).json([]);
         }
 
-        const finalTimetable = {}; // Object to hold periods grouped by time slot
+        const finalTimetable = {}; 
 
         // 3. Process the timetables to extract staff-specific periods
         for (const tt of allTimetables) {
+            // Check for valid timetable structure
+            if (!tt.timetable) continue; 
+            
             for (const dayEntry of tt.timetable) {
-                const day = dayEntry.day.substring(0, 3); // Mon, Tue, Wed, etc.
-                
+                // Ensure day is a string and get the property name
+                const dayName = dayEntry.day ? dayEntry.day.trim() : null;
+                if (!dayName) continue; 
+                const dayProp = dayName.substring(0, 3); 
+
+                // Check for valid periods array
+                if (!dayEntry.periods || !Array.isArray(dayEntry.periods)) continue;
+
                 for (const period of dayEntry.periods) {
+                    if (!period || !period.time) continue;
+
                     const timeSlot = period.time;
                     
-                    // Initialize the time slot in the final result object if it doesn't exist
+                    // Initialize the time slot in the final result object
                     if (!finalTimetable[timeSlot]) {
                         finalTimetable[timeSlot] = { time: timeSlot, Mon: '', Tue: '', Wed: '', Thu: '' };
                     }
 
-                    // Check if the current staff member is assigned to this period
-                    // NOTE: The period.teacher is an ObjectId, so we compare using .equals() or toString()
-                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
-                        
-                        // Format: Subject (Standard Division)
+                    // --- CRITICAL FIXES APPLIED HERE ---
+                    const isAssignedTeacher = period.teacher && period.teacher.toString() === staffMongoId.toString();
+                    const isClassTeacher = tt.classteacher && tt.classteacher.toString() === staffMongoId.toString();
+
+                    if (isAssignedTeacher) {
+                        // Priority 1: Assigned to teach this period
                         const classLabel = `${period.subject} (${tt.standard}${tt.division})`;
+                        finalTimetable[timeSlot][dayProp] = classLabel;
                         
-                        // Assign the class to the correct day property (e.g., Mon, Tue)
-                        finalTimetable[timeSlot][day] = classLabel;
-                        
-                    } else if (!period.teacher && period.subject.toLowerCase().includes('break')) {
-                        // If it's a break/assembly, show it only if the staff is the class teacher for that class, 
-                        // or if the time slot hasn't been assigned yet.
-                         if (tt.classteacher.toString() === staffMongoId.toString() && finalTimetable[timeSlot][day] === '') {
-                             finalTimetable[timeSlot][day] = period.subject; // e.g., 'Break' or 'Assembly'
-                         }
+                    } else if (!period.teacher && isClassTeacher && period.subject) {
+                        // Priority 2: Not teaching, but it's a non-class period (e.g., break/assembly)
+                        // and the staff member is the class teacher for this timetable.
+                        if (finalTimetable[timeSlot][dayProp] === '') {
+                             finalTimetable[timeSlot][dayProp] = period.subject; // e.g., 'Break'
+                        }
                     }
+                    // --- END CRITICAL FIXES ---
                 }
             }
         }
         
-        // Convert the final object back into the array format expected by the frontend
-        // Sort by time (you may need better sorting if time strings are not consistently formatted)
+        // 4. Convert to array and sort
         const sortedTimetable = Object.values(finalTimetable).sort((a, b) => 
             a.time.localeCompare(b.time)
         );
@@ -1195,7 +1205,8 @@ exports.getStaffTimetable = async (req, res) => {
         return res.status(200).json(sortedTimetable);
 
     } catch (error) {
-        console.error("Error fetching staff timetable:", error);
+        console.error("Error fetching staff timetable (CAUGHT CRASH):", error);
+        // Returning a 500 with the error message helps the frontend show details
         return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
     }
 };
