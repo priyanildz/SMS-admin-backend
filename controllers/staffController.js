@@ -977,60 +977,6 @@ exports.getStaffAttendance = async (req, res) => {
 };
 
 // =========================================================================
-// GET MONTHLY STAFF ATTENDANCE (FIXED FOR STRING DATE FIELD) 🚀
-// =========================================================================
-exports.getMonthlyStaffAttendance = async (req, res) => {
-    try {
-        const { month, year } = req.query;
-
-        if (!month || !year) {
-            return res.status(400).json({ message: "Month and Year query parameters are required." });
-        }
-
-        const yearInt = parseInt(year);
-        if (isNaN(yearInt)) {
-            return res.status(400).json({ message: "Invalid year format provided." });
-        }
-
-        // --- Determine Month Index and Format Prefix ---
-        // We assume the stored date format in the DB is YYYY-MM-DD or similar.
-        const dateObj = new Date(`${month} 1, ${yearInt}`);
-        if (isNaN(dateObj.getTime())) {
-             return res.status(400).json({ message: "Invalid month name provided." });
-        }
-        
-        // Format the month number with a leading zero (e.g., 11 for Nov)
-        const monthNumber = String(dateObj.getMonth() + 1).padStart(2, '0');
-
-        // Create the string prefix for the month, e.g., "2025-11"
-        const dateStringPrefix = `${yearInt}-${monthNumber}`;
-        
-        // --- Query using String Pattern Match (Mongoose/MongoDB Regex) ---
-        const filter = {
-            // Use a regular expression to find all dates that start with the YYYY-MM prefix.
-            // This is necessary because the DB field 'date' is a String, not a Date type.
-            date: { 
-                $regex: `^${dateStringPrefix}` 
-            }
-        };
-        
-        console.log(`DEBUG: Querying StaffAttendance for string dates starting with: ${dateStringPrefix}`);
-        
-        // Fetch all attendance records for the month
-        const attendanceRecords = await StaffAttendance.find(filter).sort({ staffid: 1, date: 1 }).lean();
-
-        return res.status(200).json(attendanceRecords);
-    } catch (error) {
-        console.error("❌ FINAL SERVER CRASH IN ATTENDANCE:", error.stack); 
-        return res.status(500).json({ 
-            error: error.message, 
-            message: "Internal Server Error. Please check backend logs for Mongoose/Regex issues." 
-        });
-    }
-};
-
-
-// =========================================================================
 // GET STAFF BY ID (Modified to fetch all related documents)
 // =========================================================================
 exports.getStaffById = async (req, res) => {
