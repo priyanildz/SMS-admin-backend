@@ -976,6 +976,57 @@ exports.getStaffAttendance = async (req, res) => {
     }
 };
 
+// =========================================================================
+// GET MONTHLY STAFF ATTENDANCE (Optimized for Attendance Tracker Grid) 🚀
+// =========================================================================
+exports.getMonthlyStaffAttendance = async (req, res) => {
+    try {
+        const { month, year } = req.query;
+
+        if (!month || !year) {
+            return res.status(400).json({ message: "Month and Year query parameters are required." });
+        }
+
+        let monthIndex; // 0 for Jan, 11 for Dec
+        const yearInt = parseInt(year);
+
+        if (isNaN(yearInt)) {
+            return res.status(400).json({ message: "Invalid year format provided." });
+        }
+
+        // Determine month index (0-11)
+        if (!isNaN(month) && Number(month) >= 1 && Number(month) <= 12) {
+            monthIndex = Number(month) - 1; 
+        } else {
+            const dateStr = `${month} 1, ${year}`;
+            const parsedDate = Date.parse(dateStr);
+            if (isNaN(parsedDate)) {
+                return res.status(400).json({ message: "Invalid month format provided." });
+            }
+            monthIndex = new Date(parsedDate).getMonth();
+        }
+        
+        // Calculate the date boundaries for the query
+        const startOfMonth = new Date(yearInt, monthIndex, 1);
+        const endOfMonth = new Date(yearInt, monthIndex + 1, 1);
+
+        const filter = {
+            date: { 
+                $gte: startOfMonth, 
+                $lt: endOfMonth 
+            }
+        };
+        
+        // Fetch all attendance records within the month
+        const attendanceRecords = await StaffAttendance.find(filter).sort({ staffid: 1, date: 1 });
+
+        return res.status(200).json(attendanceRecords);
+    } catch (error) {
+        console.error("Error fetching monthly staff attendance:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during monthly attendance fetch." });
+    }
+};
+
 
 // =========================================================================
 // GET STAFF BY ID (Modified to fetch all related documents)
