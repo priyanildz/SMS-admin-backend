@@ -976,6 +976,62 @@ exports.getStaffAttendance = async (req, res) => {
     }
 };
 
+// =========================================================================
+// GET MONTHLY STAFF ATTENDANCE (FIXED for Date Type in Model) 🚀
+// =========================================================================
+exports.getMonthlyStaffAttendance = async (req, res) => {
+    try {
+        const { month, year } = req.query;
+
+        if (!month || !year) {
+            return res.status(400).json({ message: "Month and Year query parameters are required." });
+        }
+
+        let monthIndex; // 0 for Jan, 11 for Dec
+        const yearInt = parseInt(year);
+
+        if (isNaN(yearInt)) {
+            return res.status(400).json({ message: "Invalid year format provided." });
+        }
+
+        // --- Robust Month Parsing ---
+        if (!isNaN(month) && Number(month) >= 1 && Number(month) <= 12) {
+            monthIndex = Number(month) - 1; 
+        } else {
+            const dateObj = new Date(`${month} 1, ${yearInt}`);
+            if (isNaN(dateObj.getTime())) {
+                return res.status(400).json({ message: "Invalid month name provided." });
+            }
+            monthIndex = dateObj.getMonth();
+        }
+        
+        // --- Calculate the date boundaries using Date objects (Correct for Model: Date) ---
+        const startOfMonth = new Date(yearInt, monthIndex, 1);
+        const endOfMonth = new Date(yearInt, monthIndex + 1, 1);
+
+        const filter = {
+            date: { 
+                $gte: startOfMonth, // Query uses Date objects now
+                $lt: endOfMonth     // Query uses Date objects now
+            }
+        };
+        
+        console.log(`DEBUG: Querying StaffAttendance for Date Range: ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
+        
+        // Fetch all attendance records within the month
+        const attendanceRecords = await StaffAttendance.find(filter).sort({ staffid: 1, date: 1 }).lean();
+
+        return res.status(200).json(attendanceRecords);
+    } catch (error) {
+        // Logging the full error stack is essential for 500 errors.
+        console.error("❌ CRITICAL SERVER ERROR in getMonthlyStaffAttendance:", error.stack); 
+        return res.status(500).json({ 
+            error: error.message, 
+            message: "Internal Server Error. The date format logic is likely still the cause. Check DB connection." 
+        });
+    }
+};
+
 
 // =========================================================================
 // GET STAFF BY ID (Modified to fetch all related documents)
