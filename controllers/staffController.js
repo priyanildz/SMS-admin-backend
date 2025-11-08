@@ -1129,61 +1129,36 @@ exports.getStaffTimetable = async (req, res) => {
             return res.status(400).json({ message: "Staff ID is required." });
         }
 
-        // --- Fetch Actual Timetable Data ---
-        // 🚨 IMPORTANT: The actual query depends entirely on your Timetable Model structure.
-        // Assuming you have a Timetable model (let's call it Timetable) 
-        // that stores an array of daily schedules or the full weekly schedule 
-        // in the format expected by the frontend.
-        
-        // 1. Find the Staff document by staffid to get its MongoDB _id (if your timetable uses this reference)
+        // --- 1. Find the Staff's MongoDB ID ---
+        // We assume the Timetable model uses the staff's MongoDB _id as a reference.
         const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
 
         if (!staffMember) {
+            console.log(`DEBUG: Timetable - Staff ID ${staffid} not found.`);
             return res.status(404).json({ message: "Staff not found." });
         }
         
         const staffMongoId = staffMember._id; 
         
-        // Example Query: Querying a hypothetical Timetable model
-        // that is indexed by the Staff's MongoDB _id reference.
-        // We sort by 'time' or 'periodIndex' to ensure order.
-        
-        // NOTE: You need to replace 'Timetable' with your actual model name
-        // and adjust the filter/find method based on your schema.
-        
-        // We will use the SubjectAllocation model logic for demonstration, 
-        // as it's the only other subject-related model imported:
-        // *** This is a complex logic that will only work if your Timetable Model is built to store data for Nidhi Pandey
-        // in a specific structure. ***
+        // --- 2. Query the Timetable Database ---
+        // This is the CRITICAL change: Replace the mock array with a Mongoose query.
         
         const staffTimetable = await Timetable.find({ 
-            // Assuming your Timetable model has a 'staff' field referencing the staff's Mongo ID
-            staff: staffMongoId 
+            // Assuming your Timetable model links to staff using a field like 'teacherId' or 'staffMongoId'
+            staffMongoId: staffMongoId 
+            // OR if it's indexed by the string staffid: staffid 
         })
-        .sort({ periodStartTime: 1 }) // Sort by period time for correct table order
+        .sort({ periodStartTime: 1 }) // Crucial for correct ordering in the table
         .lean(); // Use .lean() for faster query results
+
+        console.log(`DEBUG: Timetable - Fetched ${staffTimetable.length} records for Mongo ID: ${staffMongoId}`);
 
         if (!staffTimetable || staffTimetable.length === 0) {
             return res.status(200).json([]);
         }
         
-        // --- Data Transformation (If necessary) ---
-        // If your database schema is different from the frontend's expected format,
-        // you'll need to transform it here.
-        // Example: If each DB record is a single class: { time: '7:00', day: 'Mon', subject: 'Maths (8A)'}
-        /*
-        const timetableMap = {};
-        staffTimetable.forEach(item => {
-            if (!timetableMap[item.timeSlot]) {
-                timetableMap[item.timeSlot] = { time: item.timeSlot };
-            }
-            timetableMap[item.timeSlot][item.day.substring(0, 3)] = `${item.subject} (${item.classId})`;
-        });
-        const finalTimetable = Object.values(timetableMap);
-        */
-        
-        // Returning the raw data, assuming your DB query/schema matches the mock structure 
-        // (i.e., each DB document is a row like { time: "...", Mon: "...", Tue: "...", ... })
+        // --- 3. Return the fetched data (must be in the format the frontend expects) ---
+        // Frontend expects: [{ time: "...", Mon: "...", Tue: "...", ... }, ...]
         return res.status(200).json(staffTimetable);
         
     } catch (error) {
