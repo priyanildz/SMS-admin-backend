@@ -624,6 +624,7 @@ const staffDocs = require("../models/staffDocument");
 const staffLeave = require("../models/staffLeave");
 const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
+const SubjectAllocation = require("../models/subjectallocationModel");
 
 // 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
 // If your model is named differently, update the line below accordingly.
@@ -1057,23 +1058,63 @@ exports.getStaff = async (req, res) => {
     }
 };
 
-// staffController.js (You need to add this to your staff controller file)
+// =========================================================================
+// GET STAFF SUBJECTS (MODIFIED TO FETCH REAL DATA) 🚀
+// =========================================================================
 exports.getStaffSubjects = async (req, res) => {
-    // 1. Get staffid from params
-    const { staffid } = req.params;
-    
-    // 2. Look up the staff member's teaching blocks/roles
-    // This is where you would query your AcademicBlock or StaffRole model
-    // For now, we'll return mock data to confirm the route works
-    
-    const mockAssignments = [
-        { subject: 'Mathematics', standard: 8, division: 'A' },
-        { subject: 'Science', standard: 8, division: 'B' },
-        // ... (data that matches the frontend table structure)
-    ];
+    try {
+        const { staffid } = req.params;
 
-    // Assuming the staff role lookup is complex, let's just return a generic list for now
-    return res.status(200).json(mockAssignments);
+        // 1. Find the Staff document by staffid to get its MongoDB _id
+        // NOTE: The Staff model's primary key is likely the MongoDB _id,
+        // which is what the SubjectAllocation model's 'teacher' field references.
+        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
+
+        if (!staffMember) {
+            console.log(`DEBUG: StaffSubjects - Staff ID ${staffid} not found.`);
+            return res.status(404).json({ message: "Staff not found." });
+        }
+
+        const staffMongoId = staffMember._id;
+        console.log(`DEBUG: Staff ID ${staffid} corresponds to Mongo ID: ${staffMongoId}`);
+
+        // 2. Query the SubjectAllocation model using the Staff's MongoDB _id
+        const allocationRecords = await SubjectAllocation.find({ 
+            teacher: staffMongoId 
+        });
+
+        if (!allocationRecords || allocationRecords.length === 0) {
+            console.log(`DEBUG: StaffSubjects - No subject allocations found for Mongo ID: ${staffMongoId}`);
+            return res.status(200).json([]);
+        }
+
+        // 3. Transform the data to the format expected by the frontend:
+        // [{ subject: 'Mathematics', standard: 8, division: 'A' }, ...]
+        
+        const assignments = [];
+
+        // SubjectAllocation model stores arrays for subjects, standards, and divisions
+        allocationRecords.forEach(record => {
+            // Assuming that subjects, standards, and divisions are parallel arrays 
+            // and should be combined into separate assignment objects.
+            // This is a common but sometimes complex data structure.
+            for (let i = 0; i < record.subjects.length; i++) {
+                assignments.push({
+                    subject: record.subjects[i],
+                    standard: record.standards[i] || 'N/A', // Handle potential misalignment
+                    division: record.divisions[i] || 'N/A' // Handle potential misalignment
+                });
+            }
+        });
+
+        console.log("DEBUG: StaffSubjects - Fetched and formatted assignments:", assignments);
+        
+        return res.status(200).json(assignments);
+
+    } catch (error) {
+        console.error("Error fetching staff subjects:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during subject fetch." });
+    }
 };
 
 exports.getStaffTimetable = async (req, res) => {
