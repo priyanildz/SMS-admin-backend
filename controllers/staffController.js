@@ -977,7 +977,7 @@ exports.getStaffAttendance = async (req, res) => {
 };
 
 // =========================================================================
-// GET MONTHLY STAFF ATTENDANCE (Optimized for Attendance Tracker Grid) 🚀
+// GET MONTHLY STAFF ATTENDANCE (Optimized and Robust Date Handling) 🚀
 // =========================================================================
 exports.getMonthlyStaffAttendance = async (req, res) => {
     try {
@@ -994,19 +994,22 @@ exports.getMonthlyStaffAttendance = async (req, res) => {
             return res.status(400).json({ message: "Invalid year format provided." });
         }
 
-        // Determine month index (0-11)
+        // --- Refined Month Parsing ---
+        // 1. Try parsing directly if the month is a number (1-12)
         if (!isNaN(month) && Number(month) >= 1 && Number(month) <= 12) {
             monthIndex = Number(month) - 1; 
         } else {
-            const dateStr = `${month} 1, ${year}`;
-            const parsedDate = Date.parse(dateStr);
-            if (isNaN(parsedDate)) {
-                return res.status(400).json({ message: "Invalid month format provided." });
+            // 2. Otherwise, assume it's a string (e.g., "November")
+            // Use the standard Date constructor to parse month name
+            const dateObj = new Date(`${month} 1, ${year}`);
+            if (isNaN(dateObj.getTime())) { // Check if date is valid
+                return res.status(400).json({ message: "Invalid month name provided." });
             }
-            monthIndex = new Date(parsedDate).getMonth();
+            monthIndex = dateObj.getMonth();
         }
         
-        // Calculate the date boundaries for the query
+        // --- Calculate the date boundaries for the query ---
+        // CRITICAL: MongoDB Date objects match precisely, ensuring the boundaries are correct
         const startOfMonth = new Date(yearInt, monthIndex, 1);
         const endOfMonth = new Date(yearInt, monthIndex + 1, 1);
 
@@ -1017,13 +1020,19 @@ exports.getMonthlyStaffAttendance = async (req, res) => {
             }
         };
         
+        // Log the filter for debugging purposes (optional but helpful)
+        console.log(`Attendance Filter: Month Index ${monthIndex}, Range: ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
+        
         // Fetch all attendance records within the month
-        const attendanceRecords = await StaffAttendance.find(filter).sort({ staffid: 1, date: 1 });
+        const attendanceRecords = await StaffAttendance.find(filter).sort({ staffid: 1, date: 1 }).lean();
 
         return res.status(200).json(attendanceRecords);
     } catch (error) {
-        console.error("Error fetching monthly staff attendance:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during monthly attendance fetch." });
+        console.error("❌ CRITICAL SERVER ERROR in getMonthlyStaffAttendance:", error.stack); // Log stack for 500 debugging
+        return res.status(500).json({ 
+            error: error.message, 
+            message: "Internal Server Error during monthly attendance fetch. Check model/DB connection." 
+        });
     }
 };
 
