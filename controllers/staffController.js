@@ -1117,87 +1117,30 @@ exports.getStaffSubjects = async (req, res) => {
     }
 };
 
-// =========================================================================
-// GET STAFF TIMETABLE (MODIFIED TO FETCH REAL DATA) 🚀
-// =========================================================================
 exports.getStaffTimetable = async (req, res) => {
-    try {
-        const { staffid } = req.params;
-        
-        if (!staffid) {
-            return res.status(400).json({ message: "Staff ID is required." });
-        }
+    try {
+        const { staffid } = req.params;
+        
+        if (!staffid) {
+            return res.status(400).json({ message: "Staff ID is required." });
+        }
 
-        // 1. Find the Staff document by staffid to get its MongoDB _id
-        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
-
-        if (!staffMember) {
-            return res.status(404).json({ message: "Staff not found." });
-        }
-
-        const staffMongoId = staffMember._id;
-
-        // 2. Query the Timetable model. Find all entries where the staff member 
-        // is the class teacher OR is assigned as a teacher in any period.
-        const allTimetables = await Timetable.find({
-            $or: [
-                { classteacher: staffMongoId },
-                { 'timetable.periods.teacher': staffMongoId }
-            ]
-        }).lean(); // Use .lean() for faster query results
-
-        if (!allTimetables || allTimetables.length === 0) {
-            return res.status(200).json([]);
-        }
-
-        const finalTimetable = {}; // Object to hold periods grouped by time slot
-
-        // 3. Process the timetables to extract staff-specific periods
-        for (const tt of allTimetables) {
-            for (const dayEntry of tt.timetable) {
-                const day = dayEntry.day.substring(0, 3); // Mon, Tue, Wed, etc.
-                
-                for (const period of dayEntry.periods) {
-                    const timeSlot = period.time;
-                    
-                    // Initialize the time slot in the final result object if it doesn't exist
-                    if (!finalTimetable[timeSlot]) {
-                        finalTimetable[timeSlot] = { time: timeSlot, Mon: '', Tue: '', Wed: '', Thu: '' };
-                    }
-
-                    // Check if the current staff member is assigned to this period
-                    // NOTE: The period.teacher is an ObjectId, so we compare using .equals() or toString()
-                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
-                        
-                        // Format: Subject (Standard Division)
-                        const classLabel = `${period.subject} (${tt.standard}${tt.division})`;
-                        
-                        // Assign the class to the correct day property (e.g., Mon, Tue)
-                        finalTimetable[timeSlot][day] = classLabel;
-                        
-                    } else if (!period.teacher && period.subject.toLowerCase().includes('break')) {
-                        // If it's a break/assembly, show it only if the staff is the class teacher for that class, 
-                        // or if the time slot hasn't been assigned yet.
-                         if (tt.classteacher.toString() === staffMongoId.toString() && finalTimetable[timeSlot][day] === '') {
-                             finalTimetable[timeSlot][day] = period.subject; // e.g., 'Break' or 'Assembly'
-                         }
-                    }
-                }
-            }
-        }
-        
-        // Convert the final object back into the array format expected by the frontend
-        // Sort by time (you may need better sorting if time strings are not consistently formatted)
-        const sortedTimetable = Object.values(finalTimetable).sort((a, b) => 
-            a.time.localeCompare(b.time)
-        );
-
-        return res.status(200).json(sortedTimetable);
-
-    } catch (error) {
-        console.error("Error fetching staff timetable:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
-    }
+        // --- REPLACE MOCK DATA WITH YOUR ACTUAL DATABASE QUERY ---
+        // You would typically query a Timetable model filtered by staffid.
+        
+        const mockTimetable = [
+            { time: "7:00 to 7:30", Mon: "Maths (8A)", Tue: "Free", Wed: "History (9C)", Thu: "English (7B)" },
+            { time: "7:30 to 8:00", Mon: "Science (8B)", Tue: "Maths (9A)", Wed: "History (9C)", Thu: "Computer (7C)" },
+            { time: "8:00 to 8:30", Mon: "Assembly", Tue: "Free", Wed: "Maths (8B)", Thu: "Hindi (7C)" },
+            // Add more rows to complete the schedule...
+        ];
+        
+        // Return the timetable data
+        return res.status(200).json(mockTimetable);
+    } catch (error) {
+        console.error("Error fetching staff timetable:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
+    }
 };
 
 
