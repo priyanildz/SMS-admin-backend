@@ -625,6 +625,7 @@ const staffLeave = require("../models/staffLeave");
 const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
 const SubjectAllocation = require("../models/subjectAllocation");
+const Timetable = require("../models/timetableModel");
 
 // 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
 // If your model is named differently, update the line below accordingly.
@@ -1117,30 +1118,78 @@ exports.getStaffSubjects = async (req, res) => {
     }
 };
 
+// =========================================================================
+// GET STAFF TIMETABLE (MODIFIED TO FETCH REAL DATA) 🚀
+// =========================================================================
 exports.getStaffTimetable = async (req, res) => {
-    try {
-        const { staffid } = req.params;
-        
-        if (!staffid) {
-            return res.status(400).json({ message: "Staff ID is required." });
-        }
+    try {
+        const { staffid } = req.params;
+        
+        if (!staffid) {
+            return res.status(400).json({ message: "Staff ID is required." });
+        }
 
-        // --- REPLACE MOCK DATA WITH YOUR ACTUAL DATABASE QUERY ---
-        // You would typically query a Timetable model filtered by staffid.
-        
-        const mockTimetable = [
-            { time: "7:00 to 7:30", Mon: "Maths (8A)", Tue: "Free", Wed: "History (9C)", Thu: "English (7B)" },
-            { time: "7:30 to 8:00", Mon: "Science (8B)", Tue: "Maths (9A)", Wed: "History (9C)", Thu: "Computer (7C)" },
-            { time: "8:00 to 8:30", Mon: "Assembly", Tue: "Free", Wed: "Maths (8B)", Thu: "Hindi (7C)" },
-            // Add more rows to complete the schedule...
-        ];
-        
-        // Return the timetable data
-        return res.status(200).json(mockTimetable);
-    } catch (error) {
-        console.error("Error fetching staff timetable:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
-    }
+        // --- Fetch Actual Timetable Data ---
+        // 🚨 IMPORTANT: The actual query depends entirely on your Timetable Model structure.
+        // Assuming you have a Timetable model (let's call it Timetable) 
+        // that stores an array of daily schedules or the full weekly schedule 
+        // in the format expected by the frontend.
+        
+        // 1. Find the Staff document by staffid to get its MongoDB _id (if your timetable uses this reference)
+        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
+
+        if (!staffMember) {
+            return res.status(404).json({ message: "Staff not found." });
+        }
+        
+        const staffMongoId = staffMember._id; 
+        
+        // Example Query: Querying a hypothetical Timetable model
+        // that is indexed by the Staff's MongoDB _id reference.
+        // We sort by 'time' or 'periodIndex' to ensure order.
+        
+        // NOTE: You need to replace 'Timetable' with your actual model name
+        // and adjust the filter/find method based on your schema.
+        
+        // We will use the SubjectAllocation model logic for demonstration, 
+        // as it's the only other subject-related model imported:
+        // *** This is a complex logic that will only work if your Timetable Model is built to store data for Nidhi Pandey
+        // in a specific structure. ***
+        
+        const staffTimetable = await Timetable.find({ 
+            // Assuming your Timetable model has a 'staff' field referencing the staff's Mongo ID
+            staff: staffMongoId 
+        })
+        .sort({ periodStartTime: 1 }) // Sort by period time for correct table order
+        .lean(); // Use .lean() for faster query results
+
+        if (!staffTimetable || staffTimetable.length === 0) {
+            return res.status(200).json([]);
+        }
+        
+        // --- Data Transformation (If necessary) ---
+        // If your database schema is different from the frontend's expected format,
+        // you'll need to transform it here.
+        // Example: If each DB record is a single class: { time: '7:00', day: 'Mon', subject: 'Maths (8A)'}
+        /*
+        const timetableMap = {};
+        staffTimetable.forEach(item => {
+            if (!timetableMap[item.timeSlot]) {
+                timetableMap[item.timeSlot] = { time: item.timeSlot };
+            }
+            timetableMap[item.timeSlot][item.day.substring(0, 3)] = `${item.subject} (${item.classId})`;
+        });
+        const finalTimetable = Object.values(timetableMap);
+        */
+        
+        // Returning the raw data, assuming your DB query/schema matches the mock structure 
+        // (i.e., each DB document is a row like { time: "...", Mon: "...", Tue: "...", ... })
+        return res.status(200).json(staffTimetable);
+        
+    } catch (error) {
+        console.error("Error fetching staff timetable:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
+    }
 };
 
 // add leave request for staff
