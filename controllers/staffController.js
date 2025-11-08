@@ -1117,61 +1117,31 @@ exports.getStaffSubjects = async (req, res) => {
     }
 };
 
-// =========================================================================
-// GET STAFF TIMETABLE (DEBUGGING STAGE 1: RAW DATA FETCH) 🛠️
-// =========================================================================
 exports.getStaffTimetable = async (req, res) => {
-    try {
-        const { staffid } = req.params;
-        
-        if (!staffid) {
-            return res.status(400).json({ message: "Staff ID is required." });
-        }
+    try {
+        const { staffid } = req.params;
+        
+        if (!staffid) {
+            return res.status(400).json({ message: "Staff ID is required." });
+        }
 
-        // 1. Find the Staff document by staffid to get its MongoDB _id
-        // We use findOne and select '_id' only
-        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
-
-        if (!staffMember) {
-            return res.status(404).json({ message: "Staff not found." });
-        }
-
-        const staffMongoId = staffMember._id; // This is a Mongoose ObjectId
-
-        // 2. Query the Timetable model. Find all entries where the staff member 
-        // is the class teacher OR is assigned as a teacher in any period.
-        // We use .lean() to get plain JavaScript objects, avoiding Mongoose document methods during processing.
-        const allTimetables = await Timetable.find({
-            $or: [
-                { classteacher: staffMongoId },
-                { 'timetable.periods.teacher': staffMongoId }
-            ]
-        }).lean(); 
-
-        if (!allTimetables || allTimetables.length === 0) {
-            console.log(`DEBUG: Timetable - No raw timetable records found for ${staffid}.`);
-            return res.status(200).json([]);
-        }
-        
-        // 🚀 DEBUGGING STEP: Temporarily return the RAW data to see if the query itself is the issue.
-        // If the crash stops here, the problem is in the processing logic.
-        console.log(`DEBUG: Timetable - Successfully fetched ${allTimetables.length} raw records.`);
-        
-        // NOTE: The frontend expects a list of periods, so we return a simple mock data 
-        // with the raw data to check the connection. 
-        // If this returns the mock structure below, the query part is successful.
-        return res.status(200).json([
-             { time: "DEBUG 1", Mon: "RAW DATA FETCH SUCCESSFUL", Tue: "", Wed: "", Thu: "" },
-             { time: "DEBUG 2", Mon: JSON.stringify(staffMongoId), Tue: "", Wed: "", Thu: "" }
-        ]);
-
-    } catch (error) {
-        console.error("Error fetching staff timetable (STILL CRASHING HERE):", error);
-        // If it crashes here, the error is in the initial DB query/imports.
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
-    }
+        // --- REPLACE MOCK DATA WITH YOUR ACTUAL DATABASE QUERY ---
+        // You would typically query a Timetable model filtered by staffid.
+        
+        const mockTimetable = [
+            { time: "7:00 to 7:30", Mon: "Maths (8A)", Tue: "Free", Wed: "History (9C)", Thu: "English (7B)" },
+            { time: "7:30 to 8:00", Mon: "Science (8B)", Tue: "Maths (9A)", Wed: "History (9C)", Thu: "Computer (7C)" },
+            { time: "8:00 to 8:30", Mon: "Assembly", Tue: "Free", Wed: "Maths (8B)", Thu: "Hindi (7C)" },
+            // Add more rows to complete the schedule...
+        ];
+        
+        // Return the timetable data
+        return res.status(200).json(mockTimetable);
+    } catch (error) {
+        console.error("Error fetching staff timetable:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
+    }
 };
-
 
 // add leave request for staff
 exports.addLeave = async (req, res) => {
