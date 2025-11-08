@@ -624,7 +624,7 @@ const staffDocs = require("../models/staffDocument");
 const staffLeave = require("../models/staffLeave");
 const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
-const SubjectAllocation = require("../models/subjectallocationModel");
+// const SubjectAllocation = require("../models/subjectallocationModel");
 
 // 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
 // If your model is named differently, update the line below accordingly.
