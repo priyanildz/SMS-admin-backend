@@ -273,4 +273,7 @@ router.get("/staff/:staffid/timetable", staffController.getStaffTimetable);
 
 router.get("/staff/:staffid/history", staffController.getStaffHistory);
 
+// GET ALL STAFF ATTENDANCE (New Route)
+router.get("/get-all-staff-attendance", staffController.getMonthlyAttendanceForAllStaff);
+
 module.exports = router;
