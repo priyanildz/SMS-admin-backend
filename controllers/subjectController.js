@@ -21,31 +21,29 @@
 
 // File: ../controllers/subjectController.js (Updated Logic)
 
+// File: ../controllers/subjectController.js
+
 const subjectAllocation = require("../models/subjectAllocation");
 
 exports.addSubjectAllot = async (req, res) => {
     try {
-        const { teacher, teacherName, subjects, standards, divisions, weeklyLectures, teacherIdName } = req.body;
+        const { teacher, teacherName, subjects, standards, divisions, weeklyLectures } = req.body;
 
         if (!teacher || !teacherName || !subjects || !standards || !divisions || !weeklyLectures) {
             return res.status(400).json({ message: "Missing required fields." });
         }
         
-        // 🚀 CRUCIAL CHANGE: Decompose the request into ATOMIC database entries
+        // Decompose the request into ATOMIC database entries (one row per S/S/D combination)
         const recordsToSave = [];
 
-        // Assuming subjects, standards, and divisions are arrays from the frontend
         for (const sub of subjects) {
             for (const std of standards) {
-                // The divisions array now contains the specific divisions for this standard/subject combination
                 for (const div of divisions) {
                     recordsToSave.push({
-                        // teacher and teacherName are single values
-                        teacher: teacher.split(',')[0], // Extract ID if needed, or pass pure ID from frontend
+                        teacher: teacher, // Expecting the ID here, or handle splitting if combined string is passed
                         teacherName: teacherName,
                         
                         // Save subject, standard, and division as single-item arrays
-                        // to match the Mongoose schema: type: [String]
                         subjects: [sub],
                         standards: [std],
                         divisions: [div],
@@ -59,7 +57,6 @@ exports.addSubjectAllot = async (req, res) => {
             return res.status(400).json({ message: "No valid assignments found to save." });
         }
 
-        // Save all decomposed records at once
         await subjectAllocation.insertMany(recordsToSave);
 
         return res
@@ -73,10 +70,47 @@ exports.addSubjectAllot = async (req, res) => {
 
 exports.getAllocations = async (req, res) => {
     try {
-        // Since we are now saving atomic records, simply returning the find result works perfectly.
         const response = await subjectAllocation.find();
         return res.status(200).json(response);
     } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// 🚀 NEW FUNCTION TO FIX THE 404/UPDATE ISSUE
+exports.updateAllocation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { teacher, teacherName, subjects, standards, divisions, weeklyLectures } = req.body;
+
+        // Frontend sends atomic data (single-item arrays) for update
+        const updatedFields = {
+            // Note: If 'teacher' is passed as "ID,Name" from the frontend, you must split it here:
+            // teacher: teacher.split(',')[0], 
+            // Assuming the frontend now correctly passes the ID in the 'teacher' field:
+            teacher: teacher, 
+            teacherName: teacherName,
+            subjects: subjects,
+            standards: standards,
+            divisions: divisions,
+            weeklyLectures: weeklyLectures,
+        };
+
+        const response = await subjectAllocation.findByIdAndUpdate(
+            id,
+            updatedFields,
+            { new: true, runValidators: true }
+        );
+
+        if (!response) {
+            return res.status(404).json({ message: "Subject allotment not found." });
+        }
+
+        return res
+            .status(200)
+            .json({ message: "Subject allotment updated successfully", data: response });
+    } catch (error) {
+        console.error("Error updating subject allotment:", error);
         return res.status(500).json({ error: error.message });
     }
 };
