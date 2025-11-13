@@ -147,7 +147,10 @@ router.post("/newstaffs", staffController.getNewStaffsDetailed);
 // edit an assessment
 router.put("/edit-assessment/:_id", assessmentController.editAssessment);
 
-// ADD MISSING PUT ROUTE FOR UPDATING ALLOTMENTS
+// ADD DELETE ROUTE FOR DELETING ALLOTMENTS
+router.delete("/allotments/:id", subjectController.deleteAllocation);
+
+// ADD PUT ROUTE FOR UPDATING ALLOTMENTS
 router.put("/allotments/:id", subjectController.updateAllocation);
 
 // add subject allotment
