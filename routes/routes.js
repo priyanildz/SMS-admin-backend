@@ -40,6 +40,9 @@ router.get(
 router.get("/timetables", timetableController.getTimetable);
 
 router.post("/timetables/generate", timetableController.generateTimetable);
+
+router.delete("/timetables/:id", timetableController.deleteTimetable);
+
 router.put("/:id/arrange", timetableController.arrangeTimetable);
 // proxy endpoints
 router.post("/add-proxy", proxyController.createProxy);
