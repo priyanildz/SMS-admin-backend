@@ -189,10 +189,9 @@
 //   }
 // };
 
-
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
-const moment = require('moment'); // Using moment.js for reliable date/day calculations
+const moment = require('moment'); // Assuming 'moment' is installed via npm install moment
 
 // --- Helper Data & Functions ---
 
@@ -218,16 +217,15 @@ const fixedPeriods = [
 
 const periodTimes = fixedPeriods.filter(p => p.type === "Period").map(p => p.time);
 const breaksAndLunch = fixedPeriods.filter(p => p.type !== "Period");
-const maxPeriodsPerDay = periodTimes.length; // Should be 8
+const maxPeriodsPerDay = periodTimes.length;
 
 // 2. Mock Holiday List (for demonstration - replace with actual DB fetch)
-// Note: Independence Day (Aug 15) is outside the Nov 2025 - Apr 2026 range.
 const nationalHolidays = [
     "2025-12-25", // Christmas Day
     "2026-01-01", // New Year's Day
     "2026-01-26", // Republic Day
-    "2026-03-24", // Example: Holi
-    "2026-04-03", // Example: Good Friday
+    "2026-03-24", 
+    "2026-04-03", 
 ];
 
 const isHoliday = (date) => {
@@ -237,10 +235,10 @@ const isHoliday = (date) => {
 // 3. Automated Timetable Generation Function (Core Logic)
 const generateDailyTimetable = (std, div, fromDate, toDate, allocations) => {
     const workingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const daysPerWeek = workingDays.length; // 6 days
+    const daysPerWeek = workingDays.length;
 
     // --- 1. Compile all required lectures for the entire week ---
-    const subjectsToSchedule = []; 
+    let subjectsToSchedule = []; 
     let totalWeeklyLectures = 0;
 
     allocations.forEach(alloc => {
@@ -260,80 +258,57 @@ const generateDailyTimetable = (std, div, fromDate, toDate, allocations) => {
         return [];
     }
 
-    // Shuffle the list to ensure fairness and prevent clumping (Round Robin preparation)
+    // Shuffle the list for initial fairness
     subjectsToSchedule.sort(() => Math.random() - 0.5); 
     
     // --- 2. Create the Master Weekly Timetable Template (Mon-Sat) ---
     const weeklyTemplate = [];
-    let lectureIndex = 0; // Index for the subjectsToSchedule list
-
+    let lectureIndex = 0; 
+    
     workingDays.forEach(dayName => {
         const dayPeriods = [];
-        const teachersScheduledToday = new Set();
-        const subjectsScheduledToday = new Set();
-        
-        // Ensure no teacher teaches twice in a row (simple heuristic)
         let lastTeacherId = null; 
-
-        // Get the list of available class slots for this day (8 periods)
         const classSlots = fixedPeriods.filter(p => p.type === "Period");
         
-        // Loop through the 8 class periods
         classSlots.forEach(periodTemplate => {
             let periodEntry = null;
-            let scheduledSubject = null;
-
-            // --- Scheduling Logic: Round Robin with Constraints ---
+            let scheduledLecture = null;
             let attempts = 0;
-            let foundValidLecture = false;
-
-            while (attempts < subjectsToSchedule.length && !foundValidLecture) {
-                const currentLecture = subjectsToSchedule[lectureIndex % subjectsToSchedule.length];
-                const teacher = currentLecture.teacherId;
-                const subject = currentLecture.subject;
-
-                // Constraint Check 1: Has this teacher been scheduled in the previous slot?
-                // Constraint Check 2: Check if this is the last lecture of this type remaining
-                // Constraint Check 3: Has this teacher been used more than the fair average today? (Skipped for simplicity)
-
-                if (teacher !== lastTeacherId) {
-                    // Valid lecture found (or minimal constraint met)
-                    scheduledSubject = currentLecture;
-                    foundValidLecture = true;
+            let initialIndex = lectureIndex % subjectsToSchedule.length;
+            
+            // --- Scheduling Logic: Round Robin with Safety ---
+            
+            while (attempts < subjectsToSchedule.length && subjectsToSchedule.length > 0) {
+                const currentIndex = (initialIndex + attempts) % subjectsToSchedule.length;
+                const currentLecture = subjectsToSchedule[currentIndex];
+                
+                // Constraint Check 1: Avoid same teacher twice in a row
+                if (currentLecture.teacherId !== lastTeacherId) {
+                    scheduledLecture = currentLecture;
+                    // Prepare to remove the lecture by setting lectureIndex to the scheduled index
+                    lectureIndex = currentIndex; 
+                    break;
                 }
                 
-                // Move to the next lecture in the round-robin list
-                lectureIndex++;
                 attempts++;
             }
 
-            if (scheduledSubject) {
-                // Remove the scheduled lecture from the master list (or mark as used)
-                // Using an external index and splicing the array is cleaner than complex modulus logic, 
-                // but let's stick to simple list manipulation for array size consistency.
+            if (scheduledLecture) {
+                // Remove the scheduled lecture and ensure the lectureIndex remains valid
+                subjectsToSchedule.splice(lectureIndex, 1);
+                lectureIndex = lectureIndex % (subjectsToSchedule.length || 1); // CRITICAL: Avoid % 0
                 
-                // For a simpler approach, let's just use the current index (lectureIndex - 1) 
-                // and replace the element with a placeholder, then filter and re-sort later.
-                
-                const scheduledIndex = (lectureIndex - 1) % subjectsToSchedule.length;
-                
-                // Create the period object
                 periodEntry = {
                     periodNumber: periodTemplate.periodNumber,
-                    subject: scheduledSubject.subject,
-                    teacher: scheduledSubject.teacherId,
-                    teacherName: scheduledSubject.teacherName,
+                    subject: scheduledLecture.subject,
+                    teacher: scheduledLecture.teacherId,
+                    teacherName: scheduledLecture.teacherName,
                     time: periodTemplate.time,
                 };
-
-                subjectsToSchedule.splice(scheduledIndex, 1); // Remove the used lecture
-                lectureIndex = lectureIndex % subjectsToSchedule.length; // Reset index if necessary
-
-                lastTeacherId = scheduledSubject.teacherId;
+                lastTeacherId = scheduledLecture.teacherId;
                 
             } else {
-                // If the entire list was searched (attempts = list size) and no valid period was found, 
-                // or the list is empty, schedule a free period.
+                // If no valid lecture was found (either all scheduled or constraint failed)
                 periodEntry = {
                     periodNumber: periodTemplate.periodNumber,
                     subject: subjectsToSchedule.length === 0 ? "Free Period" : "Unscheduled",
@@ -341,11 +316,12 @@ const generateDailyTimetable = (std, div, fromDate, toDate, allocations) => {
                     teacherName: null,
                     time: periodTemplate.time,
                 };
-                lastTeacherId = null; // Reset teacher constraint
+                lastTeacherId = null; 
             }
 
             // Add the period entry and any preceding breaks/lunch
-            const breaks = fixedPeriods.filter(p => p.type !== "Period" && p.time.startsWith(periodTemplate.time.split('-')[0]));
+            const breaks = fixedPeriods.filter(p => p.type !== "Period" && p.time.split('-')[0] === periodTemplate.time.split('-')[0]);
+
             dayPeriods.push(...breaks.map(b => ({
                 periodNumber: b.periodNumber,
                 subject: b.type === "Lunch" ? "Lunch / Recess" : "Break",
@@ -357,8 +333,7 @@ const generateDailyTimetable = (std, div, fromDate, toDate, allocations) => {
             dayPeriods.push(periodEntry);
         });
 
-        // Add the final break/lunch if it follows the last period (12:19-12:24, 12:24-13:00 period 8)
-        // This period structure has the final break before P8, but we must ensure we capture the full structure.
+        // Add any remaining breaks that were not covered by the Period loop (e.g., the final break/lunch)
         const remainingBreaks = fixedPeriods.filter(p => !dayPeriods.some(dp => dp.time === p.time));
         dayPeriods.push(...remainingBreaks.map(b => ({
             periodNumber: b.periodNumber,
@@ -375,13 +350,10 @@ const generateDailyTimetable = (std, div, fromDate, toDate, allocations) => {
         });
     });
 
-    // Check if any lectures remain unallocated and log a warning
     if (subjectsToSchedule.length > 0) {
         console.warn(`Warning: ${subjectsToSchedule.length} lectures remain unallocated after 6 days of scheduling.`);
-        // In a real system, you'd need logic to assign these to free slots (Library/Sub periods).
     }
 
-    // Since the Timetable model stores a weekly template, we return the template.
     return weeklyTemplate;
 };
 
@@ -408,8 +380,8 @@ exports.generateTimetable = async (req, res) => {
         if (!standard || !division || !from || !to || !timing) {
             return res.status(400).json({ error: "Missing required fields (standard, division, timing, from, to)" });
         }
-
-        // 1. Check for existing timetable for this standard/division/date range
+        
+        // 1. Check for existing timetable
         const existingTT = await Timetable.findOne({
             standard,
             division,
@@ -422,7 +394,6 @@ exports.generateTimetable = async (req, res) => {
         }
         
         // 2. Fetch Subject Allocations
-        // Find all allocations that apply to this Std AND this Div
         const subjectAllocations = await SubjectAllocation.find({
             standards: { $in: [standard] },
             divisions: { $in: [division] }
@@ -435,7 +406,6 @@ exports.generateTimetable = async (req, res) => {
         // 3. Generate the Weekly Timetable Template
         const generatedTimetableArray = generateDailyTimetable(standard, division, from, to, subjectAllocations);
         
-        // Find a potential class teacher (e.g., the one with the most subjects assigned)
         const classteacherId = subjectAllocations.length > 0 ? subjectAllocations[0].teacher : null; 
 
         // 4. Create the new Timetable document
@@ -444,6 +414,7 @@ exports.generateTimetable = async (req, res) => {
             division,
             timetable: generatedTimetableArray, 
             submittedby: submittedby || 'Admin', 
+            // classteacher is now optional (required: false in model)
             classteacher: classteacherId, 
             from,
             to,
@@ -456,7 +427,8 @@ exports.generateTimetable = async (req, res) => {
         res.status(201).json({ valid: true, timetable: newTT }); 
     } catch (err) {
         console.error("Error generating timetable:", err);
-        res.status(500).json({ error: err.message });
+        // CRITICAL: Ensure you return an error response, not letting the function crash silently
+        res.status(500).json({ error: "Timetable generation failed on the server: " + err.message }); 
     }
 };
 
@@ -498,7 +470,7 @@ exports.validateTimetable = async (req, res) => {
 exports.arrangeTimetable = async (req, res) => {
   try {
     const { id } = req.params; 
-    const { day, periodNumber, subject, teacher, teacherName, time } = req.body; // Added teacherName
+    const { day, periodNumber, subject, teacher, teacherName, time } = req.body; 
 
     let timetable = await Timetable.findById(id);
     if (!timetable) {
@@ -510,7 +482,6 @@ exports.arrangeTimetable = async (req, res) => {
       return res.status(400).json({ error: "Day not found in timetable" });
     }
 
-    // Find the period by periodNumber OR time (more reliable)
     let period = dayBlock.periods.find((p) => (periodNumber && p.periodNumber === periodNumber) || (time && p.time === time));
     if (!period) {
       return res.status(400).json({ error: "Period not found" });
@@ -518,7 +489,7 @@ exports.arrangeTimetable = async (req, res) => {
 
     period.subject = subject || period.subject;
     period.teacher = teacher || period.teacher;
-    period.teacherName = teacherName || period.teacherName; // Update teacher name
+    period.teacherName = teacherName || period.teacherName; 
     period.time = time || period.time;
 
     await timetable.save();
@@ -529,21 +500,16 @@ exports.arrangeTimetable = async (req, res) => {
 };
 
 /**
- * GET ALL TIMETABLES (Returns a deduplicated list of the latest timetables)
+ * GET ALL TIMETABLES 
  */
 exports.getTimetable = async (req, res) => {
     try {
-        // Fetch all timetables and sort them by the latest update time descending
         const allTimetables = await Timetable.find().sort({ updatedAt: -1 }).lean();
         
-        // Use a Map to store only the latest document for each unique standard/division
         const uniqueTimetablesMap = new Map();
         
         allTimetables.forEach(item => {
-            // Key to uniquely identify a class timetable
             const key = `${item.standard}-${item.division}`; 
-
-            // Since we sorted by updatedAt DESC, the first one encountered for a key is the latest.
             if (!uniqueTimetablesMap.has(key)) {
                 uniqueTimetablesMap.set(key, item);
             }
@@ -555,7 +521,7 @@ exports.getTimetable = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching all timetables:", error);
-        return res.status(500).json({ 
+        res.status(500).json({ 
             message: "Internal Server Error during timetable fetch.", 
             error: error.message 
         });
@@ -563,7 +529,7 @@ exports.getTimetable = async (req, res) => {
 };
 
 /**
- * DELETE TIMETABLE (NEW)
+ * DELETE TIMETABLE 
  */
 exports.deleteTimetable = async (req, res) => {
   try {
