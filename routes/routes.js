@@ -37,29 +37,10 @@ router.get(
   "/:standard/:division/validate",
   timetableController.validateTimetable
 );
-// router.get("/timetables", timetableController.getTimetable);
+router.get("/timetables", timetableController.getTimetable);
 
-// router.post("/timetables/generate", timetableController.generateTimetable);
-// router.put("/:id/arrange", timetableController.arrangeTimetable);
-
-
-// 1. New route for bulk generation
-router.post("/timetables/generate-standard", timetableController.generateAndSaveTimetable); 
-
-// Existing route (now returning only the latest unique timetables)
-router.get("/timetables", timetableController.getTimetable); 
-
-// Existing (or modified existing) routes
-router.get(
-  "/:standard/:division/validate",
-  timetableController.validateTimetable
-);
+router.post("/timetables/generate", timetableController.generateTimetable);
 router.put("/:id/arrange", timetableController.arrangeTimetable);
-
-// 2. New delete route
-router.delete("/timetables/:id", timetableController.deleteTimetable);
-
-
 // proxy endpoints
 router.post("/add-proxy", proxyController.createProxy);
 router.get("/proxies", proxyController.getProxies);
