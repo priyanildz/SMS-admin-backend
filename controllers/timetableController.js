@@ -571,7 +571,7 @@
 
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
-const Staff = require("../models/staffModel"); // Required to potentially get all staff
+const Staff = require("../models/staffModel"); 
 
 // Fixed Period Schedule based on user requirements (Mon-Sat structure)
 const FIXED_PERIOD_STRUCTURE = [
@@ -582,21 +582,20 @@ const FIXED_PERIOD_STRUCTURE = [
   { num: 3, time: "08:24-09:01", type: "Period", duration: 37 },
   { num: null, time: "09:01-09:06", type: "Break", duration: 5 },
   { num: 4, time: "09:06-09:43", type: "Period", duration: 37 },
-  { num: null, time: "09:43-10:13", type: "Lunch", duration: 30 }, // Lunch adjusted
-  { num: 5, time: "10:13-10:50", type: "Period", duration: 37 }, // Adjusted time
-  { num: null, time: "10:50-10:55", type: "Break", duration: 5 }, // Adjusted time
-  { num: 6, time: "10:55-11:32", type: "Period", duration: 37 }, // Adjusted time
-  { num: null, time: "11:32-11:37", type: "Break", duration: 5 }, // Adjusted time
-  { num: 7, time: "11:37-12:14", type: "Period", duration: 37 }, // Adjusted time
-  { num: null, time: "12:14-12:19", type: "Break", duration: 5 }, // Adjusted time
-  { num: 8, time: "12:19-12:55", type: "Period", duration: 36 }, // Adjusted time
+  { num: null, time: "09:43-10:13", type: "Lunch", duration: 30 }, 
+  { num: 5, time: "10:13-10:50", type: "Period", duration: 37 }, 
+  { num: null, time: "10:50-10:55", type: "Break", duration: 5 }, 
+  { num: 6, time: "10:55-11:32", type: "Period", duration: 37 }, 
+  { num: null, time: "11:32-11:37", type: "Break", duration: 5 }, 
+  { num: 7, time: "11:37-12:14", type: "Period", duration: 37 }, 
+  { num: null, time: "12:14-12:19", type: "Break", duration: 5 }, 
+  { num: 8, time: "12:19-12:55", type: "Period", duration: 36 }, 
 ];
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const ALL_DIVISIONS = ["A", "B", "C", "D", "E", "F"]; // All divisions in the school
-const NUM_TEACHING_PERIODS = FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period').length; // 8 periods
+const NUM_TEACHING_PERIODS = FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period').length; 
 
-// Find all teaching slots once for optimization
 const teachingSlots = [];
 WEEKDAYS.forEach(day => {
     FIXED_PERIOD_STRUCTURE.forEach(period => {
@@ -680,61 +679,30 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
   return errors;
 };
 
+
 /**
- * Generates a single, balanced timetable for a Standard/Division.
+ * CORE CHANGE: Generates timetables for ALL divisions internally.
+ * This is the function the frontend will call once.
  */
 exports.generateTimetable = async (req, res) => {
-  // FIX: Destructuring 'division' to ensure it's used instead of defaulting in model
-  const { standard, division, from, to, submittedby, timing } = req.body; 
+  // We only expect these fields from the frontend
+  const { standard, from, to, submittedby, timing } = req.body; 
   const year = new Date().getFullYear(); 
 
-  if (!standard || !division || !from || !to || !submittedby) {
-    return res.status(400).json({ error: "Missing required fields (Standard, Division, date range, submittedby)." });
+  // Validation based on the minimum required fields from the UI
+  if (!standard || !from || !to || !submittedby) {
+    return res.status(400).json({ error: "Missing required fields (Standard, date range, submittedby)." });
   }
 
+  let generatedTimetables = [];
+  let successfulDivisions = [];
+  let failedDivisions = [];
+
   try {
-    // 1. Check for existing timetable based on Standard, DIVISION, and Year
-    const existingTT = await Timetable.findOne({ standard, division, year });
-    if (existingTT) {
-      return res.status(409).json({ error: `Timetable already exists for Standard ${standard} - Division ${division} in year ${year}.` });
-    }
-    
-    // 2. Fetch all relevant allocations for THIS SPECIFIC STANDARD/DIVISION
-    const allocations = await SubjectAllocation.find({ 
-      standards: { $in: [standard] },
-      divisions: { $in: [division] } // Filter by the specific division
-    });
-    
-    if (allocations.length === 0) {
-      return res.status(400).json({ error: `No subject allocations found for Standard ${standard} - Division ${division}. Please ensure allocations are made.` });
-    }
-    
-    // 3. Aggregate Requirements 
-    let requirements = allocations.map(alloc => ({
-        teacherId: alloc.teacher.toString(),
-        teacherName: alloc.teacherName,
-        subject: alloc.subjects[0],
-        requiredLectures: alloc.weeklyLectures,
-        remainingLectures: alloc.weeklyLectures,
-    }));
-    
-    // 4. Initialize Timetable structure
-    let newTimetableData = WEEKDAYS.map(day => ({
-        day: day,
-        periods: FIXED_PERIOD_STRUCTURE.map(p => ({
-            periodNumber: p.num,
-            subject: p.type === 'Period' ? 'Empty' : p.type, 
-            teacher: null, 
-            teacherName: null, 
-            time: p.time,
-        }))
-    }));
-
-    // 5. Fetch existing teacher schedules (Still important for global clash checking)
-    const allTimetables = await Timetable.find({});
+    // 1. Fetch ALL existing teacher schedules to prevent cross-division/cross-standard clashes
+    const allExistingTimetables = await Timetable.find({});
     let globalTeacherSchedule = {}; 
-
-    for (const tt of allTimetables) {
+    for (const tt of allExistingTimetables) {
         for (const dayBlock of tt.timetable) {
             for (const period of dayBlock.periods) {
                 if (period.teacher) {
@@ -749,113 +717,158 @@ exports.generateTimetable = async (req, res) => {
         }
     }
 
-    // 6. Core Timetable Generation Algorithm 
-    let lastSubjectPerDay = WEEKDAYS.reduce((acc, day) => { acc[day] = null; return acc; }, {});
-    
-    const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
-    
-    let iterationCount = 0;
-    while (requirements.some(r => r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
-        
-        requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
-        
-        let assignedInThisIteration = false;
-
-        for (const req of requirements) {
-            if (req.remainingLectures <= 0) continue;
-
-            let bestSlot = null;
-            let bestDayLectureCount = Infinity;
-
-            for (const { day, period } of teachingSlots) {
-                // Find the period object in the newTimetableData structure
-                const targetDayBlock = newTimetableData.find(d => d.day === day);
-                const targetPeriod = targetDayBlock?.periods.find(p => p.time === period.time);
-
-                if (!targetPeriod || targetPeriod.subject !== 'Empty') continue; 
-                
-                const teacherId = req.teacherId;
-                const slot = `${day}-${period.time}`;
-                const currentDayLectureCount = targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length;
-
-                // CONSTRAINTS CHECK:
-                // 1. Clash Check (Global)
-                if (globalTeacherSchedule[teacherId]?.has(slot)) continue;
-                
-                // 2. Alternation Check (Local)
-                if (req.subject === lastSubjectPerDay[day]) continue;
-                
-                // 3. Load Balance Check (Local)
-                if (currentDayLectureCount < bestDayLectureCount) {
-                    bestDayLectureCount = currentDayLectureCount;
-                    bestSlot = { day, period: targetPeriod };
-                }
+    // 2. Iterate through all divisions (A, B, C, D, E, F)
+    for (const division of ALL_DIVISIONS) {
+        try {
+            // Check for existing timetable for this specific Standard/Division/Year
+            const existingTT = await Timetable.findOne({ standard, division, year });
+            if (existingTT) {
+                failedDivisions.push({ division, error: "Timetable already exists." });
+                continue;
             }
 
-            // If a valid slot is found, assign it
-            if (bestSlot) {
-                const { day, period } = bestSlot;
-                
-                period.subject = req.subject;
-                period.teacher = req.teacherId;
-                period.teacherName = req.teacherName;
-                
-                req.remainingLectures--;
-                lastSubjectPerDay[day] = req.subject;
-                
-                const slot = `${day}-${period.time}`;
-                if (!globalTeacherSchedule[req.teacherId]) {
-                    globalTeacherSchedule[req.teacherId] = new Set();
-                }
-                globalTeacherSchedule[req.teacherId].add(slot);
-                
-                assignedInThisIteration = true;
-                break;
-            }
-        }
-        
-        if (!assignedInThisIteration && requirements.some(r => r.remainingLectures > 0)) {
-             // Failed to place all remaining lectures in one pass under strict constraints
-             break; 
-        }
-        
-        iterationCount++;
-    }
-    
-    // 7. Final Check and Save
-    const unbalanced = requirements.filter(r => r.remainingLectures > 0);
-    if (unbalanced.length > 0) {
-        console.warn(`Timetable generated, but ${unbalanced.length} requirements for division ${division} are under-assigned:`, unbalanced);
-    }
-    
-    const newTT = new Timetable({
-      standard,
-      division, // SAVING THE CORRECT DIVISION
-      year: year, 
-      from,
-      to,
-      submittedby,
-      classteacher: '60c72b2f9c4f2b1d8c8b4567', // Mocked or fetched elsewhere
-      timetable: newTimetableData,
-      timing: timing 
-    });
-    
-    await newTT.save();
+            // Fetch allocations for THIS SPECIFIC DIVISION
+            const allocations = await SubjectAllocation.find({ 
+                standards: { $in: [standard] },
+                divisions: { $in: [division] }
+            });
 
-    return res.status(201).json({ 
-        message: `Timetable generated and saved successfully for Std ${standard} Div ${division}`, 
-        timetable: newTT 
-    });
+            if (allocations.length === 0) {
+                failedDivisions.push({ division, error: "No subject allocations found." });
+                continue;
+            }
+
+            // 3. Prepare Requirements
+            let requirements = allocations.map(alloc => ({
+                teacherId: alloc.teacher.toString(),
+                teacherName: alloc.teacherName,
+                subject: alloc.subjects[0],
+                requiredLectures: alloc.weeklyLectures,
+                remainingLectures: alloc.weeklyLectures,
+            }));
+
+            // 4. Initialize Timetable structure
+            let newTimetableData = WEEKDAYS.map(day => ({
+                day: day,
+                periods: FIXED_PERIOD_STRUCTURE.map(p => ({
+                    periodNumber: p.num,
+                    subject: p.type === 'Period' ? 'Empty' : p.type, 
+                    teacher: null, 
+                    teacherName: null, 
+                    time: p.time,
+                }))
+            }));
+
+            // 5. Core Generation Logic (Assignment Loop)
+            let lastSubjectPerDay = WEEKDAYS.reduce((acc, day) => { acc[day] = null; return acc; }, {});
+            let iterationCount = 0;
+            const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
+            
+            while (requirements.some(r => r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
+                requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
+                let assignedInThisIteration = false;
+
+                for (const req of requirements) {
+                    if (req.remainingLectures <= 0) continue;
+
+                    let bestSlot = null;
+                    let bestDayLectureCount = Infinity;
+
+                    for (const { day, period } of teachingSlots) {
+                        const targetDayBlock = newTimetableData.find(d => d.day === day);
+                        const targetPeriod = targetDayBlock?.periods.find(p => p.time === period.time);
+
+                        if (!targetPeriod || targetPeriod.subject !== 'Empty') continue; 
+                        
+                        const teacherId = req.teacherId;
+                        const slot = `${day}-${period.time}`;
+                        const currentDayLectureCount = targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length;
+
+                        // CONSTRAINTS CHECK
+                        if (globalTeacherSchedule[teacherId]?.has(slot)) continue;
+                        if (req.subject === lastSubjectPerDay[day]) continue;
+                        if (currentDayLectureCount < bestDayLectureCount) {
+                            bestDayLectureCount = currentDayLectureCount;
+                            bestSlot = { day, period: targetPeriod };
+                        }
+                    }
+
+                    if (bestSlot) {
+                        const { day, period } = bestSlot;
+                        
+                        period.subject = req.subject;
+                        period.teacher = req.teacherId;
+                        period.teacherName = req.teacherName;
+                        
+                        req.remainingLectures--;
+                        lastSubjectPerDay[day] = req.subject;
+                        
+                        // Update the GLOBAL schedule immediately to prevent the next division from clashing
+                        const slot = `${day}-${period.time}`;
+                        if (!globalTeacherSchedule[req.teacherId]) {
+                            globalTeacherSchedule[req.teacherId] = new Set();
+                        }
+                        globalTeacherSchedule[req.teacherId].add(slot);
+                        
+                        assignedInThisIteration = true;
+                        break;
+                    }
+                }
+                
+                if (!assignedInThisIteration && requirements.some(r => r.remainingLectures > 0)) {
+                     break; 
+                }
+                iterationCount++;
+            } // END generation loop
+
+            // 6. Save the generated timetable for this division
+            const newTT = new Timetable({
+                standard,
+                division, // Saving the specific division
+                year: year, 
+                from,
+                to,
+                submittedby,
+                // Assuming this teacher ID is fetched/configured elsewhere
+                classteacher: '60c72b2f9c4f2b1d8c8b4567', 
+                timetable: newTimetableData,
+                timing: timing 
+            });
+            
+            await newTT.save();
+            generatedTimetables.push(newTT);
+            successfulDivisions.push(division);
+
+        } catch (innerError) {
+            console.error(`Error processing division ${division}:`, innerError);
+            failedDivisions.push({ division, error: innerError.message });
+        }
+    } // END division loop
+
+    // 7. Final Response Summary
+    if (successfulDivisions.length > 0) {
+        return res.status(201).json({ 
+            message: `Timetables generated successfully for divisions: ${successfulDivisions.join(', ')}.`, 
+            timetables: generatedTimetables,
+            failedDivisions: failedDivisions,
+        });
+    } else {
+        // If all divisions failed
+        return res.status(400).json({ 
+            error: "Timetable generation failed for all divisions.", 
+            details: failedDivisions 
+        });
+    }
 
   } catch (err) {
-    console.error(`Error during timetable generation for division ${division}:`, err);
-    res.status(500).json({ error: "Failed to generate timetable due to internal server error: " + err.message });
+    console.error("Critical error during multi-division timetable generation:", err);
+    res.status(500).json({ error: "Failed to generate timetables due to critical server error: " + err.message });
   }
 };
 
 
 // ------------------------------------------------------------------
-// Existing Timetable Controller functions (updated for Standard-only lookup)
+// Existing Timetable Controller functions (kept for completeness)
 // ------------------------------------------------------------------
 
 exports.deleteTimetable = async (req, res) => {
@@ -948,7 +961,7 @@ exports.arrangeTimetable = async (req, res) => {
     period.time = time || period.time;
 
     // Run validation before saving
-    const errors = await validateTT(timetable); // Note: This check uses the global schedule, which is good.
+    const errors = await validateTT(timetable); 
     if (errors.length > 0) {
         return res.status(400).json({ valid: false, errors, message: "Manual update caused validation errors/clashes." });
     }
