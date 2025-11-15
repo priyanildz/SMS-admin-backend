@@ -33,16 +33,19 @@ router.post("/assign-recheck", recheckingController.addRechecking);
 router.get("/recheck", recheckingController.getRechecking);
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
-// router.get(
-//   "/:standard/:division/validate",
-//   timetableController.validateTimetable
-// );
+router.get(
+  "/:standard/:division/validate",
+  timetableController.validateTimetable
+);
 router.get("/timetables", timetableController.getTimetable);
 
 router.post("/timetables/generate", timetableController.generateTimetable);
+
 router.put("/:id/arrange", timetableController.arrangeTimetable);
 
 // proxy endpoints
+
+
 router.post("/add-proxy", proxyController.createProxy);
 router.get("/proxies", proxyController.getProxies);
 
