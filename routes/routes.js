@@ -37,32 +37,10 @@ router.get(
   "/:standard/:division/validate",
   timetableController.validateTimetable
 );
-// router.get("/timetables", timetableController.getTimetable);
-
-// router.post("/timetables/generate", timetableController.generateTimetable);
-// router.put("/:id/arrange", timetableController.arrangeTimetable);
-
-
-
-
-
-
-// Timetable Routes
-router.get("/:standard/:division/validate", timetableController.validateTimetable);
 router.get("/timetables", timetableController.getTimetable);
+
 router.post("/timetables/generate", timetableController.generateTimetable);
 router.put("/:id/arrange", timetableController.arrangeTimetable);
-// NEW DELETE ROUTE
-router.delete("/timetables/:id", timetableController.deleteTimetable);
-
-
-
-
-
-
-
-
-
 
 // proxy endpoints
 router.post("/add-proxy", proxyController.createProxy);
