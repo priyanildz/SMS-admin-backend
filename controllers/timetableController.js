@@ -569,6 +569,7 @@
 //   }
 // };
 
+
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -608,7 +609,7 @@ WEEKDAYS.forEach(day => {
 
 
 /**
- * Checks for clashes and allocation limits. (Remains Unchanged)
+ * Checks for clashes and allocation limits. (Remains Unchanged, but note the local check for consecutive subjects is simplified)
  */
 const validateTT = async (timetableDoc, existingSchedules = {}) => {
   let errors = [];
@@ -659,7 +660,7 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
             }
         }
 
-        // 2. Consecutive subject check 
+        // 2. Consecutive subject check (Simplified logic for validation)
         if (period.subject && period.subject === lastSubject && period.subject !== 'Empty') {
             console.warn(`Consecutive subject warning: ${period.subject} repeated on ${dayBlock.day} at ${period.time}`);
             errors.push(`Consecutive subject warning: ${period.subject} repeated on ${dayBlock.day} at ${period.time}`);
@@ -761,6 +762,7 @@ exports.generateTimetable = async (req, res) => {
             }));
 
             // 5. Core Generation Logic (Assignment Loop)
+            // No longer tracking last subject per day as we removed the constraint
             let lastSubjectPerDay = WEEKDAYS.reduce((acc, day) => { acc[day] = null; return acc; }, {});
             let iterationCount = 0;
             const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
@@ -787,7 +789,7 @@ exports.generateTimetable = async (req, res) => {
 
                         // CONSTRAINTS CHECK
                         if (globalTeacherSchedule[teacherId]?.has(slot)) continue;
-                        if (req.subject === lastSubjectPerDay[day]) continue;
+                        // ❌ REMOVED: if (req.subject === lastSubjectPerDay[day]) continue; 
                         if (currentDayLectureCount < bestDayLectureCount) {
                             bestDayLectureCount = currentDayLectureCount;
                             bestSlot = { day, period: targetPeriod };
