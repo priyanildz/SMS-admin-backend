@@ -57,7 +57,6 @@
 // );
 
 // module.exports = mongoose.model("timetable", timetableSchema);
-
 const mongoose = require("mongoose");
 
 const timetableSchema = new mongoose.Schema(
@@ -76,15 +75,18 @@ const timetableSchema = new mongoose.Schema(
       required: true,
       enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
+    // Division field REMOVED: The timetable now applies to the entire standard.
     division: {
       type: String,
-      required: true,
-      enum: ["A", "B", "C", "D", "E", "F"], // UPDATED: 6 divisions
+      required: false, // Set to false to allow saving without division
+      default: "ALL", // Default value to distinguish standard-wide timetable if needed
+      // enum: ["A", "B", "C", "D", "E", "F"], // Enum removed
     },
     classteacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "staff",
-      required: true,
+      required: false, // Made optional since it's a standard-wide template
+      default: null
     },
     year: {
       type: Number,
@@ -105,7 +107,7 @@ const timetableSchema = new mongoose.Schema(
             teacher: {
               type: mongoose.Schema.Types.ObjectId,
               ref: "staff",
-              default: null, // Null for Breaks/Lunch or self-study
+              default: null, // Null for Breaks/Lunch
             },
             teacherName: { // NEW: To store the teacher's display name
               type: String,
