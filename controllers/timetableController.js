@@ -568,6 +568,7 @@
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -592,7 +593,7 @@ const FIXED_PERIOD_STRUCTURE = [
 ];
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-// Updated to use only A, B, C, D, E divisions as requested
+// Divisions A-E as per previous request
 const ALL_DIVISIONS = ["A", "B", "C", "D", "E"]; 
 const NUM_TEACHING_PERIODS = FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period').length; 
 
@@ -607,7 +608,7 @@ WEEKDAYS.forEach(day => {
 
 
 /**
- * Checks for clashes and allocation limits.
+ * Checks for clashes and allocation limits. (Remains Unchanged)
  */
 const validateTT = async (timetableDoc, existingSchedules = {}) => {
   let errors = [];
@@ -682,16 +683,15 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 
 /**
  * CORE CHANGE: Generates timetables for ALL divisions internally (A, B, C, D, E).
- * The frontend only provides the standard and dates.
  */
 exports.generateTimetable = async (req, res) => {
   // Frontend only sends: standard, from, to, submittedby, timing
   const { standard, from, to, submittedby, timing } = req.body; 
   const year = new Date().getFullYear(); 
 
-  // Validation based on the minimum required fields from the UI
-  if (!standard || !from || !to || !submittedby) {
-    return res.status(400).json({ error: "Missing required fields (Standard, date range, submittedby)." });
+  // 🛠️ FIX: Include 'timing' in the required fields validation to catch the 400 error.
+  if (!standard || !from || !to || !submittedby || !timing) { 
+    return res.status(400).json({ error: "Missing required fields (Standard, date range, submittedby, or timing)." });
   }
 
   let generatedTimetables = [];
@@ -734,7 +734,8 @@ exports.generateTimetable = async (req, res) => {
             });
 
             if (allocations.length === 0) {
-                failedDivisions.push({ division, error: "No subject allocations found." });
+                // ⚠️ IMPROVED ERROR REPORTING HERE
+                failedDivisions.push({ division, error: "No subject allocations found for this Standard/Division." });
                 continue;
             }
 
@@ -821,7 +822,17 @@ exports.generateTimetable = async (req, res) => {
                 iterationCount++;
             } // END generation loop
 
-            // 6. Save the generated timetable for this division
+            // 6. FINAL CHECK: Did all required lectures get assigned?
+            const unassignedLectures = requirements.filter(r => r.remainingLectures > 0);
+            if (unassignedLectures.length > 0) {
+                // ⚠️ IMPROVED ERROR REPORTING HERE
+                const subjectsFailed = unassignedLectures.map(u => `${u.subject} (${u.remainingLectures} lectures left)`).join(', ');
+                failedDivisions.push({ division, error: `Generation failed due to scheduling conflicts. Unassigned lectures: ${subjectsFailed}` });
+                continue;
+            }
+
+
+            // 7. Save the generated timetable for this division
             const newTT = new Timetable({
                 standard,
                 division, // Saving the specific division
@@ -845,7 +856,7 @@ exports.generateTimetable = async (req, res) => {
         }
     } // END division loop
 
-    // 7. Final Response Summary
+    // 8. Final Response Summary
     if (successfulDivisions.length > 0) {
         return res.status(201).json({ 
             message: `Timetables generated successfully for divisions: ${successfulDivisions.join(', ')}.`, 
