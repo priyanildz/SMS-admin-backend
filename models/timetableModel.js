@@ -123,6 +123,7 @@
 // );
 
 // module.exports = mongoose.model("timetable", timetableSchema);
+// File: timetableModel.js
 
 const mongoose = require("mongoose");
 
@@ -142,10 +143,10 @@ const timetableSchema = new mongoose.Schema(
       required: true,
       enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
-    division: { // REVERTED to be division-specific
+    division: { // Division field is REQUIRED for granular storage
       type: String,
-      required: true, // Now required
-      enum: ["A", "B", "C", "D", "E", "F"], // Using 6 divisions as per frontend logic
+      required: true, 
+      enum: ["A", "B", "C", "D", "E", "F"], // Using 6 divisions as per requirement
     },
     classteacher: {
       type: mongoose.Schema.Types.ObjectId,
@@ -161,10 +162,10 @@ const timetableSchema = new mongoose.Schema(
     to: { type: String, required: true },
     timetable: [
       {
-        day: { type: String, required: true }, // Monday, Tuesday, etc.
+        day: { type: String, required: true },
         periods: [
           {
-            periodNumber: { type: Number, default: null }, // Null for Breaks/Lunch
+            periodNumber: { type: Number, default: null },
             subject: {
               type: String,
               required: true,
@@ -172,7 +173,7 @@ const timetableSchema = new mongoose.Schema(
             teacher: {
               type: mongoose.Schema.Types.ObjectId,
               ref: "staff",
-              default: null, // Null for Breaks/Lunch
+              default: null,
             },
             teacherName: { 
               type: String,
