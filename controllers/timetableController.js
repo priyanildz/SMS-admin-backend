@@ -481,6 +481,28 @@ exports.generateTimetable = async (req, res) => {
 
 
 // ------------------------------------------------------------------
+// DELETE Timetable function (NEW)
+// ------------------------------------------------------------------
+
+exports.deleteTimetable = async (req, res) => {
+  try {
+    const { id } = req.params; // Timetable ID
+
+    const deletedTimetable = await Timetable.findByIdAndDelete(id);
+
+    if (!deletedTimetable) {
+      return res.status(404).json({ error: "Timetable not found" });
+    }
+
+    res.status(200).json({ message: "Timetable deleted successfully ✅" });
+  } catch (error) {
+    console.error("Error deleting timetable:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+// ------------------------------------------------------------------
 // Existing Timetable Controller functions (updated to use new model fields)
 // ------------------------------------------------------------------
 
@@ -509,7 +531,8 @@ exports.validateTimetable = async (req, res) => {
     const timetable = await Timetable.findOne({ standard, division });
 
     if (!timetable) {
-      return res.status(404).json({ error: "Timetable not found" });
+      // NOTE: Changed to return 200/false if not found, allowing client to generate new one.
+      return res.json({ valid: false, message: "Timetable not found for validation. Ready for generation." });
     }
 
     const errors = await validateTT(timetable, existingSchedules);

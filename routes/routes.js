@@ -43,6 +43,9 @@ router.post("/timetables/generate", timetableController.generateTimetable);
 
 router.put("/:id/arrange", timetableController.arrangeTimetable);
 
+// NEW DELETE ROUTE
+router.delete("/timetables/:id", timetableController.deleteTimetable);
+
 // proxy endpoints
 
 
