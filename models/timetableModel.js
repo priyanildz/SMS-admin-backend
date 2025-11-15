@@ -79,8 +79,8 @@ const timetableSchema = new mongoose.Schema(
     division: {
       type: String,
       required: false, // Set to false to allow saving without division
-      default: "ALL", // Default value to distinguish standard-wide timetable if needed
-      // enum: ["A", "B", "C", "D", "E", "F"], // Enum removed
+    //   default: "ALL", // Default value to distinguish standard-wide timetable if needed
+      enum: ["A", "B", "C", "D", "E", "F"], // Enum removed
     },
     classteacher: {
       type: mongoose.Schema.Types.ObjectId,
