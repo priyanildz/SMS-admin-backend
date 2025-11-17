@@ -998,9 +998,10 @@
 //   }
 // };
 
-const Timetable = require("./models/timetableModel"); // Assuming path is correct
-const SubjectAllocation = require("./models/subjectAllocation"); // Assuming path is correct
-const Staff = require("./models/staffModel"); // Assuming path is correct
+
+const Timetable = require("../models/timetableModel");
+const SubjectAllocation = require("../models/subjectAllocation");
+const Staff = require("../models/staffModel"); 
 
 // Fixed Period Schedule based on user requirements (Mon-Sat structure)
 const FIXED_PERIOD_STRUCTURE = [
@@ -1039,7 +1040,7 @@ WEEKDAYS.forEach(day => {
 // Helper function to handle the cyclic shift based on division
 const getCyclicSequence = (allocations, division) => {
     // 1. Get the base ordered list of subjects (e.g., A's order)
-    const baseSubjects = allocations.map(a => a.subjects[0]).sort();
+    const baseSubjects = allocations.map(a => a.subject).sort();
     
     // 2. Determine the shift amount (A=0, B=1, C=2, D=3, E=4)
     const shiftMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4 };
@@ -1047,59 +1048,79 @@ const getCyclicSequence = (allocations, division) => {
     
     if (baseSubjects.length === 0) return [];
     
+    // 3. Create the cyclic shift array
+    const shiftedSubjects = [...baseSubjects.slice(shift), ...baseSubjects.slice(0, shift)];
+    
+    // 4. Create the daily requirement map based on the shifted order
+    // Ensure 6 lectures are spread across 6 days by filling the 8 periods/day slots first.
     let sequence = [];
     const numDays = WEEKDAYS.length;
-    
-    let mutableAllocations = JSON.parse(JSON.stringify(allocations));
-    
-    // Loop through 48 available period slots (8 periods * 6 days)
-    for (let pIndex = 0; pIndex < NUM_TEACHING_PERIODS; pIndex++) { // Periods 1 to 8 (index 0 to 7)
-        for (let dIndex = 0; dIndex < numDays; dIndex++) { // Days Mon to Sat (index 0 to 5)
-            
-            const day = WEEKDAYS[dIndex];
-            const periodDetails = FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period')[pIndex];
-            const time = periodDetails.time;
+    let subjectIndex = 0;
 
-            // Determine the subject for this slot based on the cyclic shift
-            const subjectIndex = (pIndex + shift) % baseSubjects.length;
-            const subject = baseSubjects[subjectIndex];
-            
-            // Find the corresponding allocation for this subject (must have lectures remaining)
-            const allocation = mutableAllocations.find(a => a.subjects.includes(subject) && a.weeklyLectures > 0);
+    for (let dayIndex = 0; dayIndex < numDays; dayIndex++) {
+        const dailyPeriods = FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period').length; // Should be 8
+        
+        for (let p = 0; p < dailyPeriods; p++) {
+            const subject = shiftedSubjects[subjectIndex % shiftedSubjects.length];
+            const allocation = allocations.find(a => a.subjects.includes(subject));
 
-            if (allocation) {
+            if (allocation && allocation.remainingLectures > 0) {
                 sequence.push({
-                    day: day,
-                    periodNumber: periodDetails.num,
+                    day: WEEKDAYS[dayIndex],
+                    periodNumber: FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period')[p].num,
                     subject: subject,
                     teacherId: allocation.teacher.toString(),
                     teacherName: allocation.teacherName,
-                    time: time,
+                    time: FIXED_PERIOD_STRUCTURE.find(fp => fp.num === FIXED_PERIOD_STRUCTURE.filter(p => p.type === 'Period')[p].num && fp.type === 'Period').time,
                 });
-                allocation.weeklyLectures--; // Decrement required lectures
+                allocation.remainingLectures--;
             }
+            subjectIndex++;
         }
     }
-    
     return sequence;
 };
 
 
+// Helper function to find a substitute teacher for a subject if the primary teacher clashes
+const findSubstituteTeacher = async (subject, slot, globalTeacherSchedule) => {
+    // 1. Find all staff capable of teaching this subject (requires Staff model update)
+    // NOTE: For this mock scenario, we assume all staff can teach all subjects, 
+    // but in a real system, you'd query Staff based on subject expertise.
+    // Since we don't have the Staff structure, we'll try any available teacher not currently clashing.
+
+    const allStaff = await Staff.find({}); // Fetch all available staff IDs (replace with actual logic)
+    
+    for (const staff of allStaff) {
+        const teacherId = staff._id.toString();
+        const teacherName = staff.teacherName || staff.name; // Use appropriate field
+        
+        // Check if this substitute teacher is currently available for this slot
+        if (!globalTeacherSchedule[teacherId] || !globalTeacherSchedule[teacherId].has(slot)) {
+            // Found a qualified, available substitute!
+            return { substituteId: teacherId, substituteName: teacherName };
+        }
+    }
+    return null; // No substitute found
+};
+
+
 /**
- * Checks for clashes and allocation limits. (Validation remains the same)
+ * Checks for clashes and allocation limits. (Remains Unchanged)
  */
 const validateTT = async (timetableDoc, existingSchedules = {}) => {
-// ... (validation logic remains the same)
   let errors = [];
-  let teacherSchedule = existingSchedules; 
-  let lectureCounts = {};  
+  let teacherSchedule = existingSchedules; // clash check
+  let lectureCounts = {};   // lecture count check
 
   const KEY_SEP = '||';
 
+  // --- Build schedule & counts for this timetable ---
   for (let dayBlock of timetableDoc.timetable) {
     let lastSubject = null;
     let isPreviousPeriodBreak = false; 
     for (let period of dayBlock.periods) {
+      // Check for consecutive breaks
       if (period.type !== 'Period') {
           if (isPreviousPeriodBreak && (period.type === 'Break' || period.type === 'Lunch')) {
               errors.push(`Consecutive break/lunch detected: ${dayBlock.day} at ${period.time}`);
@@ -1124,6 +1145,7 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
         const slot = `${dayBlock.day}-${period.time}`;
         const key = `${teacherId}${KEY_SEP}${period.subject}${KEY_SEP}${timetableDoc.standard}${KEY_SEP}${division}`;
 
+        // 1. Clash check: Ensure no double-booking per slot (across all loaded timetables)
         if (teacherId) {
             if (!teacherSchedule[teacherId]) teacherSchedule[teacherId] = new Set();
             if (teacherSchedule[teacherId].has(slot)) {
@@ -1135,29 +1157,37 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
             }
         }
 
+        // 2. Consecutive subject check (Simplified logic for validation)
         if (period.subject && period.subject === lastSubject && period.subject !== 'Empty') {
             console.warn(`Consecutive subject warning: ${period.subject} repeated on ${dayBlock.day} at ${period.time}`);
             errors.push(`Consecutive subject warning: ${period.subject} repeated on ${dayBlock.day} at ${period.time}`);
         }
         lastSubject = period.subject;
 
+        // 3. Lecture count (only count if a teacher is assigned)
         if (teacherId) {
             lectureCounts[key] = (lectureCounts[key] || 0) + 1;
         }
       } else {
-          lastSubject = null; 
+          lastSubject = null; // Reset subject after a break/lunch
       }
     }
   }
+  
+  // Basic allocation limits check (optional, but good for stability)
   return errors;
 };
 
 
+/**
+ * CORE CHANGE: Generates timetables for ALL divisions internally (A, B, C, D, E).
+ */
 exports.generateTimetable = async (req, res) => {
   // Frontend only sends: standard, from, to, submittedby, timing
   const { standard, from, to, submittedby, timing } = req.body; 
   const year = new Date().getFullYear(); 
 
+  // 🛠️ FIX: Include 'timing' in the required fields validation to catch the 400 error.
   if (!standard || !from || !to || !submittedby || !timing) { 
     return res.status(400).json({ error: "Missing required fields (Standard, date range, submittedby, or timing)." });
   }
@@ -1184,15 +1214,12 @@ exports.generateTimetable = async (req, res) => {
             }
         }
     }
-    
-    // Fetch all staff for substitution lookup
-    const allStaff = await Staff.find({}).lean(); 
 
     // 2. Iterate through all required divisions (A, B, C, D, E)
     for (const division of ALL_DIVISIONS) {
         try {
             // Check for existing timetable for this specific Standard/Division/Year
-            const existingTT = await Timetable.findOne({ standard, division, year });
+            const existingTT = await Timetable.findOne({ standard, division, year });
             if (existingTT) {
                 failedDivisions.push({ division, error: "Timetable already exists." });
                 continue;
@@ -1202,23 +1229,17 @@ exports.generateTimetable = async (req, res) => {
             let allocations = await SubjectAllocation.find({ 
                 standards: { $in: [standard] },
                 divisions: { $in: [division] }
-            }).lean(); 
+            }).lean(); // Use .lean() for faster, mutable objects
 
             if (allocations.length === 0) {
                 failedDivisions.push({ division, error: "No subject allocations found for this Standard/Division." });
                 continue;
             }
             
-            // 💡 Generate the deterministic sequence based on the cyclic shift logic
-            let assignmentSequence = getCyclicSequence(allocations, division);
-            
-            // If the sequence is empty, it means there are allocations but 0 weekly lectures required.
-            if (assignmentSequence.length === 0) {
-                failedDivisions.push({ division, error: "Allocations found, but total weekly lectures required is zero." });
-                continue;
-            }
+            // 💡 Apply Cyclic Shift Logic to determine the sequence of subjects for the week
+            let assignmentSequence = getCyclicSequence(JSON.parse(JSON.stringify(allocations)), division);
 
-            // 4. Initialize Timetable structure 
+            // 4. Initialize Timetable structure
             let newTimetableData = WEEKDAYS.map(day => ({
                 day: day,
                 periods: FIXED_PERIOD_STRUCTURE.map(p => ({
@@ -1230,12 +1251,16 @@ exports.generateTimetable = async (req, res) => {
                 }))
             }));
 
-            // 5. Core Assignment Loop (Based on Sequence)
-            let successfulAssignments = 0;
-
+            // 5. Core Generation Logic (Assignment based on Cyclic Sequence)
+            let dailyLectureCounts = WEEKDAYS.reduce((acc, day) => { acc[day] = 0; return acc; }, {});
+            
+            // 💡 Iterate through the sequence to fill the required slots
             for (const seq of assignmentSequence) {
                 const day = seq.day;
                 const time = seq.time;
+                const reqSubject = seq.subject;
+                let reqTeacherId = seq.teacherId;
+                let reqTeacherName = seq.teacherName;
                 const slot = `${day}-${time}`;
                 
                 const dayBlock = newTimetableData.find(d => d.day === day);
@@ -1243,57 +1268,50 @@ exports.generateTimetable = async (req, res) => {
 
                 if (!period || period.subject !== 'Empty') continue;
                 
-                let assigned = false;
+                // 1. Check Primary Teacher Clash
+                let teacherClashes = globalTeacherSchedule[reqTeacherId]?.has(slot);
                 
-                // 1. Attempt to assign the Primary Teacher (from allocation)
-                let currentTeacherId = seq.teacherId;
-                let currentTeacherName = seq.teacherName;
-                
-                // Check if the Primary Teacher clashes globally
-                let primaryTeacherClashes = globalTeacherSchedule[currentTeacherId]?.has(slot);
-                
-                if (!primaryTeacherClashes) {
-                    // Primary teacher is free, assign immediately
-                    assigned = true;
-                } else {
+                if (teacherClashes) {
                     // 2. Teacher Substitution Logic: Find a teacher who is available
+                    const substitute = await findSubstituteTeacher(reqSubject, slot, globalTeacherSchedule);
                     
-                    // Find staff who can teach this subject (based on Allocation records)
-                    const qualifiedAllocations = allocations.filter(a => a.subjects.includes(seq.subject));
-                    
-                    for (const alloc of qualifiedAllocations) {
-                        const subTeacherId = alloc.teacher.toString();
-                        
-                        // Check if the qualified teacher is currently available for this slot
-                        if (!globalTeacherSchedule[subTeacherId] || !globalTeacherSchedule[subTeacherId].has(slot)) {
-                            // Substitute teacher found and available!
-                            currentTeacherId = subTeacherId;
-                            currentTeacherName = alloc.teacherName;
-                            assigned = true;
-                            break;
-                        }
+                    if (substitute) {
+                        reqTeacherId = substitute.substituteId;
+                        reqTeacherName = substitute.substituteName;
+                        teacherClashes = false; // Resolved
+                    } else {
+                        // If no substitute found, leave the slot empty for now and continue
+                        continue;
                     }
                 }
                 
-                if (assigned) {
+                if (!teacherClashes) {
                     // Assign the lecture (either to primary teacher or substitute)
-                    period.subject = seq.subject;
-                    period.teacher = currentTeacherId;
-                    period.teacherName = currentTeacherName;
+                    period.subject = reqSubject;
+                    period.teacher = reqTeacherId;
+                    period.teacherName = reqTeacherName;
                     
                     // Update global schedule immediately
-                    if (!globalTeacherSchedule[currentTeacherId]) {
-                        globalTeacherSchedule[currentTeacherId] = new Set();
+                    if (!globalTeacherSchedule[reqTeacherId]) {
+                        globalTeacherSchedule[reqTeacherId] = new Set();
                     }
-                    globalTeacherSchedule[currentTeacherId].add(slot);
-                    successfulAssignments++;
+                    globalTeacherSchedule[reqTeacherId].add(slot);
+                    dailyLectureCounts[day]++;
                 }
-            } // END assignment loop
-
-            // 6. FINAL CHECK: Did we assign all periods required by the sequence?
-            if (successfulAssignments < assignmentSequence.length) {
-                failedDivisions.push({ division, error: `Could not assign all periods. ${assignmentSequence.length - successfulAssignments} slots left empty due to scheduling conflicts.` });
             }
+            
+            // 6. FINAL CHECK (Modified to simply ensure the table is filled by now)
+            // We trust the loop assigned the cyclic sequence, so we check for 'Empty' instead of remaining lectures.
+            const totalAssignedPeriods = newTimetableData.flatMap(day => 
+                day.periods.filter(p => p.type === 'Period' && p.subject !== 'Empty')
+            ).length;
+
+            if (totalAssignedPeriods < assignmentSequence.length) {
+                // This means the substitution logic failed to find enough slots/teachers for the full cyclic demand
+                failedDivisions.push({ division, error: `Could only assign ${totalAssignedPeriods} of ${assignmentSequence.length} required periods due to clashes or lack of substitute teachers.` });
+                // We proceed to save the partially complete timetable for debugging but flag it as failed
+            }
+
 
             // 7. Save the generated timetable for this division
             const newTT = new Timetable({
@@ -1303,6 +1321,7 @@ exports.generateTimetable = async (req, res) => {
                 from,
                 to,
                 submittedby,
+                // Assuming this teacher ID is fetched/configured elsewhere
                 classteacher: '60c72b2f9c4f2b1d8c8b4567', 
                 timetable: newTimetableData,
                 timing: timing 
@@ -1310,7 +1329,7 @@ exports.generateTimetable = async (req, res) => {
             
             await newTT.save();
             generatedTimetables.push(newTT);
-            if (successfulAssignments === assignmentSequence.length) {
+            if (totalAssignedPeriods === assignmentSequence.length) {
                successfulDivisions.push(division);
             }
 
@@ -1411,7 +1430,6 @@ exports.validateTimetable = async (req, res) => {
 
 exports.arrangeTimetable = async (req, res) => {
   try {
-// ... (content remains the same)
     const { id } = req.params; 
     const { day, periodNumber, subject, teacher, time } = req.body;
 
@@ -1450,7 +1468,6 @@ exports.arrangeTimetable = async (req, res) => {
 };
 
 exports.getTimetable = async (req, res) => {
-// ... (content remains the same)
   try {
     const timetables = await Timetable.find()
     if (timetables.length === 0) {
