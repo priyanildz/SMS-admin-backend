@@ -124,6 +124,7 @@
 
 // module.exports = mongoose.model("timetable", timetableSchema);
 // File: timetableModel.js
+
 const mongoose = require("mongoose");
 
 const timetableSchema = new mongoose.Schema(
