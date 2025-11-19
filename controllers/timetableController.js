@@ -571,7 +571,6 @@
 
 
 
-
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -735,15 +734,20 @@ exports.generateTimetable = async (req, res) => {
                 standards: { $in: [standard] },
                 divisions: { $in: [division] }
             });
+            
+            // 🚨 FIX START: Initialize requirements to an empty array. 
+            // This prevents the 'length' error if the code hits 'continue' on line 184
+            let requirements = [];
 
             if (allocations.length === 0) {
                 // ⚠️ IMPROVED ERROR REPORTING HERE
                 failedDivisions.push({ division, error: "No subject allocations found for this Standard/Division." });
                 continue;
             }
+            // 🚨 FIX END
 
             // 3. Prepare Requirements
-            let requirements = allocations.map(alloc => ({
+            requirements = allocations.map(alloc => ({
                 teacherId: alloc.teacher.toString(),
                 teacherName: alloc.teacherName,
                 // Defensive check if alloc.subjects is null/undefined or empty array
@@ -770,14 +774,14 @@ exports.generateTimetable = async (req, res) => {
             let iterationCount = 0;
             const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
             
-            // 🚨 Defensive check: ensure requirements is an array before calling .some()
+            // 🚨 Defensive check: ensure requirements is an array before calling .some()
             while (Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
                 requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
                 let assignedInThisIteration = false;
 
                 for (const req of requirements) {
                     // Defensive check for req
-                    if (!req || req.remainingLectures <= 0) continue;
+                    if (!req || req.remainingLectures <= 0) continue;
 
                     let bestSlot = null;
                     let bestDayLectureCount = Infinity;
@@ -791,8 +795,8 @@ exports.generateTimetable = async (req, res) => {
                         const teacherId = req.teacherId;
                         const slot = `${day}-${period.time}`;
                         
-                        // Defensive check: ensure targetDayBlock.periods exists before filtering
-                        const currentDayLectureCount = targetDayBlock?.periods ? targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length : 0;
+                        // Defensive check: ensure targetDayBlock.periods exists before filtering
+                        const currentDayLectureCount = targetDayBlock?.periods ? targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length : 0;
 
 
                         // CONSTRAINTS CHECK
