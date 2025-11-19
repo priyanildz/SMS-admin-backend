@@ -570,7 +570,6 @@
 // };
 
 
-
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -610,8 +609,8 @@ WEEKDAYS.forEach(day => {
 
 
 /**
- * Checks for clashes and allocation limits. (Remains Unchanged, but note the local check for consecutive subjects is simplified)
- */
+ * Checks for clashes and allocation limits.
+ */
 const validateTT = async (timetableDoc, existingSchedules = {}) => {
   let errors = [];
   let teacherSchedule = existingSchedules; // clash check
@@ -684,14 +683,14 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 
 
 /**
- * CORE CHANGE: Generates timetables for ALL divisions internally (A, B, C, D, E).
- */
+ * Generates timetables for ALL divisions internally (A, B, C, D, E).
+ */
 exports.generateTimetable = async (req, res) => {
   // Frontend only sends: standard, from, to, submittedby, timing
   const { standard, from, to, submittedby, timing } = req.body; 
   const year = new Date().getFullYear(); 
 
-  // 🛠️ FIX: Include 'timing' in the required fields validation to catch the 400 error.
+  // Validate required fields
   if (!standard || !from || !to || !submittedby || !timing) { 
     return res.status(400).json({ error: "Missing required fields (Standard, date range, submittedby, or timing)." });
   }
@@ -734,17 +733,15 @@ exports.generateTimetable = async (req, res) => {
                 standards: { $in: [standard] },
                 divisions: { $in: [division] }
             });
-            
-            // 🚨 FIX START: Initialize requirements to an empty array. 
-            // This prevents the 'length' error if the code hits 'continue' on line 184
-            let requirements = [];
+            
+            // Initialize requirements to prevent crash if 'continue' is hit below
+            let requirements = [];
 
             if (allocations.length === 0) {
-                // ⚠️ IMPROVED ERROR REPORTING HERE
+                // Improved error reporting here
                 failedDivisions.push({ division, error: "No subject allocations found for this Standard/Division." });
                 continue;
             }
-            // 🚨 FIX END
 
             // 3. Prepare Requirements
             requirements = allocations.map(alloc => ({
@@ -774,7 +771,7 @@ exports.generateTimetable = async (req, res) => {
             let iterationCount = 0;
             const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
             
-            // 🚨 Defensive check: ensure requirements is an array before calling .some()
+            // Defensive check: ensure requirements is an array before calling .some()
             while (Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
                 requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
                 let assignedInThisIteration = false;
@@ -801,7 +798,7 @@ exports.generateTimetable = async (req, res) => {
 
                         // CONSTRAINTS CHECK
                         if (teacherId && globalTeacherSchedule[teacherId]?.has(slot)) continue;
-                        // ❌ REMOVED: if (req.subject === lastSubjectPerDay[day]) continue; 
+                        // Removed: if (req.subject === lastSubjectPerDay[day]) continue; 
                         if (currentDayLectureCount < bestDayLectureCount) {
                             bestDayLectureCount = currentDayLectureCount;
                             bestSlot = { day, period: targetPeriod };
@@ -839,7 +836,7 @@ exports.generateTimetable = async (req, res) => {
             // 6. FINAL CHECK: Did all required lectures get assigned?
             const unassignedLectures = requirements.filter(r => r && r.remainingLectures > 0);
             if (unassignedLectures.length > 0) {
-                // ⚠️ IMPROVED ERROR REPORTING HERE
+                // Improved error reporting here
                 const subjectsFailed = unassignedLectures.map(u => `${u.subject} (${u.remainingLectures} lectures left)`).join(', ');
                 failedDivisions.push({ division, error: `Generation failed due to scheduling conflicts. Unassigned lectures: ${subjectsFailed}` });
                 continue;
@@ -875,6 +872,7 @@ exports.generateTimetable = async (req, res) => {
         return res.status(201).json({ 
             message: `Timetables generated successfully for divisions: ${successfulDivisions.join(', ')}.`, 
             timetables: generatedTimetables,
+            failedDivisions: failedDivisions,
         });
     } else {
         // If all divisions failed
@@ -902,7 +900,7 @@ exports.publishTimetable = async (req, res) => {
             return res.status(400).json({ error: "Missing required field: standard." });
         }
         
-        // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
+        // CRITICAL FIX: Generate the Date object correctly outside the update query.
         const publicationDate = new Date();
 
         const updateResult = await Timetable.updateMany(
@@ -1048,7 +1046,6 @@ module.exports = {
     getTimetable: exports.getTimetable,
     publishTimetable: exports.publishTimetable
 };
-
 
 
 
