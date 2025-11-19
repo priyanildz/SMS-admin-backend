@@ -571,6 +571,7 @@
 
 
 
+
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -745,15 +746,11 @@ exports.generateTimetable = async (req, res) => {
             let requirements = allocations.map(alloc => ({
                 teacherId: alloc.teacher.toString(),
                 teacherName: alloc.teacherName,
-                // Defensive check for subject array access
+                // Defensive check if alloc.subjects is null/undefined or empty array
                 subject: (alloc.subjects && alloc.subjects.length > 0) ? alloc.subjects[0] : 'Unknown Subject',
                 requiredLectures: alloc.weeklyLectures,
                 remainingLectures: alloc.weeklyLectures,
             }));
-            
-            // Filter out any potentially malformed requirements where teacherId might be missing
-            requirements = requirements.filter(req => req.teacherId);
-
 
             // 4. Initialize Timetable structure
             let newTimetableData = WEEKDAYS.map(day => ({
@@ -771,16 +768,16 @@ exports.generateTimetable = async (req, res) => {
             // No longer tracking last subject per day as we removed the constraint
             let lastSubjectPerDay = WEEKDAYS.reduce((acc, day) => { acc[day] = null; return acc; }, {});
             let iterationCount = 0;
-            // Use maximum length for requirements check to avoid length errors if requirements is empty
-            const maxIterations = (requirements.length > 0) ? totalTeachingSlots * requirements.length * 2 : 1;
+            const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
             
-            // 🚨 FIX: Stronger check in loop condition to prevent crash
-            while (Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0) && iterationCount < maxIterations) { 
+            // 🚨 Defensive check: ensure requirements is an array before calling .some()
+            while (Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
                 requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
                 let assignedInThisIteration = false;
 
                 for (const req of requirements) {
-                    if (!req || req.remainingLectures <= 0) continue; // Defensive check
+                    // Defensive check for req
+                    if (!req || req.remainingLectures <= 0) continue;
 
                     let bestSlot = null;
                     let bestDayLectureCount = Infinity;
@@ -900,7 +897,7 @@ exports.publishTimetable = async (req, res) => {
         if (!standard) {
             return res.status(400).json({ error: "Missing required field: standard." });
         }
-
+        
         // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
         const publicationDate = new Date();
 
