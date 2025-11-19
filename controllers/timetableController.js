@@ -569,7 +569,6 @@
 //   }
 // };
 
-
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -744,7 +743,8 @@ exports.generateTimetable = async (req, res) => {
             let requirements = allocations.map(alloc => ({
                 teacherId: alloc.teacher.toString(),
                 teacherName: alloc.teacherName,
-                subject: alloc.subjects[0],
+                // Defensive check if alloc.subjects is null/undefined or empty array
+                subject: (alloc.subjects && alloc.subjects.length > 0) ? alloc.subjects[0] : 'Unknown Subject',
                 requiredLectures: alloc.weeklyLectures,
                 remainingLectures: alloc.weeklyLectures,
             }));
@@ -767,12 +767,14 @@ exports.generateTimetable = async (req, res) => {
             let iterationCount = 0;
             const totalTeachingSlots = NUM_TEACHING_PERIODS * WEEKDAYS.length; 
             
-            while (requirements.some(r => r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
+            // 🚨 Defensive check: ensure requirements is an array before calling .some()
+            while (Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0) && iterationCount < totalTeachingSlots * requirements.length * 2) { 
                 requirements.sort((a, b) => b.remainingLectures - a.remainingLectures);
                 let assignedInThisIteration = false;
 
                 for (const req of requirements) {
-                    if (req.remainingLectures <= 0) continue;
+                    // Defensive check for req
+                    if (!req || req.remainingLectures <= 0) continue;
 
                     let bestSlot = null;
                     let bestDayLectureCount = Infinity;
@@ -785,10 +787,13 @@ exports.generateTimetable = async (req, res) => {
                         
                         const teacherId = req.teacherId;
                         const slot = `${day}-${period.time}`;
-                        const currentDayLectureCount = targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length;
+                        
+                        // Defensive check: ensure targetDayBlock.periods exists before filtering
+                        const currentDayLectureCount = targetDayBlock?.periods ? targetDayBlock.periods.filter(p => p.periodNumber !== null && p.teacher).length : 0;
+
 
                         // CONSTRAINTS CHECK
-                        if (globalTeacherSchedule[teacherId]?.has(slot)) continue;
+                        if (teacherId && globalTeacherSchedule[teacherId]?.has(slot)) continue;
                         // ❌ REMOVED: if (req.subject === lastSubjectPerDay[day]) continue; 
                         if (currentDayLectureCount < bestDayLectureCount) {
                             bestDayLectureCount = currentDayLectureCount;
@@ -818,14 +823,14 @@ exports.generateTimetable = async (req, res) => {
                     }
                 }
                 
-                if (!assignedInThisIteration && requirements.some(r => r.remainingLectures > 0)) {
+                if (!assignedInThisIteration && Array.isArray(requirements) && requirements.some(r => r && r.remainingLectures > 0)) {
                      break; 
                 }
                 iterationCount++;
             } // END generation loop
 
             // 6. FINAL CHECK: Did all required lectures get assigned?
-            const unassignedLectures = requirements.filter(r => r.remainingLectures > 0);
+            const unassignedLectures = requirements.filter(r => r && r.remainingLectures > 0);
             if (unassignedLectures.length > 0) {
                 // ⚠️ IMPROVED ERROR REPORTING HERE
                 const subjectsFailed = unassignedLectures.map(u => `${u.subject} (${u.remainingLectures} lectures left)`).join(', ');
@@ -1034,7 +1039,7 @@ module.exports = {
     validateTimetable: exports.validateTimetable,
     arrangeTimetable: exports.arrangeTimetable,
     getTimetable: exports.getTimetable,
-    publishTimetable: exports.publishTimetable // Exporting the fixed publish function
+    publishTimetable: exports.publishTimetable
 };
 
 
