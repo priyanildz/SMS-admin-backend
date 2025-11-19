@@ -863,7 +863,6 @@ exports.generateTimetable = async (req, res) => {
         return res.status(201).json({ 
             message: `Timetables generated successfully for divisions: ${successfulDivisions.join(', ')}.`, 
             timetables: generatedTimetables,
-            failedDivisions: failedDivisions,
         });
     } else {
         // If all divisions failed
@@ -890,11 +889,13 @@ exports.publishTimetable = async (req, res) => {
         if (!standard) {
             return res.status(400).json({ error: "Missing required field: standard." });
         }
+        
+        // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
+        const publicationDate = new Date();
 
-        // ⚠️ FIXED: Removed the extra 'new' keyword to correctly initialize Date object.
         const updateResult = await Timetable.updateMany(
             { standard: standard },
-            { $set: { status: 'published', publishedAt: new Date() } } // <- FIXED
+            { $set: { status: 'published', publishedAt: publicationDate } } 
         );
 
         if (updateResult.modifiedCount > 0) {
@@ -1035,7 +1036,6 @@ module.exports = {
     getTimetable: exports.getTimetable,
     publishTimetable: exports.publishTimetable // Exporting the fixed publish function
 };
-
 
 
 
