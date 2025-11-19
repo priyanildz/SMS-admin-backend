@@ -569,7 +569,6 @@
 //   }
 // };
 
-
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -863,6 +862,7 @@ exports.generateTimetable = async (req, res) => {
         return res.status(201).json({ 
             message: `Timetables generated successfully for divisions: ${successfulDivisions.join(', ')}.`, 
             timetables: generatedTimetables,
+            failedDivisions: failedDivisions,
         });
     } else {
         // If all divisions failed
@@ -883,31 +883,28 @@ exports.generateTimetable = async (req, res) => {
 // NEW PUBLISH ENDPOINT: Updates the status of a timetable (Requires 'status' field in Timetable model)
 // ------------------------------------------------------------------
 exports.publishTimetable = async (req, res) => {
-    try {
-        const { standard } = req.params; 
-        
-        if (!standard) {
-            return res.status(400).json({ error: "Missing required field: standard." });
-        }
-        
-        // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
-        // This resolves the "intermediate value is not a constructor" error.
-        const publicationDate = new Date();
+    try {
+        const { standard } = req.params; 
+        
+        if (!standard) {
+            return res.status(400).json({ error: "Missing required field: standard." });
+        }
 
-        const updateResult = await Timetable.updateMany(
-            { standard: standard },
-            { $set: { status: 'published', publishedAt: publicationDate } } 
-        );
+        // ⚠️ IMPORTANT: This assumes your Mongoose Timetable model has a 'status' field.
+        const updateResult = await Timetable.updateMany(
+            { standard: standard },
+            { $set: { status: 'published', publishedAt: new new Date() } } // Set publication status/date
+        );
 
-        if (updateResult.modifiedCount > 0) {
-            res.status(200).json({ message: `Timetable successfully published for Standard ${standard} (${updateResult.modifiedCount} divisions updated).` });
-        } else {
-            res.status(404).json({ error: `No timetables found or updated for Standard ${standard}.` });
-        }
-    } catch (error) {
-        console.error("Error publishing timetable:", error);
-        res.status(500).json({ error: error.message });
-    }
+        if (updateResult.modifiedCount > 0) {
+            res.status(200).json({ message: `Timetable successfully published for Standard ${standard} (${updateResult.modifiedCount} divisions updated).` });
+        } else {
+            res.status(404).json({ error: `No timetables found or updated for Standard ${standard}.` });
+        }
+    } catch (error) {
+        console.error("Error publishing timetable:", error);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 // ------------------------------------------------------------------
@@ -1028,15 +1025,17 @@ exports.getTimetable = async (req, res) => {
   }
 };
 
-// Export the functions
+// Export the new function
 module.exports = {
     generateTimetable: exports.generateTimetable,
     deleteTimetable: exports.deleteTimetable,
     validateTimetable: exports.validateTimetable,
     arrangeTimetable: exports.arrangeTimetable,
     getTimetable: exports.getTimetable,
-    publishTimetable: exports.publishTimetable
+    publishTimetable: exports.publishTimetable // <-- NEW EXPORT
 };
+
+
 
 
 
