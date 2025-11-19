@@ -883,30 +883,31 @@ exports.generateTimetable = async (req, res) => {
 // NEW PUBLISH ENDPOINT: Updates the status of a timetable (Requires 'status' field in Timetable model)
 // ------------------------------------------------------------------
 exports.publishTimetable = async (req, res) => {
-    try {
-        const { standard } = req.params; 
-        
-        if (!standard) {
-            return res.status(400).json({ error: "Missing required field: standard." });
-        }
-        
-        // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
-        const publicationDate = new Date();
+    try {
+        const { standard } = req.params; 
+        
+        if (!standard) {
+            return res.status(400).json({ error: "Missing required field: standard." });
+        }
+        
+        // 💥 CRITICAL FIX: Generate the Date object correctly outside the update query.
+        // This resolves the "intermediate value is not a constructor" error.
+        const publicationDate = new Date();
 
-        const updateResult = await Timetable.updateMany(
-            { standard: standard },
-            { $set: { status: 'published', publishedAt: publicationDate } } 
-        );
+        const updateResult = await Timetable.updateMany(
+            { standard: standard },
+            { $set: { status: 'published', publishedAt: publicationDate } } 
+        );
 
-        if (updateResult.modifiedCount > 0) {
-            res.status(200).json({ message: `Timetable successfully published for Standard ${standard} (${updateResult.modifiedCount} divisions updated).` });
-        } else {
-            res.status(404).json({ error: `No timetables found or updated for Standard ${standard}.` });
-        }
-    } catch (error) {
-        console.error("Error publishing timetable:", error);
-        res.status(500).json({ error: error.message });
-    }
+        if (updateResult.modifiedCount > 0) {
+            res.status(200).json({ message: `Timetable successfully published for Standard ${standard} (${updateResult.modifiedCount} divisions updated).` });
+        } else {
+            res.status(404).json({ error: `No timetables found or updated for Standard ${standard}.` });
+        }
+    } catch (error) {
+        console.error("Error publishing timetable:", error);
+        res.status(500).json({ error: error.message });
+    }
 };
 
 // ------------------------------------------------------------------
@@ -1034,7 +1035,7 @@ module.exports = {
     validateTimetable: exports.validateTimetable,
     arrangeTimetable: exports.arrangeTimetable,
     getTimetable: exports.getTimetable,
-    publishTimetable: exports.publishTimetable // Exporting the fixed publish function
+    publishTimetable: exports.publishTimetable
 };
 
 
