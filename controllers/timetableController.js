@@ -569,6 +569,7 @@
 //   }
 // };
 
+
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
@@ -890,10 +891,10 @@ exports.publishTimetable = async (req, res) => {
             return res.status(400).json({ error: "Missing required field: standard." });
         }
 
-        // ⚠️ IMPORTANT: This assumes your Mongoose Timetable model has a 'status' field.
+        // ⚠️ FIXED: Removed the extra 'new' keyword to correctly initialize Date object.
         const updateResult = await Timetable.updateMany(
             { standard: standard },
-            { $set: { status: 'published', publishedAt: new new Date() } } // Set publication status/date
+            { $set: { status: 'published', publishedAt: new Date() } } // <- FIXED
         );
 
         if (updateResult.modifiedCount > 0) {
@@ -1025,16 +1026,15 @@ exports.getTimetable = async (req, res) => {
   }
 };
 
-// Export the new function
+// Export the functions
 module.exports = {
     generateTimetable: exports.generateTimetable,
     deleteTimetable: exports.deleteTimetable,
     validateTimetable: exports.validateTimetable,
     arrangeTimetable: exports.arrangeTimetable,
     getTimetable: exports.getTimetable,
-    publishTimetable: exports.publishTimetable // <-- NEW EXPORT
+    publishTimetable: exports.publishTimetable // Exporting the fixed publish function
 };
-
 
 
 
