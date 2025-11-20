@@ -28,7 +28,6 @@
 // };
 
 
-
 const proxy = require("../models/proxyModel");
 
 // Create a new proxy entry
@@ -45,7 +44,7 @@ exports.createProxy = async (req, res) => {
   }
 };
 
-// Get all proxy entries (UPDATED: Added .populate())
+// Get all proxy entries (UPDATED: Added .populate() for teacher names)
 exports.getProxies = async (req, res) => {
   try {
     const proxies = await proxy.find()
