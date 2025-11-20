@@ -27,8 +27,6 @@
 //   }
 // };
 
-
-
 const proxy = require("../models/proxyModel");
 
 // Create a new proxy entry
@@ -45,12 +43,12 @@ exports.createProxy = async (req, res) => {
   }
 };
 
-// Get all proxy entries (UPDATED: Added .populate() for teacher names)
+// Get all proxy entries
 exports.getProxies = async (req, res) => {
   try {
     const proxies = await proxy.find()
-      .populate("fromteacher", "firstname lastname") // Populate fromteacher with names
-      .populate("toteacher", "firstname lastname");   // Populate toteacher with names
+      .populate("fromteacher", "firstname lastname")
+      .populate("toteacher", "firstname lastname");
 
     res.json(proxies);
   } catch (err) {
@@ -59,4 +57,23 @@ exports.getProxies = async (req, res) => {
       error: err.message,
     });
   }
+};
+
+// NEW: Delete a proxy entry
+exports.deleteProxy = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedProxy = await proxy.findByIdAndDelete(id);
+
+        if (!deletedProxy) {
+            return res.status(404).json({ message: "Proxy entry not found." });
+        }
+
+        res.status(200).json({ message: "Proxy deleted successfully." });
+    } catch (err) {
+        console.error("Error in deleteProxy:", err);
+        res.status(500).json({
+            error: err.message,
+        });
+    }
 };

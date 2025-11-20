@@ -53,6 +53,8 @@ router.put("/timetables/publish/:standard", timetableController.publishTimetable
 
 router.post("/add-proxy", proxyController.createProxy);
 router.get("/proxies", proxyController.getProxies);
+router.delete("/proxies/:id", proxyController.deleteProxy);
+
 
 //edit student
 router.put("/edit-student/:id", studentController.editStudent);
