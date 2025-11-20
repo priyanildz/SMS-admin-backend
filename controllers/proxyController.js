@@ -27,7 +27,6 @@
 //   }
 // };
 
-
 const proxy = require("../models/proxyModel");
 
 // Create a new proxy entry
