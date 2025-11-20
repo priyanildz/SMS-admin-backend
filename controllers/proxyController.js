@@ -27,6 +27,7 @@
 //   }
 // };
 
+
 const proxy = require("../models/proxyModel");
 
 // Create a new proxy entry
@@ -59,7 +60,7 @@ exports.getProxies = async (req, res) => {
   }
 };
 
-// NEW: Delete a proxy entry
+// Delete a proxy entry
 exports.deleteProxy = async (req, res) => {
     try {
         const { id } = req.params;
