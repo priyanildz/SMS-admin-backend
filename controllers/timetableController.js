@@ -877,7 +877,7 @@ exports.generateTimetable = async (req, res) => {
     } else {
         // If all divisions failed
         return res.status(400).json({ 
-            error: "Timetable generation failed for all divisions.", 
+            error: "Timetable generation failed for all divisions. Please set the teacher and subject allocations correctly.", 
             details: failedDivisions 
         });
     }
