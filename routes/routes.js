@@ -290,4 +290,6 @@ router.get("/staff/:staffid/timetable", staffController.getStaffTimetable);
 
 router.get("/staff/:staffid/history", staffController.getStaffHistory);
 
+router.post("/exam-results", examController.getExamResults);
+
 module.exports = router;
