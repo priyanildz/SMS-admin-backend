@@ -139,6 +139,8 @@ router.post("/add-classroom", classroomController.addClassroom);
 
 router.get("/classrooms", classroomController.getAllClassrooms);
 
+router.delete("/classrooms/:id", classroomController.deleteClassroom);
+
 // modify announcement
 router.put(
   "/modify-announcement/:id",
