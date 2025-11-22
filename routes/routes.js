@@ -141,6 +141,8 @@ router.get("/classrooms", classroomController.getAllClassrooms);
 
 router.delete("/classrooms/:id", classroomController.deleteClassroom);
 
+router.get("/class-teacher/:standard/:division", classroomController.getClassTeacherByClass);
+
 // modify announcement
 router.put(
   "/modify-announcement/:id",

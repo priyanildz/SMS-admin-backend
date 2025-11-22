@@ -78,3 +78,40 @@ exports.deleteClassroom = async (req, res) => {
         return res.status(500).json({ error: error.message, message: "Internal Server Error during deletion." });
     }
 };
+
+
+exports.getClassTeacherByClass = async (req, res) => {
+    try {
+        const { standard, division } = req.params;
+
+        // 1. Find the classroom assignment by Standard and Division
+        const assignment = await classroom.findOne({ standard, division }).lean();
+
+        if (!assignment || !assignment.staffid) {
+            return res.status(404).json({ message: "Classroom assignment or Class Teacher not found." });
+        }
+        
+        // 2. Fetch the Staff details (only need name) using the staffid (which is an _id in your classroom model)
+        const classTeacher = await Staff.findById(assignment.staffid)
+            .select('firstname lastname') // Select only the necessary fields
+            .lean();
+
+        if (!classTeacher) {
+            // Handle case where assignment exists but teacher record is missing
+            return res.status(200).json({ 
+                name: "Teacher Record Missing", 
+                staffid: assignment.staffid 
+            });
+        }
+
+        return res.status(200).json({
+            name: `${classTeacher.firstname} ${classTeacher.lastname}`,
+            staffid: assignment.staffid 
+        });
+
+    } catch (error) {
+        console.error("Error fetching Class Teacher by class:", error);
+        // Using 404 here matches the frontend's original failure mode
+        return res.status(404).json({ message: "Failed to fetch class teacher details." }); 
+    }
+};
