@@ -23,7 +23,7 @@ exports.addClassroom = async (req, res) => {
 exports.deleteClassroom = async (req, res) => {
     try {
         const { id } = req.params;
-        // FIX: Change from 'Classroom' to 'classroom'
+        // FIX: Use the imported variable 'classroom' (lowercase)
         const result = await classroom.findByIdAndDelete(id); 
 
         if (!result) {
