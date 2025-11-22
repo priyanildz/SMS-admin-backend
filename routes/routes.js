@@ -137,6 +137,8 @@ router.get("/term-result/:id", testController.getResultsById);
 // add classroom
 router.post("/add-classroom", classroomController.addClassroom);
 
+router.get("/classrooms", classroomController.getAllClassrooms);
+
 // modify announcement
 router.put(
   "/modify-announcement/:id",

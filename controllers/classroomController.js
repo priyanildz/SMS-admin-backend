@@ -8,3 +8,15 @@ exports.addClassroom = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+exports.getAllClassrooms = async (req, res) => {
+    try {
+        // Fetch all documents from the Classroom model
+        const classrooms = await Classroom.find({}); 
+        
+        // Return the list of classrooms
+        return res.status(200).json(classrooms);
+    } catch (error) {
+        console.error("Error fetching all classrooms:", error);
+        return res.status(500).json({ message: "Internal Server Error while fetching classroom list." });
+    }
+};
