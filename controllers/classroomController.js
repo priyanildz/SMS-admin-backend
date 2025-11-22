@@ -12,16 +12,11 @@ exports.addClassroom = async (req, res) => {
 
 exports.getAllClassrooms = async (req, res) => {
     try {
-        const classrooms = await classroom.find({});
+        // 1. Fetch all existing classroom assignments
+        const assignments = await classroom.find({}).lean(); // Use .lean() for faster aggregation/mapping
         
-        // 1. Get all unique standard/division combinations
-        const classList = classrooms.map(c => ({ 
-            standard: c.standard, 
-            division: c.division, 
-            _id: c._id // Retain ID for easy mapping
-        }));
-        
-        // 2. Perform aggregation on the student collection to get counts
+        // 2. Perform a single aggregation query on the student collection to get counts for all classes
+        // This is much faster than querying for each class individually.
         const studentCounts = await Student.aggregate([
             {
                 $group: {
@@ -34,23 +29,24 @@ exports.getAllClassrooms = async (req, res) => {
             }
         ]);
         
-        // 3. Merge the counts back into the classroom assignments
-        const mergedAssignments = classrooms.map(assignment => {
+        // 3. Merge the calculated counts back into the classroom assignments
+        const mergedAssignments = assignments.map(assignment => {
             const countMatch = studentCounts.find(sc => 
                 sc._id.standard === assignment.standard && 
                 sc._id.division === assignment.division
             );
             
+            // Return the assignment object, overriding the saved studentcount (which is 0)
             return {
-                ...assignment._doc, // Use _doc if it's a Mongoose document
+                ...assignment,
                 studentcount: countMatch ? countMatch.count : 0
             };
         });
 
         return res.status(200).json(mergedAssignments);
     } catch (error) {
-        console.error("Error fetching all classrooms with counts:", error);
-        return res.status(500).json({ message: "Internal Server Error" });
+        console.error("Error fetching all classrooms with student counts:", error);
+        return res.status(500).json({ message: "Internal Server Error during fetching with count." });
     }
 };
 
