@@ -626,6 +626,7 @@ const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Timetable = require("../models/timetableModel");
+const classroom = require("../models/classroomModel");
 
 // 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
 // If your model is named differently, update the line below accordingly.
@@ -653,6 +654,15 @@ const upsertStaffSubDoc = async (Model, staffid, data, fieldsToUpdate) => {
     );
 };
 
+exports.addClassroom = async (req, res) => {
+  try {
+    const response = new classroom(req.body);
+    await response.save();
+    return res.status(200).json({ message: "added classroom successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 // =========================================================================
 // GET STAFF HISTORY (UPDATED TO FETCH REAL DATA) 🚀
