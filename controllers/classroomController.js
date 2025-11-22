@@ -12,33 +12,37 @@ exports.addClassroom = async (req, res) => {
 
 exports.getAllClassrooms = async (req, res) => {
     try {
-        // 1. Fetch all existing classroom assignments
-        const assignments = await classroom.find({}).lean(); // Use .lean() for faster aggregation/mapping
-        
-        // 2. Perform a single aggregation query on the student collection to get counts for all classes
-        // This is much faster than querying for each class individually.
+        // 1. Aggregate Student Counts by Standard and Division
         const studentCounts = await Student.aggregate([
             {
                 $group: {
                     _id: {
-                        standard: "$standard", // Assuming student model has these fields
-                        division: "$division"
+                        standard: "$admission.admissionstd", // Use nested student admission standard field
+                        division: "$admission.admissiondivision" // Use nested student admission division field
                     },
-                    count: { $sum: 1 }
+                    count: { $sum: 1 } // Count students in that group
                 }
             }
         ]);
         
-        // 3. Merge the calculated counts back into the classroom assignments
+        // 2. Fetch all Classroom Assignments
+        const assignments = await classroom.find({}).lean(); // Use .lean() for faster results
+
+        // 3. Merge the counts into the assignments
         const mergedAssignments = assignments.map(assignment => {
+            
+            // Note: Your data shows two assignments with the same standard: 5 and division: A.
+            // This is a data integrity issue but we must handle the join.
+            // We search for a matching count based on the class definition.
             const countMatch = studentCounts.find(sc => 
                 sc._id.standard === assignment.standard && 
                 sc._id.division === assignment.division
             );
             
-            // Return the assignment object, overriding the saved studentcount (which is 0)
+            // Return the assignment object, overriding the database's 'studentcount: 0' field
             return {
                 ...assignment,
+                // If a count is found, use it; otherwise, default to 0
                 studentcount: countMatch ? countMatch.count : 0
             };
         });
@@ -46,7 +50,7 @@ exports.getAllClassrooms = async (req, res) => {
         return res.status(200).json(mergedAssignments);
     } catch (error) {
         console.error("Error fetching all classrooms with student counts:", error);
-        return res.status(500).json({ message: "Internal Server Error during fetching with count." });
+        return res.status(500).json({ message: "Internal Server Error" });
     }
 };
 
