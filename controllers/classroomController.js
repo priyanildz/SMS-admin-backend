@@ -1,4 +1,5 @@
 const classroom = require("../models/classroomModel");
+const Student = require("../models/studentModel");
 exports.addClassroom = async (req, res) => {
   try {
     const response = new classroom(req.body);
@@ -7,17 +8,50 @@ exports.addClassroom = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-};exports.getAllClassrooms = async (req, res) => {
-    try {
-        // FIX: Change 'Classroom' to 'classroom' to match the import above
-        const classrooms = await classroom.find({}); 
-        
-        // Return the list of classrooms
-        return res.status(200).json(classrooms);
-    } catch (error) {
-        console.error("Error fetching all classrooms:", error);
-        return res.status(500).json({ message: "Internal Server Error while fetching classroom list." });
-    }
+};
+
+exports.getAllClassrooms = async (req, res) => {
+    try {
+        const classrooms = await classroom.find({});
+        
+        // 1. Get all unique standard/division combinations
+        const classList = classrooms.map(c => ({ 
+            standard: c.standard, 
+            division: c.division, 
+            _id: c._id // Retain ID for easy mapping
+        }));
+        
+        // 2. Perform aggregation on the student collection to get counts
+        const studentCounts = await Student.aggregate([
+            {
+                $group: {
+                    _id: {
+                        standard: "$standard", // Assuming student model has these fields
+                        division: "$division"
+                    },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        
+        // 3. Merge the counts back into the classroom assignments
+        const mergedAssignments = classrooms.map(assignment => {
+            const countMatch = studentCounts.find(sc => 
+                sc._id.standard === assignment.standard && 
+                sc._id.division === assignment.division
+            );
+            
+            return {
+                ...assignment._doc, // Use _doc if it's a Mongoose document
+                studentcount: countMatch ? countMatch.count : 0
+            };
+        });
+
+        return res.status(200).json(mergedAssignments);
+    } catch (error) {
+        console.error("Error fetching all classrooms with counts:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
 };
 
 exports.deleteClassroom = async (req, res) => {
