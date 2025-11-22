@@ -12,37 +12,45 @@ exports.addClassroom = async (req, res) => {
 
 exports.getAllClassrooms = async (req, res) => {
     try {
-        // 1. Aggregate Student Counts by Standard and Division
+        // 1. Fetch Student Counts by Standard and Division using Aggregation
         const studentCounts = await Student.aggregate([
             {
                 $group: {
                     _id: {
-                        standard: "$admission.admissionstd", // Use nested student admission standard field
-                        division: "$admission.admissiondivision" // Use nested student admission division field
+                        // Grouping key 1: Standard
+                        standard: "$admission.admissionstd", 
+                        // Grouping key 2: Use the Division, but ensure it's not null/missing 
+                        // Note: If students are sometimes saved with null/undefined division, 
+                        // they won't be counted for any class unless specifically grouped.
+                        division: "$admission.admissiondivision" 
                     },
-                    count: { $sum: 1 } // Count students in that group
+                    count: { $sum: 1 }
                 }
             }
         ]);
         
         // 2. Fetch all Classroom Assignments
-        const assignments = await classroom.find({}).lean(); // Use .lean() for faster results
+        const assignments = await classroom.find({}).lean(); 
 
         // 3. Merge the counts into the assignments
         const mergedAssignments = assignments.map(assignment => {
             
-            // Note: Your data shows two assignments with the same standard: 5 and division: A.
-            // This is a data integrity issue but we must handle the join.
-            // We search for a matching count based on the class definition.
-            const countMatch = studentCounts.find(sc => 
-                sc._id.standard === assignment.standard && 
-                sc._id.division === assignment.division
-            );
+            // Search for a matching count based on both Standard and Division
+            const countMatch = studentCounts.find(sc => {
+                const isStandardMatch = sc._id.standard === assignment.standard;
+                const isDivisionMatch = sc._id.division === assignment.division;
+                
+                // CRITICAL LOGIC: If the student division is an empty string, 
+                // it will only match a classroom division that is ALSO an empty string.
+                // Since your classroom divisions are letters ("A", "D", "E"), 
+                // the student records need accurate division letters for the count to match.
+                
+                return isStandardMatch && isDivisionMatch;
+            });
             
-            // Return the assignment object, overriding the database's 'studentcount: 0' field
+            // The logic here is correct: take the count if found, otherwise 0
             return {
                 ...assignment,
-                // If a count is found, use it; otherwise, default to 0
                 studentcount: countMatch ? countMatch.count : 0
             };
         });
