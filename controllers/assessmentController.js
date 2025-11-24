@@ -10,27 +10,15 @@ exports.addAssessment = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// exports.getAssessment = async (req, res) => {
-//   try {
-//     const response = await assessment.find();
-//     return res.status(200).json(response);
-//   } catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
-
-
 exports.getAssessment = async (req, res) => {
-  try {
-    // Ensure this is the most stable version without population or complex queries
-    const response = await assessment.find(); 
-    return res.status(200).json(response);
-  } catch (error) {
-    // Log the actual error on the server console for proper debugging
-    console.error("Error in getAssessment:", error); 
-    return res.status(500).json({ error: "Failed to retrieve assessments. Check server logs." });
-  }
+  try {
+    const response = await assessment.find();
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
+
 // homework endpoints
 exports.addHomework = async (req, res) => {
   try {
