@@ -11,12 +11,22 @@ exports.addAssessment = async (req, res) => {
   }
 };
 exports.getAssessment = async (req, res) => {
-  try {
-    const response = await assessment.find();
-    return res.status(200).json(response);
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  try {
+    const response = await assessment.find()
+      // Use populate to fetch the Staff document corresponding to the teacherId
+      // and only select the name fields (firstname, lastname)
+      .populate({
+        path: 'teacherId', // The field in the assessment schema that stores the ID
+        select: 'firstname lastname', // The fields from the Staff document to retrieve
+      });
+      
+    // The structure needs to be adjusted in the frontend to handle the populated object.
+    // e.g., item.teacherId.firstname instead of item.teacherName
+
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 // homework endpoints
