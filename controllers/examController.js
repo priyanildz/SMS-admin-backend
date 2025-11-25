@@ -123,11 +123,13 @@
 
 
 // examController.js
+// examController.js
 
 const mongoose = require("mongoose");
-const examModel = require("../models/examModel"); // For exam timetable related functions
-// Assuming the file path is correct: "../models/ExamResultModel"
+const examModel = require("../models/examModel"); 
+// ⭐ CRITICAL: Ensure you replace the path below if your result model file is named differently
 const ExamResult = require("../models/ExamResultModel"); 
+
 
 // Helper function to concatenate student name from populated object
 const getStudentFullName = (student) => {
@@ -190,7 +192,7 @@ exports.getExamResults = async (req, res) => {
         })
         .lean(); // Use .lean() for better performance
 
-    // Map results to flatten the student name and scores for the frontend table
+    // Map results to flatten the student name and scores for the frontend table
     const mappedResults = results.map(item => {
         const student = item.studentId;
         
@@ -199,9 +201,9 @@ exports.getExamResults = async (req, res) => {
             name: getStudentFullName(student),
             
             // 2. Include all other fields (subject scores, etc.) from the result document
-            // This safely excludes the studentId and other internal fields, leaving the scores
             ...Object.keys(item).reduce((acc, key) => {
-                if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester') {
+                // Exclude internal Mongoose fields and filter fields, leaving the scores
+                if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
                     acc[key] = item[key];
                 }
                 return acc;
@@ -217,6 +219,6 @@ exports.getExamResults = async (req, res) => {
     
   } catch (error) {
     console.error("Critical Server Error in getExamResults:", error);
-    return res.status(500).json({ error: "Failed to fetch exam results due to a server error." });
+    return res.status(500).json({ error: "Failed to fetch exam results due to a server error. Check database link and data integrity." });
   }
 };
