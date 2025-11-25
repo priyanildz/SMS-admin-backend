@@ -121,55 +121,85 @@
 //   }
 // };
 
+
+// examController.js
+
 const mongoose = require("mongoose");
-// Import the new result model
+const examModel = require("../models/examModel"); // For exam timetable related functions
+// Assuming the file path is correct: "../models/ExamResultModel"
 const ExamResult = require("../models/ExamResultModel"); 
-const examModel = require("../models/examModel"); 
 
 // Helper function to concatenate student name from populated object
 const getStudentFullName = (student) => {
+    // Check if student object exists and has name fields
     return student && student.firstname && student.lastname 
         ? `${student.firstname} ${student.lastname}` 
         : 'N/A Student';
 };
 
-// ... (addETimetable and getETimetable remain the same)
+// =================================================================================
+// 1. EXAM TIMETABLE FUNCTIONS (Existing)
+// =================================================================================
+
+exports.addETimetable = async (req, res) => {
+  try {
+    const response = new examModel(req.body);
+    await response.save();
+    return res
+      .status(200)
+      .json({ message: "exam timetable created successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getETimetable = async (req, res) => {
+  try {
+    const response = await examModel.find();
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 // =================================================================================
-// GET EXAM RESULTS (Final working logic using ExamResult Model)
+// 2. GET EXAM RESULTS (Final working logic using ExamResult Model)
 // =================================================================================
+
 exports.getExamResults = async (req, res) => {
-  try {
-    const { standard, division, semester } = req.body;
+  try {
+    // Filters are sent via POST request body from the frontend
+    const { standard, division, semester } = req.body;
 
-    if (!standard || !division || !semester) {
-      return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
-    }
+    if (!standard || !division || !semester) {
+      return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
+    }
 
-    const filterQuery = {
-        standard: standard,
-        division: division,
-        semester: semester
-    };
-    
-    // ⭐ CORE FIX: Use ExamResult and populate student name ⭐
-    const results = await ExamResult.find(filterQuery)
+    // Build the main query filter
+    const filterQuery = {
+        standard: standard,
+        division: division,
+        semester: semester 
+    };
+    
+    // Fetch results and populate the linked Student data
+    const results = await ExamResult.find(filterQuery)
         .populate({
-            path: 'studentId', 
-            // Select the name fields from the student model
-            select: 'firstname lastname -_id' 
+            path: 'studentId', // The field in ExamResult storing the Student ObjectId
+            select: 'firstname lastname -_id' // Fetch only name fields from the Student model
         })
-        .lean(); 
+        .lean(); // Use .lean() for better performance
 
-    // Map results to flatten the student name and scores for the frontend table
+    // Map results to flatten the student name and scores for the frontend table
     const mappedResults = results.map(item => {
         const student = item.studentId;
         
         return {
             // 1. Student Name (Required for the first column)
             name: getStudentFullName(student),
-            // 2. Dynamically include all other score/subject fields
-            // The frontend table will pick up Maths, Science, English, etc.
+            
+            // 2. Include all other fields (subject scores, etc.) from the result document
+            // This safely excludes the studentId and other internal fields, leaving the scores
             ...Object.keys(item).reduce((acc, key) => {
                 if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester') {
                     acc[key] = item[key];
@@ -179,14 +209,14 @@ exports.getExamResults = async (req, res) => {
         };
     });
 
-    if (!mappedResults || mappedResults.length === 0) {
-      return res.status(200).json([]);
-    }
+    if (!mappedResults || mappedResults.length === 0) {
+      return res.status(200).json([]);
+    }
 
-    return res.status(200).json(mappedResults);
-    
-  } catch (error) {
-    console.error("Critical Server Error in getExamResults:", error);
-    return res.status(500).json({ error: "Failed to fetch exam results due to a server error." });
-  }
+    return res.status(200).json(mappedResults);
+    
+  } catch (error) {
+    console.error("Critical Server Error in getExamResults:", error);
+    return res.status(500).json({ error: "Failed to fetch exam results due to a server error." });
+  }
 };
