@@ -251,7 +251,6 @@
 
 
 
-
 const mongoose = require("mongoose");
 const examModel = require("../models/examModel"); 
 // 1. IMPORT DEDICATED RESULT MODEL
@@ -362,9 +361,9 @@ exports.addETimetable = async (req, res) => {
         // Pre-check for existing record to provide a cleaner error message
         const existingTimetable = await examModel.findOne({ standard, examtype });
         if (existingTimetable) {
-            // UPDATED: Standardized conflict notification message
+            // Standardized conflict notification message
             return res.status(409).json({ 
-                message: `A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
                 error: true,
                 code: 409
             });
@@ -382,7 +381,7 @@ exports.addETimetable = async (req, res) => {
     } catch (error) {
         // Handle MongoDB Duplicate Key Error (Code 11000) explicitly if the pre-check fails
         if (error.code === 11000) {
-            // UPDATED: Standardized conflict notification message
+            // Standardized conflict notification message
             return res.status(409).json({ 
                 message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
                 error: true,
@@ -405,4 +404,20 @@ exports.getETimetable = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
+};
+
+// NEW CHANGE: Delete Exam Timetable Function
+exports.deleteETimetable = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await examModel.findByIdAndDelete(id);
+
+        if (!result) {
+            return res.status(404).json({ message: "Exam timetable not found.", error: true });
+        }
+
+        return res.status(200).json({ message: "Exam timetable deleted successfully.", error: false });
+    } catch (error) {
+        return res.status(500).json({ message: "Error deleting exam timetable.", error: error.message });
+    }
 };

@@ -125,6 +125,9 @@ router.post("/add-etimetable", examController.addETimetable);
 // display all exam schedules
 router.get("/etimetable", examController.getETimetable);
 
+// NEW CHANGE: Delete Exam Timetable Route
+router.delete("/etimetable/:id", examController.deleteETimetable);
+
 // add term results
 router.post("/add-test", testController.addTermResult);
 
