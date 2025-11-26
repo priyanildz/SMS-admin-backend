@@ -364,7 +364,7 @@ exports.addETimetable = async (req, res) => {
         if (existingTimetable) {
             // UPDATED: Standardized conflict notification message
             return res.status(409).json({ 
-                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+                message: `A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
                 error: true,
                 code: 409
             });
