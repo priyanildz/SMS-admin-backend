@@ -250,6 +250,8 @@
 // };
 
 
+
+
 const mongoose = require("mongoose");
 const examModel = require("../models/examModel"); 
 // 1. IMPORT DEDICATED RESULT MODEL
@@ -350,18 +352,20 @@ exports.getExamResults = async (req, res) => {
 };
 
 // =================================================================================
-// 3. EXAM TIMETABLE FUNCTIONS (Existing - kept as is)
+// 3. EXAM TIMETABLE FUNCTIONS 
 // =================================================================================
 
 exports.addETimetable = async (req, res) => {
     const { standard, examtype } = req.body;
     
     try {
-        // OPTIONAL PRE-CHECK (Database index handles the enforcement, but this provides a cleaner error)
+        // Pre-check for existing record to provide a cleaner error message
         const existingTimetable = await examModel.findOne({ standard, examtype });
         if (existingTimetable) {
+            // UPDATED: Standardized conflict notification message
             return res.status(409).json({ 
-                error: `A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+                error: true,
                 code: 409
             });
         }
@@ -370,19 +374,27 @@ exports.addETimetable = async (req, res) => {
         await response.save();
         return res
           .status(200)
-          .json({ message: "exam timetable created successfully" });
+          .json({ 
+            message: "Exam timetable created successfully",
+            error: false 
+        });
         
     } catch (error) {
-        // Handle MongoDB Duplicate Key Error (Code 11000) explicitly, 
-        // which occurs if the client bypasses the pre-check.
+        // Handle MongoDB Duplicate Key Error (Code 11000) explicitly if the pre-check fails
         if (error.code === 11000) {
+            // UPDATED: Standardized conflict notification message
             return res.status(409).json({ 
-                error: `A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
+                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
+                error: true,
                 code: 409
             });
         }
         
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ 
+            message: "An unexpected error occurred while creating the timetable.", 
+            error: error.message,
+            code: 500
+        });
     }
 };
 
