@@ -122,128 +122,152 @@
 // };
 
 
-
 // examController.js
 
 const mongoose = require("mongoose");
 const examModel = require("../models/examModel"); 
-// We need to import the testController to reuse its functions or access the assessment model
-const TermAssessment = require("../models/termAssessment");
-const Student = mongoose.model('student'); // Assuming student model is globally available or imported in testController
-// const Staff = mongoose.model('staff'); // Assuming staff model is globally available or imported in testController
+const TermAssessment = require("../models/termAssessment"); // Model that holds scores/studentData
+const Student = mongoose.model('student'); 
+// NOTE: Ensure your student model is globally available or correctly required in this file.
 
 
-// Helper function to concatenate student name (needed for the frontend)
+// Helper function to concatenate student name from populated object
 const getStudentFullName = (student) => {
     return student && student.firstname && student.lastname 
         ? `${student.firstname} ${student.lastname}` 
         : 'N/A Student';
 };
 
+// =================================================================================
+// ADD EXAM RESULTS (New Function)
+// =================================================================================
+exports.addExamResults = async (req, res) => {
+    // Allows saving a single object or an array of objects to TermAssessment
+    const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
+    
+    if (resultsToSave.length === 0) {
+        return res.status(400).json({ error: "No data provided to save." });
+    }
+
+    try {
+        // We assume the data structure being posted is a simplified score object 
+        // that matches the TermAssessment model fields (e.g., standard, division, studentData).
+        // Since TermAssessment is designed for *assessment* records (not individual student scores),
+        // we'll save it directly, assuming the client provides the full TermAssessment object.
+        
+        // This logic is safer: it saves records exactly as they are sent.
+        const savedResults = await TermAssessment.insertMany(resultsToSave); 
+
+        return res.status(200).json({ 
+            message: "Exam results saved successfully to TermAssessment collection.", 
+            count: savedResults.length 
+        });
+    } catch (error) {
+        console.error("Error saving exam results:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
 
 // =================================================================================
-// 1. EXAM TIMETABLE FUNCTIONS (Existing)
+// EXAM TIMETABLE FUNCTIONS (Kept as is)
 // =================================================================================
 
 exports.addETimetable = async (req, res) => {
-  // ... (Timetable creation logic)
-    try {
-        const response = new examModel(req.body);
-        await response.save();
-        return res
-          .status(200)
-          .json({ message: "exam timetable created successfully" });
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
+  try {
+    const response = new examModel(req.body);
+    await response.save();
+    return res
+      .status(200)
+      .json({ message: "exam timetable created successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getETimetable = async (req, res) => {
-  // ... (Timetable retrieval logic)
-    try {
-        const response = await examModel.find();
-        return res.status(200).json(response);
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
+  try {
+    const response = await examModel.find();
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 // =================================================================================
-// 2. GET EXAM RESULTS (Uses TermAssessment model for score data)
+// GET EXAM RESULTS (Retrieval logic)
 // =================================================================================
 
 exports.getExamResults = async (req, res) => {
-  try {
-    // Filters sent from the frontend ExamResults page
-    const { standard, division, semester } = req.body; 
+  try {
+    // Filters sent from the frontend ExamResults page
+    const { standard, division, semester } = req.body; 
 
-    if (!standard || !division || !semester) {
-      return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
-    }
-    
-    // We assume 'semester' in the frontend corresponds to a field/logic in your TermAssessment data.
-    // For safety, we query using standard and division, and assume the data retrieved is for the correct exam type/semester.
+    if (!standard || !division || !semester) {
+      return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
+    }
+    
+    const filterQuery = {
+        standard: standard,
+        division: division,
+        // If TermAssessment gets a 'semester' field, uncomment this:
+        // semester: semester 
+    };
 
-    const filterQuery = {
-        standard: standard,
-        division: division,
-        // You may need to add a filter for the exam type or date range here if available
-        // examType: semester === '1' ? 'mid-term' : 'finals' // Example custom logic
-    };
+    // Find the Term Assessment record(s) matching the class filters
+    const termRecords = await TermAssessment.find(filterQuery).lean(); 
 
-    // Find the Term Assessment record(s) matching the class filters
-    // Note: This returns one or more assessment records, which may not be ideal
-    // if you have many term assessments per semester.
-    const termRecords = await TermAssessment.find(filterQuery)
-        // If your studentData field stores an array of ObjectIds, you would populate it here.
-        .lean(); 
+    if (!termRecords || termRecords.length === 0) {
+      return res.status(200).json([]);
+    }
 
-    if (!termRecords || termRecords.length === 0) {
-      return res.status(200).json([]);
-    }
+    // --- Aggregating and Flattening Student Results ---
+    const allStudentResults = {};
 
-    // ⭐ CRITICAL STEP: Flattening the studentData from the TermAssessment record(s) ⭐
+    for (const record of termRecords) {
+        // Assumes studentData: { studentId1: { subject1: score }, ... }
 
-    // We assume the studentData object inside the termAssessment schema looks like:
-    // studentData: { studentId1: { subject1: score, subject2: score }, studentId2: { ... } }
-    
-    // The frontend expects an array of { name: '...', subject1: score, subject2: score }
-    
-    // For simplicity and stability, we will return the raw studentData array 
-    // from the first matching term record. 
-    // NOTE: The structure of termAssessment's 'studentData' is an Object, 
-    // making the dynamic student name population complex without more database queries. 
-    // We must rely on the frontend or subsequent calls to resolve the student names.
+        for (const [studentMongoId, scores] of Object.entries(record.studentData)) {
+            if (!allStudentResults[studentMongoId]) {
+                allStudentResults[studentMongoId] = { studentId: studentMongoId, ...scores };
+            } else {
+                allStudentResults[studentMongoId] = { 
+                    ...allStudentResults[studentMongoId], 
+                    ...scores 
+                };
+            }
+        }
+    }
+    
+    const studentIds = Object.keys(allStudentResults);
 
-    // For now, we return the data flat, assuming names are handled later or are within the scores array.
-    
-    // As a placeholder, let's return a simple structure that the frontend can process:
-    // This assumes that the 'studentData' field in your database holds the final score array directly
-    // and that 'studentData' must be fetched by student ID later.
-    
-    // --- TEMPORARY SIMPLE RETURN ---
-    // If your TermAssessment data is student-centric (one record per student), 
-    // the model should be changed. Since it's a "TermAssessment" record, it's assessment-centric.
-    // For now, return the list of scores from the first record found:
-    const rawStudentData = termRecords[0].studentData;
+    if (studentIds.length === 0) {
+        return res.status(200).json([]);
+    }
 
-    // The studentData object is an object mapping student IDs to scores.
-    // We will transform it to the array format the frontend expects:
-    
-    const finalResults = [];
-    
-    // The final step here would be complex population. To avoid crashing, 
-    // we must ensure the frontend handles the data format correctly.
-    
-    // Since we cannot run population easily here (as 'studentData' is an Object),
-    // let's return a simplified array that the frontend expects, which must be
-    // done by converting the studentData object.
-    
-    // This is the safest way to ensure the data is non-null and avoid server crashes:
-    return res.status(200).json([]); // Safely return empty array for now.
-    
-  } catch (error) {
-    console.error("Critical Server Error in getExamResults:", error);
-    return res.status(500).json({ error: "Failed to fetch exam results. Please ensure the data structure in termAssessment is compatible." });
-  }
+    // 1. Fetch all student details (names) based on collected IDs
+    const students = await Student.find({ _id: { $in: studentIds } }).lean();
+    
+    const studentMap = students.reduce((acc, student) => {
+        acc[student._id.toString()] = student;
+        return acc;
+    }, {});
+    
+    // 2. Final mapping to frontend format
+    const finalResults = studentIds.map(id => {
+        const studentDetails = studentMap[id];
+        const scores = allStudentResults[id];
+
+        return {
+            name: studentDetails ? getStudentFullName(studentDetails) : `Student ${id}`,
+            ...scores
+        };
+    });
+    
+    return res.status(200).json(finalResults);
+    
+  } catch (error) {
+    console.error("Critical Server Error in getExamResults:", error);
+    return res.status(500).json({ error: "Failed to fetch exam results. Please ensure the TermAssessment data structure is correct and student IDs are valid.", detail: error.message });
+  }
 };
