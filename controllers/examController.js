@@ -128,7 +128,7 @@
 const mongoose = require("mongoose");
 const examModel = require("../models/examModel"); 
 // 1. IMPORT DEDICATED RESULT MODEL
-const ExamResult = require("../models/ExamResultModel"); 
+const ExamResult = require("../models/examResult");
 // 2. IMPORT STUDENT MODEL for name lookup
 const Student = mongoose.model('student'); 
 
