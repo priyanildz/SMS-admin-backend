@@ -298,6 +298,6 @@ router.get("/staff/:staffid/history", staffController.getStaffHistory);
 
 router.post("/exam-results", examController.getExamResults);
 
-// router.post("/save-exam-result", examController.saveExamResult);
+router.post("/save-exam-result", examController.saveExamResult);
 
 module.exports = router;
