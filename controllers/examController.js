@@ -251,6 +251,179 @@
 
 
 
+// const mongoose = require("mongoose");
+// const examModel = require("../models/examModel"); 
+// // 1. IMPORT DEDICATED RESULT MODEL
+// const ExamResult = require("../models/examResult");
+// // 2. IMPORT STUDENT MODEL for name lookup
+// const Student = mongoose.model('student'); 
+
+
+// // Helper function to concatenate student name from populated object
+// const getStudentFullName = (student) => {
+//     return student && student.firstname && student.lastname 
+//         ? `${student.firstname} ${student.lastname}` 
+//         : 'N/A Student';
+// };
+
+// // =================================================================================
+// // ADD EXAM RESULTS (Handles POST to /save-exam-result)
+// // =================================================================================
+// exports.addExamResults = async (req, res) => {
+//     const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
+    
+//     if (resultsToSave.length === 0) {
+//         return res.status(400).json({ error: "No data provided to save." });
+//     }
+
+//     try {
+//         // Save records directly to the dedicated ExamResult collection
+//         const savedResults = await ExamResult.insertMany(resultsToSave); 
+
+//         return res.status(200).json({ 
+//             message: "Exam results saved successfully.", 
+//             count: savedResults.length 
+//         });
+//     } catch (error) {
+//         console.error("Error saving exam results:", error);
+//         return res.status(500).json({ error: error.message, detail: "Ensure studentId is a valid ObjectId." });
+//     }
+// };
+
+
+// // =================================================================================
+// // GET EXAM RESULTS (Handles POST to /exam-results)
+// // =================================================================================
+
+// exports.getExamResults = async (req, res) => {
+//     try {
+//         const { standard, division, semester } = req.body;
+
+//         if (!standard || !division || !semester) {
+//             return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
+//         }
+
+//         const filterQuery = {
+//             standard: standard,
+//             division: division,
+//             semester: semester 
+//         };
+//     
+//         // Fetch results and populate the linked Student data
+//         const results = await ExamResult.find(filterQuery)
+//             .populate({
+//                 path: 'studentId', 
+//                 select: 'firstname lastname -_id', 
+//                 // CRITICAL STABILITY FIX
+//                 match: { _id: { $ne: null } }
+//             })
+//             .lean(); 
+
+//         // Map results to flatten the data
+//         const mappedResults = results
+//             .filter(item => item.studentId) 
+//             .map(item => {
+//                 const student = item.studentId;
+                
+//                 return {
+//                     name: getStudentFullName(student),
+                    
+//                     // Include all other score fields dynamically
+//                     ...Object.keys(item).reduce((acc, key) => {
+//                         if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
+//                             acc[key] = item[key];
+//                         }
+//                         return acc;
+//                     }, {})
+//                 };
+//             });
+
+//         if (mappedResults.length === 0) {
+//             return res.status(200).json([]);
+//         }
+
+//         return res.status(200).json(mappedResults);
+//     
+//     } catch (error) {
+//         console.error("CRITICAL SERVER ERROR IN GET EXAM RESULTS:", error);
+//         return res.status(500).json({ error: "Server failed to process query/population." });
+//     }
+// };
+
+// // =================================================================================
+// // 3. EXAM TIMETABLE FUNCTIONS 
+// // =================================================================================
+
+// exports.addETimetable = async (req, res) => {
+//     const { standard, examtype } = req.body;
+    
+//     try {
+//         // Pre-check for existing record to provide a cleaner error message
+//         const existingTimetable = await examModel.findOne({ standard, examtype });
+//         if (existingTimetable) {
+//             // Standardized conflict notification message
+//             return res.status(409).json({ 
+//                 message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+//                 error: true,
+//                 code: 409
+//             });
+//         }
+        
+//         const response = new examModel(req.body);
+//         await response.save();
+//         return res
+//           .status(200)
+//           .json({ 
+//             message: "Exam timetable created successfully",
+//             error: false 
+//         });
+        
+//     } catch (error) {
+//         // Handle MongoDB Duplicate Key Error (Code 11000) explicitly if the pre-check fails
+//         if (error.code === 11000) {
+//             // Standardized conflict notification message
+//             return res.status(409).json({ 
+//                 message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
+//                 error: true,
+//                 code: 409
+//             });
+//         }
+        
+//         return res.status(500).json({ 
+//             message: "An unexpected error occurred while creating the timetable.", 
+//             error: error.message,
+//             code: 500
+//         });
+//     }
+// };
+
+// exports.getETimetable = async (req, res) => {
+//   try {
+//     const response = await examModel.find();
+//     return res.status(200).json(response);
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // NEW CHANGE: Delete Exam Timetable Function
+// exports.deleteETimetable = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const result = await examModel.findByIdAndDelete(id);
+
+//         if (!result) {
+//             return res.status(404).json({ message: "Exam timetable not found.", error: true });
+//         }
+
+//         return res.status(200).json({ message: "Exam timetable deleted successfully.", error: false });
+//     } catch (error) {
+//         return res.status(500).json({ message: "Error deleting exam timetable.", error: error.message });
+//     }
+// };
+
+
+
 const mongoose = require("mongoose");
 const examModel = require("../models/examModel"); 
 // 1. IMPORT DEDICATED RESULT MODEL
@@ -261,33 +434,33 @@ const Student = mongoose.model('student');
 
 // Helper function to concatenate student name from populated object
 const getStudentFullName = (student) => {
-    return student && student.firstname && student.lastname 
-        ? `${student.firstname} ${student.lastname}` 
-        : 'N/A Student';
+    return student && student.firstname && student.lastname 
+        ? `${student.firstname} ${student.lastname}` 
+        : 'N/A Student';
 };
 
 // =================================================================================
 // ADD EXAM RESULTS (Handles POST to /save-exam-result)
 // =================================================================================
 exports.addExamResults = async (req, res) => {
-    const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
-    
-    if (resultsToSave.length === 0) {
-        return res.status(400).json({ error: "No data provided to save." });
-    }
+    const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
+    
+    if (resultsToSave.length === 0) {
+        return res.status(400).json({ error: "No data provided to save." });
+    }
 
-    try {
-        // Save records directly to the dedicated ExamResult collection
-        const savedResults = await ExamResult.insertMany(resultsToSave); 
+    try {
+        // Save records directly to the dedicated ExamResult collection
+        const savedResults = await ExamResult.insertMany(resultsToSave); 
 
-        return res.status(200).json({ 
-            message: "Exam results saved successfully.", 
-            count: savedResults.length 
-        });
-    } catch (error) {
-        console.error("Error saving exam results:", error);
-        return res.status(500).json({ error: error.message, detail: "Ensure studentId is a valid ObjectId." });
-    }
+        return res.status(200).json({ 
+            message: "Exam results saved successfully.", 
+            count: savedResults.length 
+        });
+    } catch (error) {
+        console.error("Error saving exam results:", error);
+        return res.status(500).json({ error: error.message, detail: "Ensure studentId is a valid ObjectId." });
+    }
 };
 
 
@@ -296,58 +469,58 @@ exports.addExamResults = async (req, res) => {
 // =================================================================================
 
 exports.getExamResults = async (req, res) => {
-    try {
-        const { standard, division, semester } = req.body;
+    try {
+        const { standard, division, semester } = req.body;
 
-        if (!standard || !division || !semester) {
-            return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
-        }
+        if (!standard || !division || !semester) {
+            return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
+        }
 
-        const filterQuery = {
-            standard: standard,
-            division: division,
-            semester: semester 
-        };
+        const filterQuery = {
+            standard: standard,
+            division: division,
+            semester: semester 
+        };
     
-        // Fetch results and populate the linked Student data
-        const results = await ExamResult.find(filterQuery)
-            .populate({
-                path: 'studentId', 
-                select: 'firstname lastname -_id', 
-                // CRITICAL STABILITY FIX
-                match: { _id: { $ne: null } }
-            })
-            .lean(); 
+        // Fetch results and populate the linked Student data
+        const results = await ExamResult.find(filterQuery)
+            .populate({
+                path: 'studentId', 
+                select: 'firstname lastname -_id', 
+                // CRITICAL STABILITY FIX
+                match: { _id: { $ne: null } }
+            })
+            .lean(); 
 
-        // Map results to flatten the data
-        const mappedResults = results
-            .filter(item => item.studentId) 
-            .map(item => {
-                const student = item.studentId;
-                
-                return {
-                    name: getStudentFullName(student),
-                    
-                    // Include all other score fields dynamically
-                    ...Object.keys(item).reduce((acc, key) => {
-                        if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
-                            acc[key] = item[key];
-                        }
-                        return acc;
-                    }, {})
-                };
-            });
+        // Map results to flatten the data
+        const mappedResults = results
+            .filter(item => item.studentId) 
+            .map(item => {
+                const student = item.studentId;
+                
+                return {
+                    name: getStudentFullName(student),
+                    
+                    // Include all other score fields dynamically
+                    ...Object.keys(item).reduce((acc, key) => {
+                        if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
+                            acc[key] = item[key];
+                        }
+                        return acc;
+                    }, {})
+                };
+            });
 
-        if (mappedResults.length === 0) {
-            return res.status(200).json([]);
-        }
+        if (mappedResults.length === 0) {
+            return res.status(200).json([]);
+        }
 
-        return res.status(200).json(mappedResults);
+        return res.status(200).json(mappedResults);
     
-    } catch (error) {
-        console.error("CRITICAL SERVER ERROR IN GET EXAM RESULTS:", error);
-        return res.status(500).json({ error: "Server failed to process query/population." });
-    }
+    } catch (error) {
+        console.error("CRITICAL SERVER ERROR IN GET EXAM RESULTS:", error);
+        return res.status(500).json({ error: "Server failed to process query/population." });
+    }
 };
 
 // =================================================================================
@@ -355,46 +528,46 @@ exports.getExamResults = async (req, res) => {
 // =================================================================================
 
 exports.addETimetable = async (req, res) => {
-    const { standard, examtype } = req.body;
-    
-    try {
-        // Pre-check for existing record to provide a cleaner error message
-        const existingTimetable = await examModel.findOne({ standard, examtype });
-        if (existingTimetable) {
-            // Standardized conflict notification message
-            return res.status(409).json({ 
-                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
-                error: true,
-                code: 409
-            });
-        }
-        
-        const response = new examModel(req.body);
-        await response.save();
-        return res
-          .status(200)
-          .json({ 
-            message: "Exam timetable created successfully",
-            error: false 
-        });
-        
-    } catch (error) {
-        // Handle MongoDB Duplicate Key Error (Code 11000) explicitly if the pre-check fails
-        if (error.code === 11000) {
-            // Standardized conflict notification message
-            return res.status(409).json({ 
-                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
-                error: true,
-                code: 409
-            });
-        }
-        
-        return res.status(500).json({ 
-            message: "An unexpected error occurred while creating the timetable.", 
-            error: error.message,
-            code: 500
-        });
-    }
+    const { standard, examtype } = req.body;
+    
+    try {
+        // Pre-check for existing record to provide a cleaner error message
+        const existingTimetable = await examModel.findOne({ standard, examtype });
+        if (existingTimetable) {
+            // Standardized conflict notification message
+            return res.status(409).json({ 
+                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists.`,
+                error: true,
+                code: 409
+            });
+        }
+        
+        const response = new examModel(req.body);
+        await response.save();
+        return res
+          .status(200)
+          .json({ 
+            message: "Exam timetable created successfully",
+            error: false 
+        });
+        
+    } catch (error) {
+        // Handle MongoDB Duplicate Key Error (Code 11000) explicitly if the pre-check fails
+        if (error.code === 11000) {
+            // Standardized conflict notification message
+            return res.status(409).json({ 
+                message: `Conflict: A timetable for Standard ${standard} and Exam Type '${examtype}' already exists (DB Enforced).`,
+                error: true,
+                code: 409
+            });
+        }
+        
+        return res.status(500).json({ 
+            message: "An unexpected error occurred while creating the timetable.", 
+            error: error.message,
+            code: 500
+        });
+    }
 };
 
 exports.getETimetable = async (req, res) => {
@@ -406,18 +579,61 @@ exports.getETimetable = async (req, res) => {
   }
 };
 
-// NEW CHANGE: Delete Exam Timetable Function
+// Existing Delete Exam Timetable Function (Kept for deleting entire schedule)
 exports.deleteETimetable = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await examModel.findByIdAndDelete(id);
+
+        if (!result) {
+            return res.status(404).json({ message: "Exam timetable not found.", error: true });
+        }
+
+        return res.status(200).json({ message: "Exam timetable deleted successfully.", error: false });
+    } catch (error) {
+        return res.status(500).json({ message: "Error deleting exam timetable.", error: error.message });
+    }
+};
+
+// NEW FUNCTION: Update Exam Timetable
+exports.updateETimetable = async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await examModel.findByIdAndDelete(id);
+        const updates = req.body;
 
-        if (!result) {
-            return res.status(404).json({ message: "Exam timetable not found.", error: true });
+        // Find the current timetable to check for uniqueness violation if standard/examtype changes
+        // NOTE: The frontend logic for the Edit modal should generally prevent changing standard/examtype to avoid DB complexity.
+        // Assuming only 'timetable' array is updated, which is fine under the existing unique index.
+
+        const updatedTimetable = await examModel.findByIdAndUpdate(
+            id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedTimetable) {
+            return res.status(404).json({ message: "Exam timetable not found for update.", error: true });
         }
 
-        return res.status(200).json({ message: "Exam timetable deleted successfully.", error: false });
+        return res.status(200).json({ 
+            message: "Exam timetable updated successfully.", 
+            error: false, 
+            data: updatedTimetable 
+        });
+
     } catch (error) {
-        return res.status(500).json({ message: "Error deleting exam timetable.", error: error.message });
+        // Handle potential unique index violation if standard/examtype were somehow changed
+        if (error.code === 11000) {
+            return res.status(409).json({ 
+                message: `Conflict: A timetable with the same Standard and Exam Type already exists.`,
+                error: true,
+                code: 409
+            });
+        }
+
+        return res.status(500).json({ 
+            message: "Error updating exam timetable.", 
+            error: error.message 
+        });
     }
 };

@@ -128,6 +128,9 @@ router.get("/etimetable", examController.getETimetable);
 // NEW CHANGE: Delete Exam Timetable Route
 router.delete("/etimetable/:id", examController.deleteETimetable);
 
+// NEW CHANGE: PUT/UPDATE Exam Timetable Route
+router.put("/etimetable/:id", examController.updateETimetable);
+
 // add term results
 router.post("/add-test", testController.addTermResult);
 
