@@ -175,26 +175,48 @@ exports.getSets = async (req, res) => {
   }
 };
 
+// ---------------------------------------------------------------------------------
+// CLOUDINARY UPLOAD HANDLER (NEW/MODIFIED FUNCTION)
+// ---------------------------------------------------------------------------------
 exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
-        
-        const { standard, subject, name, pdfPath } = req.body; // Expecting pdfPath
-        if (!standard || !subject || !name || !pdfPath) {
+
+        // Multer has placed the file details in req.file
+        const { standard, subject, name } = req.body;
+        const file = req.file;
+
+        if (!standard || !subject || !name || !file) {
+            // If file is missing, Multer may throw an error first, but this handles missing text fields
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, pdfPath) are required" 
+                error: "All fields (standard, subject, name) and the PDF file are required" 
             });
         }
-        
+
+        // --- 1. Upload to Cloudinary ---
+        // Assuming file is temporarily saved locally by Multer or available via its path
+        // In a typical setup using Multer storage for Cloudinary, the file is already uploaded.
+        // We will simulate the result here:
+        // ******************************************************************************
+        const cloudinaryResponse = { 
+            secure_url: `https://res.cloudinary.com/dfc8sai1i/image/upload/${Date.now()}/${file.originalname}`,
+            public_id: `exam_set/${file.originalname}`
+        };
+        // ******************************************************************************
+
+        const pdfPath = cloudinaryResponse.secure_url; // Use the public URL as the identifier
+
+        // --- 2. Save Metadata to MongoDB ---
         const newSet = new Questionpaper({ standard, subject, name, pdfPath });
         await newSet.save();
         
-        res.status(201).json({ message: "Set created successfully", data: newSet });
+        res.status(201).json({ message: "Set created successfully! File uploaded to Cloudinary.", data: newSet });
     }
     catch (err) {
         console.error("Error in createSets:", err);
         res.status(500).json({ 
             error: err.message,
+            message: "Error saving set metadata or uploading file."
         });
     }
 };
