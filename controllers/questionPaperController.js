@@ -106,68 +106,191 @@
 // };
 
 
+// const Questionpaper = require("../models/setModel");
+// const Schedule = require("../models/scheduleQuestionP");
+// const path = require('path');
+// const fs = require('fs');
+
+// // --- File Viewing Controller (NEW FUNCTION) ---
+// // This function reads the PDF file from the disk and sends it to the browser.
+// // The PDF files are assumed to be stored in a directory named 'uploads/question-papers' 
+// // relative to the server's root.
+// exports.viewPdf = (req, res) => {
+//     const { fileName } = req.params;
+//     // SECURITY NOTE: In a production environment, you must sanitize and validate 'fileName' 
+//     // to prevent directory traversal attacks (e.g., using path.join or path.resolve 
+//     // and checking against the safe uploads directory).
+//     const filePath = path.join(__dirname, '..', '..', 'uploads', 'question-papers', fileName);
+
+//     console.log(`Attempting to serve file: ${filePath}`);
+
+//     // Check if file exists
+//     if (!fs.existsSync(filePath)) {
+//         return res.status(404).json({ error: "File not found." });
+//     }
+
+//     // Set headers to tell the browser it's a PDF file
+//     res.setHeader('Content-Type', 'application/pdf');
+//     res.setHeader('Content-Disposition', `inline; filename="${fileName}"`); // 'inline' tells browser to display it
+
+//     // Stream the file
+//     fs.createReadStream(filePath).pipe(res);
+// };
+// // --- END NEW FUNCTION ---
+
+
+// // --- Existing functions remain unchanged (but shown for completeness) ---
+
+// exports.getSets = async (req, res) => {
+//   try {
+//     console.log("getSets called with params:", req.params);
+//     const { standard, subject } = req.params;
+//     
+//     if (!standard || !subject) {
+//       return res.status(400).json({ error: "Standard and subject are required" });
+//     }
+//     
+//     const sets = await Questionpaper.find({ standard, subject });
+//     
+//     // Use pdfPath for checking schedule lock
+//     const scheduledSets = await Schedule.find({ standard, subject });
+//     const scheduledPaths = scheduledSets.map(scheduled => scheduled.set); 
+//     
+//     const setsWithStatus = sets.map(set => {
+//       const setObj = set.toObject ? set.toObject() : set;
+//       return {
+//         ...setObj,
+//         isScheduled: scheduledPaths.includes(setObj.pdfPath) // Check against pdfPath
+//       };
+//     });
+//     
+//     res.json(setsWithStatus);
+//     
+//   } catch (err) {
+//     console.error("Error in getSets:", err);
+//     res.status(500).json({ 
+//       error: err.message,
+//       details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//     });
+//   }
+// };
+
+// // ---------------------------------------------------------------------------------
+// // CLOUDINARY UPLOAD HANDLER (NEW/MODIFIED FUNCTION)
+// // ---------------------------------------------------------------------------------
+// exports.createSets = async (req, res) => {
+//     try {
+//         console.log("createSets called with body:", req.body);
+
+//         // Multer has placed the file details in req.file
+//         const { standard, subject, name } = req.body;
+//         const file = req.file;
+
+//         if (!standard || !subject || !name || !file) {
+//             // If file is missing, Multer may throw an error first, but this handles missing text fields
+//             return res.status(400).json({ 
+//                 error: "All fields (standard, subject, name) and the PDF file are required" 
+//             });
+//         }
+
+//         // --- 1. Upload to Cloudinary ---
+//         // Assuming file is temporarily saved locally by Multer or available via its path
+//         // In a typical setup using Multer storage for Cloudinary, the file is already uploaded.
+//         // We will simulate the result here:
+//         // ******************************************************************************
+//         const cloudinaryResponse = { 
+//             secure_url: `https://res.cloudinary.com/dfc8sai1i/image/upload/${Date.now()}/${file.originalname}`,
+//             public_id: `exam_set/${file.originalname}`
+//         };
+//         // ******************************************************************************
+
+//         const pdfPath = cloudinaryResponse.secure_url; // Use the public URL as the identifier
+
+//         // --- 2. Save Metadata to MongoDB ---
+//         const newSet = new Questionpaper({ standard, subject, name, pdfPath });
+//         await newSet.save();
+//         
+//         res.status(201).json({ message: "Set created successfully! File uploaded to Cloudinary.", data: newSet });
+//     }
+//     catch (err) {
+//         console.error("Error in createSets:", err);
+//         res.status(500).json({ 
+//             error: err.message,
+//             message: "Error saving set metadata or uploading file."
+//         });
+//     }
+// };
+
+// exports.addSchedule = async (req, res) => {
+//   try {
+//     console.log("addSchedule called with body:", req.body);
+//     const { standard, subject, set, schedule } = req.body; 
+//     
+//     if (!standard || !subject || !set || !schedule) {
+//         return res.status(400).json({ 
+//             error: "All fields (standard, subject, set, schedule) are required" 
+//         });
+//     }
+//     
+//     const existingSchedule = await Schedule.findOne({ standard, subject, set }); 
+//     if (existingSchedule) {
+//       return res.status(400).json({ error: "This set is already scheduled" });
+//     }
+//     
+//     const newSchedule = new Schedule({ standard, subject, set, schedule });
+//     await newSchedule.save();
+//     
+//     res.status(201).json({ message: "Scheduled successfully", data: newSchedule });
+//   } catch (err) {
+//     console.error("Error in addSchedule:", err);
+//     res.status(500).json({ 
+//         error: err.message,
+//     });
+//   }
+// };
+
+
+
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
-const path = require('path');
-const fs = require('fs');
-
-// --- File Viewing Controller (NEW FUNCTION) ---
-// This function reads the PDF file from the disk and sends it to the browser.
-// The PDF files are assumed to be stored in a directory named 'uploads/question-papers' 
-// relative to the server's root.
-exports.viewPdf = (req, res) => {
-    const { fileName } = req.params;
-    // SECURITY NOTE: In a production environment, you must sanitize and validate 'fileName' 
-    // to prevent directory traversal attacks (e.g., using path.join or path.resolve 
-    // and checking against the safe uploads directory).
-    const filePath = path.join(__dirname, '..', '..', 'uploads', 'question-papers', fileName);
-
-    console.log(`Attempting to serve file: ${filePath}`);
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "File not found." });
-    }
-
-    // Set headers to tell the browser it's a PDF file
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`); // 'inline' tells browser to display it
-
-    // Stream the file
-    fs.createReadStream(filePath).pipe(res);
-};
-// --- END NEW FUNCTION ---
-
-
-// --- Existing functions remain unchanged (but shown for completeness) ---
 
 exports.getSets = async (req, res) => {
   try {
     console.log("getSets called with params:", req.params);
     const { standard, subject } = req.params;
     
+    // Validate parameters
     if (!standard || !subject) {
       return res.status(400).json({ error: "Standard and subject are required" });
     }
     
+    console.log(`Fetching sets for standard: ${standard}, subject: ${subject}`);
+    
+    // Get all sets for the standard and subject
     const sets = await Questionpaper.find({ standard, subject });
+    console.log(`Found ${sets.length} sets`);
     
-    // Use pdfPath for checking schedule lock
+    // Get all scheduled sets to check which ones are locked
     const scheduledSets = await Schedule.find({ standard, subject });
-    const scheduledPaths = scheduledSets.map(scheduled => scheduled.set); 
+    console.log(`Found ${scheduledSets.length} scheduled sets`);
     
+    const scheduledUrls = scheduledSets.map(scheduled => scheduled.set);
+    
+    // Add isScheduled flag to each set
     const setsWithStatus = sets.map(set => {
       const setObj = set.toObject ? set.toObject() : set;
       return {
         ...setObj,
-        isScheduled: scheduledPaths.includes(setObj.pdfPath) // Check against pdfPath
+        isScheduled: scheduledUrls.includes(setObj.url)
       };
     });
     
+    console.log("Returning sets with status:", setsWithStatus);
     res.json(setsWithStatus);
     
   } catch (err) {
     console.error("Error in getSets:", err);
+    console.error("Error stack:", err.stack);
     res.status(500).json({ 
       error: err.message,
       details: process.env.NODE_ENV === 'development' ? err.stack : undefined
@@ -175,48 +298,43 @@ exports.getSets = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------------
-// CLOUDINARY UPLOAD HANDLER (NEW/MODIFIED FUNCTION)
-// ---------------------------------------------------------------------------------
 exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
-
-        // Multer has placed the file details in req.file
+        // Multer attaches file information to req.file
+        const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        
+        // Validate required fields (including the file URL now)
         const { standard, subject, name } = req.body;
-        const file = req.file;
+        if (!standard || !subject || !name || !fileUrl) {
+            // If the error is due to a missing file, give a specific message
+            const missing = [];
+            if (!standard) missing.push('standard');
+            if (!subject) missing.push('subject');
+            if (!name) missing.push('name');
+            if (!fileUrl) missing.push('question paper file');
 
-        if (!standard || !subject || !name || !file) {
-            // If file is missing, Multer may throw an error first, but this handles missing text fields
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name) and the PDF file are required" 
+                error: `Missing required fields: ${missing.join(', ')}`
             });
         }
-
-        // --- 1. Upload to Cloudinary ---
-        // Assuming file is temporarily saved locally by Multer or available via its path
-        // In a typical setup using Multer storage for Cloudinary, the file is already uploaded.
-        // We will simulate the result here:
-        // ******************************************************************************
-        const cloudinaryResponse = { 
-            secure_url: `https://res.cloudinary.com/dfc8sai1i/image/upload/${Date.now()}/${file.originalname}`,
-            public_id: `exam_set/${file.originalname}`
-        };
-        // ******************************************************************************
-
-        const pdfPath = cloudinaryResponse.secure_url; // Use the public URL as the identifier
-
-        // --- 2. Save Metadata to MongoDB ---
-        const newSet = new Questionpaper({ standard, subject, name, pdfPath });
-        await newSet.save();
         
-        res.status(201).json({ message: "Set created successfully! File uploaded to Cloudinary.", data: newSet });
+        const newSet = new Questionpaper({
+          standard, 
+          subject, 
+          name,
+          url: fileUrl // Use the generated file URL/path
+        });
+        await newSet.save();
+        console.log("Set created successfully:", newSet);
+        
+        res.status(201).json({ message: "Set created successfully", data: newSet });
     }
     catch (err) {
         console.error("Error in createSets:", err);
         res.status(500).json({ 
             error: err.message,
-            message: "Error saving set metadata or uploading file."
+            details: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
     }
 };
@@ -224,27 +342,32 @@ exports.createSets = async (req, res) => {
 exports.addSchedule = async (req, res) => {
   try {
     console.log("addSchedule called with body:", req.body);
-    const { standard, subject, set, schedule } = req.body; 
+    const { standard, subject, set, schedule } = req.body;
     
+    // Validate required fields
     if (!standard || !subject || !set || !schedule) {
         return res.status(400).json({ 
             error: "All fields (standard, subject, set, schedule) are required" 
         });
     }
     
-    const existingSchedule = await Schedule.findOne({ standard, subject, set }); 
+    // Check if this set is already scheduled
+    const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
+      console.log("Set already scheduled:", existingSchedule);
       return res.status(400).json({ error: "This set is already scheduled" });
     }
     
     const newSchedule = new Schedule({ standard, subject, set, schedule });
     await newSchedule.save();
+    console.log("Schedule created successfully:", newSchedule);
     
     res.status(201).json({ message: "Scheduled successfully", data: newSchedule });
   } catch (err) {
     console.error("Error in addSchedule:", err);
     res.status(500).json({ 
         error: err.message,
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 };
