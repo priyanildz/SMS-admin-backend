@@ -262,6 +262,9 @@ router.post("/add-set", questionPaperController.createSets);
 
 router.post("/schedule", questionPaperController.addSchedule);
 
+// NEW ROUTE TO SERVE PDF FILE
+router.get("/view-pdf/:fileName", questionPaperController.viewPdf);
+
 router.put("/update-vehicle/:id", transportController.updateVehicle);
 
 router.get("/academic-blocks", blockController.getBlocks);
