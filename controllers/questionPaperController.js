@@ -111,7 +111,6 @@
 //   }
 // };
 
-
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -147,7 +146,7 @@ exports.getSets = async (req, res) => {
       const setObj = set.toObject ? set.toObject() : set;
       return {
         ...setObj,
-        isScheduled: scheduledUrls.includes(setObj.url)
+        isScheduled: scheduledUrls.includes(setObj.url) // uses setObj.url (as fixed in schema)
       };
     });
     
@@ -168,7 +167,8 @@ exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
         
-        // Validate required fields (Changed pdfpath back to 'url' for database consistency)
+        // Validate required fields 
+        // Removed pdfpath reference, now consistently using 'url'
         const { standard, subject, name, url } = req.body;
         if (!standard || !subject || !name || !url) {
             return res.status(400).json({ 
@@ -177,7 +177,7 @@ exports.createSets = async (req, res) => {
         }
         
         // Ensure we are mapping to the schema fields correctly
-        const newSet = new Questionpaper({ standard, subject, name, url });
+        const newSet = new Questionpaper({ standard, subject, name, url });
         await newSet.save();
         console.log("Set created successfully:", newSet);
         
@@ -221,12 +221,10 @@ exports.addSchedule = async (req, res) => {
     }
     
     // 3. Check if THIS set (set URL) is already scheduled in the past or future.
-    // This provides a more specific error if the user tries to reschedule the same set.
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
-        // This usually means the exam has already happened. The logic might need refinement 
-        // if you want to allow re-scheduling of old sets. But based on current structure, 
-        // we block a direct duplicate.
+        // This check is mostly for preventing the *exact* same schedule from being created twice, 
+        // regardless of past/future status, but is harmless here.
       console.log("This specific set is already scheduled:", existingSchedule);
       return res.status(400).json({ error: "This set has already been scheduled." });
     }
