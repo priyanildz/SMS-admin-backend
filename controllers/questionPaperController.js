@@ -111,6 +111,10 @@
 //   }
 // };
 
+
+
+
+
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -146,7 +150,8 @@ exports.getSets = async (req, res) => {
       const setObj = set.toObject ? set.toObject() : set;
       return {
         ...setObj,
-        isScheduled: scheduledUrls.includes(setObj.url) // uses setObj.url (as fixed in schema)
+        // 🐛 FIX: Use the correct field name from the Questionpaper model: pdfpath
+        isScheduled: scheduledUrls.includes(setObj.pdfpath) 
       };
     });
     
@@ -167,17 +172,16 @@ exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
         
-        // Validate required fields 
-        // Removed pdfpath reference, now consistently using 'url'
-        const { standard, subject, name, url } = req.body;
-        if (!standard || !subject || !name || !url) {
+        // 🐛 FIX: Use the correct field name: pdfpath
+        const { standard, subject, name, pdfpath } = req.body;
+        if (!standard || !subject || !name || !pdfpath) {
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, url) are required" 
+                error: "All fields (standard, subject, name, pdfpath) are required" 
             });
         }
         
         // Ensure we are mapping to the schema fields correctly
-        const newSet = new Questionpaper({ standard, subject, name, url });
+        const newSet = new Questionpaper({ standard, subject, name, pdfpath });
         await newSet.save();
         console.log("Set created successfully:", newSet);
         
@@ -205,7 +209,6 @@ exports.addSchedule = async (req, res) => {
     }
 
     // 2. BUSINESS LOGIC: Check for any existing, future schedule for this standard/subject
-    // This ensures only ONE exam is scheduled for the class at any given time.
     const now = new Date();
     const existingFutureSchedule = await Schedule.findOne({ 
       standard, 
@@ -220,11 +223,9 @@ exports.addSchedule = async (req, res) => {
       });
     }
     
-    // 3. Check if THIS set (set URL) is already scheduled in the past or future.
+    // 3. Check if THIS set (set URL/pdfpath) is already scheduled in the past or future.
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
-        // This check is mostly for preventing the *exact* same schedule from being created twice, 
-        // regardless of past/future status, but is harmless here.
       console.log("This specific set is already scheduled:", existingSchedule);
       return res.status(400).json({ error: "This set has already been scheduled." });
     }
