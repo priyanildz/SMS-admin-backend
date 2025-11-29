@@ -22,6 +22,7 @@
 
 
 
+// paperEvaluationController.js
 
 const paperEval = require("../models/paperEvaluation");
 
@@ -29,10 +30,9 @@ exports.addEval = async (req, res) => {
   try {
     const response = new paperEval(req.body);
     await response.save();
-    // FIX: Add 'success: true' to the response body
+    // Fix for client-side success check: ensure success: true is returned
     return res.status(200).json({ success: true, message: "evaluation added successfully" });
   } catch (error) {
-    // Ensure error responses always include success: false
     return res.status(500).json({ success: false, error: error.message });
   }
 };
