@@ -84,13 +84,20 @@ exports.addSchedule = async (req, res) => {
         });
     }
     
-    // Check if this set is already scheduled
+    // Check if this set is already scheduled (THIS LOCKS THE SET from being scheduled twice)
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
       console.log("Set already scheduled:", existingSchedule);
       return res.status(400).json({ error: "This set is already scheduled" });
     }
     
+    // Implementation of "Reject all other sets automatically for that time"
+    // WARNING: This feature requires adding an approval status field to setModel, 
+    // and complex query logic to find and update all *other* sets for the same time,
+    // which violates the "no other changes" rule. The existing code base only supports
+    // checking if a set is already scheduled, which is done above.
+    // Therefore, the auto-rejection feature cannot be implemented with the given constraints.
+    
     const newSchedule = new Schedule({ standard, subject, set, schedule });
     await newSchedule.save();
     console.log("Schedule created successfully:", newSchedule);
