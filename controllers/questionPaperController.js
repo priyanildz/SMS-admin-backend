@@ -1,3 +1,118 @@
+// const Questionpaper = require("../models/setModel");
+// const Schedule = require("../models/scheduleQuestionP");
+
+// exports.getSets = async (req, res) => {
+//   try {
+//     console.log("getSets called with params:", req.params);
+//     const { standard, subject } = req.params;
+//     
+//     // Validate parameters
+//     if (!standard || !subject) {
+//       return res.status(400).json({ error: "Standard and subject are required" });
+//     }
+//     
+//     console.log(`Fetching sets for standard: ${standard}, subject: ${subject}`);
+//     
+//     // Get all sets for the standard and subject
+//     const sets = await Questionpaper.find({ standard, subject });
+//     console.log(`Found ${sets.length} sets`);
+//     
+//     // Get all scheduled sets to check which ones are locked
+//     // Note: To enforce the lock, we must check for schedules where the time is in the future.
+//     const now = new Date();
+//     const scheduledSets = await Schedule.find({ 
+//       standard, 
+//       subject, 
+//       schedule: { $gt: now } // Only consider schedules that are in the future
+//     });
+//     console.log(`Found ${scheduledSets.length} currently locked sets`);
+//     
+//     const scheduledUrls = scheduledSets.map(scheduled => scheduled.set);
+//     
+//     // Add isScheduled flag to each set
+//     const setsWithStatus = sets.map(set => {
+//       const setObj = set.toObject ? set.toObject() : set;
+//       return {
+//         ...setObj,
+//         isScheduled: scheduledUrls.includes(setObj.url)
+//       };
+//     });
+//     
+//     console.log("Returning sets with status:", setsWithStatus);
+//     res.json(setsWithStatus);
+//     
+//   } catch (err) {
+//     console.error("Error in getSets:", err);
+//     console.error("Error stack:", err.stack);
+//     res.status(500).json({ 
+//       error: err.message,
+//       details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//     });
+//   }
+// };
+
+// exports.createSets = async (req, res) => {
+//     try {
+//         console.log("createSets called with body:", req.body);
+        
+//         // Validate required fields
+//         const { standard, subject, name, pdfpath } = req.body;
+//         if (!standard || !subject || !name || !pdfpath) {
+//             return res.status(400).json({ 
+//                 error: "All fields (standard, subject, name, pdf file) are required" 
+//             });
+//         }
+        
+//         const newSet = new Questionpaper(req.body);
+//         await newSet.save();
+//         console.log("Set created successfully:", newSet);
+        
+//         res.status(201).json({ message: "Set created successfully", data: newSet });
+//     }
+//     catch (err) {
+//         console.error("Error in createSets:", err);
+//         res.status(500).json({ 
+//             error: err.message,
+//             details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//         });
+//     }
+// };
+
+// exports.addSchedule = async (req, res) => {
+//   try {
+//     console.log("addSchedule called with body:", req.body);
+//     const { standard, subject, set, schedule } = req.body;
+//     
+//     // Validate required fields
+//     if (!standard || !subject || !set || !schedule) {
+//         return res.status(400).json({ 
+//             error: "All fields (standard, subject, set, schedule) are required" 
+//         });
+//     }
+//     
+//     // Check if this set is already scheduled
+//     const existingSchedule = await Schedule.findOne({ standard, subject, set });
+//     if (existingSchedule) {
+//       console.log("Set already scheduled:", existingSchedule);
+//       return res.status(400).json({ error: "This set is already scheduled" });
+//     }
+//     
+//     const newSchedule = new Schedule({ standard, subject, set, schedule });
+//     await newSchedule.save();
+//     console.log("Schedule created successfully:", newSchedule);
+//     
+//     res.status(201).json({ message: "Scheduled successfully", data: newSchedule });
+//   } catch (err) {
+//     console.error("Error in addSchedule:", err);
+//     res.status(500).json({ 
+//         error: err.message,
+//         details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//     });
+//   }
+// };
+
+
+
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -17,13 +132,12 @@ exports.getSets = async (req, res) => {
     const sets = await Questionpaper.find({ standard, subject });
     console.log(`Found ${sets.length} sets`);
     
-    // Get all scheduled sets to check which ones are locked
-    // Note: To enforce the lock, we must check for schedules where the time is in the future.
+    // *** FIX: Check for all scheduled sets whose schedule time is GREATER THAN the current time ($gt: now) ***
     const now = new Date();
     const scheduledSets = await Schedule.find({ 
       standard, 
       subject, 
-      schedule: { $gt: now } // Only consider schedules that are in the future
+      schedule: { $gt: now } // Only retrieve schedules that are in the future
     });
     console.log(`Found ${scheduledSets.length} currently locked sets`);
     
@@ -52,30 +166,30 @@ exports.getSets = async (req, res) => {
 };
 
 exports.createSets = async (req, res) => {
-    try {
-        console.log("createSets called with body:", req.body);
-        
-        // Validate required fields
-        const { standard, subject, name, pdfpath } = req.body;
-        if (!standard || !subject || !name || !pdfpath) {
-            return res.status(400).json({ 
-                error: "All fields (standard, subject, name, pdf file) are required" 
-            });
-        }
-        
-        const newSet = new Questionpaper(req.body);
-        await newSet.save();
-        console.log("Set created successfully:", newSet);
-        
-        res.status(201).json({ message: "Set created successfully", data: newSet });
-    }
-    catch (err) {
-        console.error("Error in createSets:", err);
-        res.status(500).json({ 
-            error: err.message,
-            details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-        });
-    }
+    try {
+        console.log("createSets called with body:", req.body);
+        
+        // Validate required fields
+        const { standard, subject, name, pdfpath } = req.body;
+        if (!standard || !subject || !name || !pdfpath) {
+            return res.status(400).json({ 
+                error: "All fields (standard, subject, name, pdf file) are required" 
+            });
+        }
+        
+        const newSet = new Questionpaper(req.body);
+        await newSet.save();
+        console.log("Set created successfully:", newSet);
+        
+        res.status(201).json({ message: "Set created successfully", data: newSet });
+    }
+    catch (err) {
+        console.error("Error in createSets:", err);
+        res.status(500).json({ 
+            error: err.message,
+            details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
+    }
 };
 
 exports.addSchedule = async (req, res) => {
@@ -83,20 +197,37 @@ exports.addSchedule = async (req, res) => {
     console.log("addSchedule called with body:", req.body);
     const { standard, subject, set, schedule } = req.body;
     
-    // Validate required fields
+    // 1. Validate required fields (Existing check)
     if (!standard || !subject || !set || !schedule) {
         return res.status(400).json({ 
             error: "All fields (standard, subject, set, schedule) are required" 
         });
     }
+
+    // 2. *** BUSINESS LOGIC: Check for any existing, future schedule for this standard/subject ***
+    // This enforces that only ONE set can be scheduled at any future time.
+    const now = new Date();
+    const existingFutureSchedule = await Schedule.findOne({ 
+      standard, 
+      subject, 
+      schedule: { $gt: now } 
+    });
     
-    // Check if this set is already scheduled
+    if (existingFutureSchedule) {
+      console.log("Another set is already scheduled in the future:", existingFutureSchedule);
+      return res.status(400).json({ 
+        error: "Another set is already scheduled for this standard and subject. Only one future schedule is allowed." 
+      });
+    }
+    
+    // 3. Check if THIS set (set URL) is already scheduled (redundant, but kept for explicit check if logic changes)
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
-      console.log("Set already scheduled:", existingSchedule);
+      console.log("This specific set is already scheduled:", existingSchedule);
       return res.status(400).json({ error: "This set is already scheduled" });
     }
     
+    // 4. Create new schedule
     const newSchedule = new Schedule({ standard, subject, set, schedule });
     await newSchedule.save();
     console.log("Schedule created successfully:", newSchedule);
