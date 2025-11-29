@@ -272,6 +272,9 @@ router.post("/add-capacity", capacityController.addCapacity);
 
 router.get("/capacity", capacityController.getCapacity);
 
+// Add the DELETE route for paper evaluation
+router.delete("/assigned-papers/:id", paperEvaluationController.deleteEval);
+
 router.post("/assign-paper", paperEvaluationController.addEval);
 
 router.get("/assigned-papers", paperEvaluationController.getEval);
