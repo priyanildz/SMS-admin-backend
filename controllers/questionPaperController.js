@@ -2,47 +2,53 @@ const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
 exports.getSets = async (req, res) => {
-  try {
-    console.log("getSets called with params:", req.params);
-    const { standard, subject } = req.params;
-    
-    // Validate parameters
-    if (!standard || !subject) {
-      return res.status(400).json({ error: "Standard and subject are required" });
-    }
-    
-    console.log(`Fetching sets for standard: ${standard}, subject: ${subject}`);
-    
-    // Get all sets for the standard and subject
-    const sets = await Questionpaper.find({ standard, subject });
-    console.log(`Found ${sets.length} sets`);
-    
-    // Get all scheduled sets to check which ones are locked
-    const scheduledSets = await Schedule.find({ standard, subject });
-    console.log(`Found ${scheduledSets.length} scheduled sets`);
-    
-    const scheduledUrls = scheduledSets.map(scheduled => scheduled.set);
-    
-    // Add isScheduled flag to each set
-    const setsWithStatus = sets.map(set => {
-      const setObj = set.toObject ? set.toObject() : set;
-      return {
-        ...setObj,
-        isScheduled: scheduledUrls.includes(setObj.url)
-      };
-    });
-    
-    console.log("Returning sets with status:", setsWithStatus);
-    res.json(setsWithStatus);
-    
-  } catch (err) {
-    console.error("Error in getSets:", err);
-    console.error("Error stack:", err.stack);
-    res.status(500).json({ 
-      error: err.message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
+  try {
+    console.log("getSets called with params:", req.params);
+    const { standard, subject } = req.params;
+    
+    // Validate parameters
+    if (!standard || !subject) {
+      return res.status(400).json({ error: "Standard and subject are required" });
+    }
+    
+    console.log(`Fetching sets for standard: ${standard}, subject: ${subject}`);
+    
+    // Get all sets for the standard and subject
+    const sets = await Questionpaper.find({ standard, subject });
+    console.log(`Found ${sets.length} sets`);
+    
+    // Get all scheduled sets to check which ones are locked
+    // Note: To enforce the lock, we must check for schedules where the time is in the future.
+    const now = new Date();
+    const scheduledSets = await Schedule.find({ 
+      standard, 
+      subject, 
+      schedule: { $gt: now } // Only consider schedules that are in the future
+    });
+    console.log(`Found ${scheduledSets.length} currently locked sets`);
+    
+    const scheduledUrls = scheduledSets.map(scheduled => scheduled.set);
+    
+    // Add isScheduled flag to each set
+    const setsWithStatus = sets.map(set => {
+      const setObj = set.toObject ? set.toObject() : set;
+      return {
+        ...setObj,
+        isScheduled: scheduledUrls.includes(setObj.url)
+      };
+    });
+    
+    console.log("Returning sets with status:", setsWithStatus);
+    res.json(setsWithStatus);
+    
+  } catch (err) {
+    console.error("Error in getSets:", err);
+    console.error("Error stack:", err.stack);
+    res.status(500).json({ 
+      error: err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
 };
 
 exports.createSets = async (req, res) => {
