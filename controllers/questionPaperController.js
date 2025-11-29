@@ -51,9 +51,9 @@ exports.createSets = async (req, res) => {
         
         // Validate required fields
         const { standard, subject, name, url } = req.body;
-        if (!standard || !subject || !name || !url) {
+        if (!standard || !subject || !name || !pdfpath) {
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, url) are required" 
+                error: "All fields (standard, subject, name, pdf file) are required" 
             });
         }
         
