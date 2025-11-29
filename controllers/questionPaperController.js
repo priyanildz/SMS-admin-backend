@@ -111,6 +111,8 @@
 //   }
 // };
 
+
+
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -130,14 +132,9 @@ exports.getSets = async (req, res) => {
     const sets = await Questionpaper.find({ standard, subject });
     console.log(`Found ${sets.length} sets`);
     
-    // Get all scheduled sets whose schedule time is GREATER THAN the current time ($gt: now)
-    const now = new Date();
-    const scheduledSets = await Schedule.find({ 
-      standard, 
-      subject, 
-      schedule: { $gt: now } // Only retrieve schedules that are in the future
-    });
-    console.log(`Found ${scheduledSets.length} currently locked sets`);
+    // Get all scheduled sets to check which ones are locked
+    const scheduledSets = await Schedule.find({ standard, subject });
+    console.log(`Found ${scheduledSets.length} scheduled sets`);
     
     const scheduledUrls = scheduledSets.map(scheduled => scheduled.set);
     
@@ -166,17 +163,30 @@ exports.getSets = async (req, res) => {
 exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
+        // Multer attaches file information to req.file
+        const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
         
-        // Validate required fields (Changed pdfpath back to 'url' for database consistency)
-        const { standard, subject, name, url } = req.body;
-        if (!standard || !subject || !name || !url) {
+        // Validate required fields (including the file URL now)
+        const { standard, subject, name } = req.body;
+        if (!standard || !subject || !name || !fileUrl) {
+            // If the error is due to a missing file, give a specific message
+            const missing = [];
+            if (!standard) missing.push('standard');
+            if (!subject) missing.push('subject');
+            if (!name) missing.push('name');
+            if (!fileUrl) missing.push('question paper file');
+
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, url) are required" 
+                error: `Missing required fields: ${missing.join(', ')}`
             });
         }
         
-        // Ensure we are mapping to the schema fields correctly
-        const newSet = new Questionpaper({ standard, subject, name, url });
+        const newSet = new Questionpaper({
+          standard, 
+          subject, 
+          name,
+          url: fileUrl // Use the generated file URL/path
+        });
         await newSet.save();
         console.log("Set created successfully:", newSet);
         
@@ -196,41 +206,20 @@ exports.addSchedule = async (req, res) => {
     console.log("addSchedule called with body:", req.body);
     const { standard, subject, set, schedule } = req.body;
     
-    // 1. Validate required fields
+    // Validate required fields
     if (!standard || !subject || !set || !schedule) {
         return res.status(400).json({ 
             error: "All fields (standard, subject, set, schedule) are required" 
         });
     }
-
-    // 2. BUSINESS LOGIC: Check for any existing, future schedule for this standard/subject
-    // This ensures only ONE exam is scheduled for the class at any given time.
-    const now = new Date();
-    const existingFutureSchedule = await Schedule.findOne({ 
-      standard, 
-      subject, 
-      schedule: { $gt: now } 
-    });
     
-    if (existingFutureSchedule) {
-      console.log("Another set is already scheduled in the future:", existingFutureSchedule);
-      return res.status(400).json({ 
-        error: `Set '${existingFutureSchedule.set}' is already scheduled for this class at ${existingFutureSchedule.schedule.toISOString()}. Only one future schedule is allowed.` 
-      });
-    }
-    
-    // 3. Check if THIS set (set URL) is already scheduled in the past or future.
-    // This provides a more specific error if the user tries to reschedule the same set.
+    // Check if this set is already scheduled
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
-        // This usually means the exam has already happened. The logic might need refinement 
-        // if you want to allow re-scheduling of old sets. But based on current structure, 
-        // we block a direct duplicate.
-      console.log("This specific set is already scheduled:", existingSchedule);
-      return res.status(400).json({ error: "This set has already been scheduled." });
+      console.log("Set already scheduled:", existingSchedule);
+      return res.status(400).json({ error: "This set is already scheduled" });
     }
     
-    // 4. Create new schedule
     const newSchedule = new Schedule({ standard, subject, set, schedule });
     await newSchedule.save();
     console.log("Schedule created successfully:", newSchedule);
