@@ -111,8 +111,6 @@
 //   }
 // };
 
-
-
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -132,7 +130,7 @@ exports.getSets = async (req, res) => {
     const sets = await Questionpaper.find({ standard, subject });
     console.log(`Found ${sets.length} sets`);
     
-    // *** FIX: Check for all scheduled sets whose schedule time is GREATER THAN the current time ($gt: now) ***
+    // Get all scheduled sets whose schedule time is GREATER THAN the current time ($gt: now)
     const now = new Date();
     const scheduledSets = await Schedule.find({ 
       standard, 
@@ -169,15 +167,16 @@ exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
         
-        // Validate required fields
-        const { standard, subject, name, pdfpath } = req.body;
-        if (!standard || !subject || !name || !pdfpath) {
+        // Validate required fields (Changed pdfpath back to 'url' for database consistency)
+        const { standard, subject, name, url } = req.body;
+        if (!standard || !subject || !name || !url) {
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, pdf file) are required" 
+                error: "All fields (standard, subject, name, url) are required" 
             });
         }
         
-        const newSet = new Questionpaper(req.body);
+        // Ensure we are mapping to the schema fields correctly
+        const newSet = new Questionpaper({ standard, subject, name, url });
         await newSet.save();
         console.log("Set created successfully:", newSet);
         
@@ -197,15 +196,15 @@ exports.addSchedule = async (req, res) => {
     console.log("addSchedule called with body:", req.body);
     const { standard, subject, set, schedule } = req.body;
     
-    // 1. Validate required fields (Existing check)
+    // 1. Validate required fields
     if (!standard || !subject || !set || !schedule) {
         return res.status(400).json({ 
             error: "All fields (standard, subject, set, schedule) are required" 
         });
     }
 
-    // 2. *** BUSINESS LOGIC: Check for any existing, future schedule for this standard/subject ***
-    // This enforces that only ONE set can be scheduled at any future time.
+    // 2. BUSINESS LOGIC: Check for any existing, future schedule for this standard/subject
+    // This ensures only ONE exam is scheduled for the class at any given time.
     const now = new Date();
     const existingFutureSchedule = await Schedule.findOne({ 
       standard, 
@@ -216,15 +215,19 @@ exports.addSchedule = async (req, res) => {
     if (existingFutureSchedule) {
       console.log("Another set is already scheduled in the future:", existingFutureSchedule);
       return res.status(400).json({ 
-        error: "Another set is already scheduled for this standard and subject. Only one future schedule is allowed." 
+        error: `Set '${existingFutureSchedule.set}' is already scheduled for this class at ${existingFutureSchedule.schedule.toISOString()}. Only one future schedule is allowed.` 
       });
     }
     
-    // 3. Check if THIS set (set URL) is already scheduled (redundant, but kept for explicit check if logic changes)
+    // 3. Check if THIS set (set URL) is already scheduled in the past or future.
+    // This provides a more specific error if the user tries to reschedule the same set.
     const existingSchedule = await Schedule.findOne({ standard, subject, set });
     if (existingSchedule) {
+        // This usually means the exam has already happened. The logic might need refinement 
+        // if you want to allow re-scheduling of old sets. But based on current structure, 
+        // we block a direct duplicate.
       console.log("This specific set is already scheduled:", existingSchedule);
-      return res.status(400).json({ error: "This set is already scheduled" });
+      return res.status(400).json({ error: "This set has already been scheduled." });
     }
     
     // 4. Create new schedule
