@@ -114,7 +114,6 @@
 
 
 
-
 const Questionpaper = require("../models/setModel");
 const Schedule = require("../models/scheduleQuestionP");
 
@@ -150,8 +149,8 @@ exports.getSets = async (req, res) => {
       const setObj = set.toObject ? set.toObject() : set;
       return {
         ...setObj,
-        // 🐛 FIX: Use the correct field name from the Questionpaper model: pdfpath
-        isScheduled: scheduledUrls.includes(setObj.pdfpath) 
+        // ✅ FIX: Check against the correct field name (setObj.pdfPath)
+        isScheduled: scheduledUrls.includes(setObj.pdfPath) 
       };
     });
     
@@ -172,16 +171,16 @@ exports.createSets = async (req, res) => {
     try {
         console.log("createSets called with body:", req.body);
         
-        // 🐛 FIX: Use the correct field name: pdfpath
-        const { standard, subject, name, pdfpath } = req.body;
-        if (!standard || !subject || !name || !pdfpath) {
+        // ✅ FIX: Use the correct field name: pdfPath
+        const { standard, subject, name, pdfPath } = req.body;
+        if (!standard || !subject || !name || !pdfPath) {
             return res.status(400).json({ 
-                error: "All fields (standard, subject, name, pdfpath) are required" 
+                error: "All fields (standard, subject, name, pdfPath) are required" 
             });
         }
         
         // Ensure we are mapping to the schema fields correctly
-        const newSet = new Questionpaper({ standard, subject, name, pdfpath });
+        const newSet = new Questionpaper({ standard, subject, name, pdfPath });
         await newSet.save();
         console.log("Set created successfully:", newSet);
         
