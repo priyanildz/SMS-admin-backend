@@ -73,34 +73,34 @@ exports.createSets = async (req, res) => {
 };
 
 exports.addSchedule = async (req, res) => {
-  try {
-    console.log("addSchedule called with body:", req.body);
-    const { standard, subject, set, schedule } = req.body;
-    
-    // Validate required fields
-    if (!standard || !subject || !set || !schedule) {
-        return res.status(400).json({ 
-            error: "All fields (standard, subject, set, schedule) are required" 
-        });
-    }
-    
-    // Check if this set is already scheduled
-    const existingSchedule = await Schedule.findOne({ standard, subject, set });
-    if (existingSchedule) {
-      console.log("Set already scheduled:", existingSchedule);
-      return res.status(400).json({ error: "This set is already scheduled" });
-    }
-    
-    const newSchedule = new Schedule({ standard, subject, set, schedule });
-    await newSchedule.save();
-    console.log("Schedule created successfully:", newSchedule);
-    
-    res.status(201).json({ message: "Scheduled successfully", data: newSchedule });
-  } catch (err) {
-    console.error("Error in addSchedule:", err);
-    res.status(500).json({ 
-        error: err.message,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
+  try {
+    console.log("addSchedule called with body:", req.body);
+    const { standard, subject, set, schedule } = req.body;
+    
+    // Validate required fields
+    if (!standard || !subject || !set || !schedule) {
+        return res.status(400).json({ 
+            error: "All fields (standard, subject, set, schedule) are required" 
+        });
+    }
+    
+    // Check if this set is already scheduled
+    const existingSchedule = await Schedule.findOne({ standard, subject, set });
+    if (existingSchedule) {
+      console.log("Set already scheduled:", existingSchedule);
+      return res.status(400).json({ error: "This set is already scheduled" });
+    }
+    
+    const newSchedule = new Schedule({ standard, subject, set, schedule });
+    await newSchedule.save();
+    console.log("Schedule created successfully:", newSchedule);
+    
+    res.status(201).json({ message: "Scheduled successfully", data: newSchedule });
+  } catch (err) {
+    console.error("Error in addSchedule:", err);
+    res.status(500).json({ 
+        error: err.message,
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
 };
