@@ -27,7 +27,6 @@
 // };
 
 
-
 // recheckingController
 const Rechecking = require("../models/recheckingModel");
 
@@ -47,9 +46,11 @@ exports.addRechecking = async (req, res) => {
 exports.getRechecking = async (req, res) => {
   try {
     const rechecks = await Rechecking.find()
-      // CHANGE: Fetching firstname and lastname instead of just name
+      // Ensure assignedTo and checkedBy populate the required fields for full name display
       .populate("assignedTo", "firstname lastname") 
-      .populate("checkedBy", "firstname lastname"); // Also updated checkedBy for consistency
+      .populate("checkedBy", "firstname lastname");
+    
+    // The response is the array of rechecks, which the frontend expects
     res.status(200).json(rechecks);
   } catch (error) {
     console.error("Error fetching rechecking:", error);
