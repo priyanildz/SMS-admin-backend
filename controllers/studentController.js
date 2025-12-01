@@ -299,3 +299,37 @@ exports.getAllAttendance = async (req, res) => {
     return res.status(500).send({ message: "Internal Server Error!:- " + error.message });
   }
 };
+
+exports.promoteStudents = async (req, res) => {
+    try {
+        const { studentIds, newStandard, newDivision } = req.body;
+
+        if (!studentIds || !newStandard || !Array.isArray(studentIds) || studentIds.length === 0) {
+            return res.status(400).json({ message: "Invalid input: studentIds and newStandard are required." });
+        }
+
+        // Use updateMany to efficiently update all selected students at once
+        const result = await User.updateMany(
+            { studentid: { $in: studentIds } }, // Filter: Find students whose studentid is in the list
+            {
+                $set: {
+                    "admission.admissionstd": newStandard, // Set the new standard
+                    "admission.admissiondivision": newDivision || "", // Set the new division (optional)
+                    // You might also update the academic year here if necessary
+                }
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: "No matching students found to promote." });
+        }
+
+        return res.status(200).json({
+            message: `${result.modifiedCount} students promoted successfully to Standard ${newStandard}.`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error("Error during student promotion:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during promotion." });
+    }
+};

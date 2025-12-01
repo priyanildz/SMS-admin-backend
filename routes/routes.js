@@ -74,6 +74,9 @@ router.post("/addstudent", studentController.createUser);
 // displaying students api
 router.get("/students", studentController.getStudents);
 
+// NEW ROUTE: Promote multiple students
+router.post("/promote-students", studentController.promoteStudents);
+
 // displaying staff api
 router.get("/staff", staffController.getStaff);
 
