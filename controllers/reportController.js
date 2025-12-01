@@ -24,7 +24,13 @@ const report = require("../models/reportModel");
 const Student = require("../models/studentModel"); // 💡 ASSUMPTION: You have a Student model import
 
 exports.addReport = async (req, res) => {
-    // ... (existing addReport function)
+  try {
+    const response = new report(req.body);
+    await response.save();
+    return res.status(200).json({ message: "added report card" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getReport = async (req, res) => {
