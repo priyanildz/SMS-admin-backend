@@ -57,3 +57,18 @@ exports.getRechecking = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch rechecking" });
   }
 };
+// Delete a rechecking entry
+exports.deleteRechecking = async (req, res) => {
+  try {
+    const deleted = await Rechecking.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Rechecking entry not found" });
+    }
+
+    res.status(200).json({ message: "Rechecking deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting rechecking:", error);
+    res.status(500).json({ error: "Failed to delete rechecking" });
+  }
+};

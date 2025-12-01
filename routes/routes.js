@@ -31,6 +31,9 @@ const vehicleSupController = require("../controllers/vehicleSupervisorController
 
 router.post("/assign-recheck", recheckingController.addRechecking);
 router.get("/recheck", recheckingController.getRechecking);
+router.delete("/recheck/:id", recheckingController.deleteRechecking);
+
+
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
 router.get(
