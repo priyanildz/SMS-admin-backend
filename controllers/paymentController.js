@@ -207,10 +207,9 @@
 
 
 
+
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
-// Assuming Student Model is imported or available for lookup
-const Student = require("../models/student"); // Placeholder: Adjust path if necessary
 
 exports.getPaymentEntries = async (req, res) => {
   try {
@@ -229,39 +228,21 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
-  // FIX: Accept studentId, amount, date, and mode.
-  const { studentid, date, amount, mode } = req.body; 
+  // FIX: Ensure 'name' is destructured, along with 'amount' and 'date'
+  const { name, std, div, date, amount, mode } = req.body; 
 
   try {
-    // 1. Fetch Student Details using studentid
-    // This assumes the Student model structure matches the provided student data:
-    // - Student ID at the top level
-    // - Name fields at the top level
-    // - Standard and Division nested under 'admission'
-    const studentData = await Student.findOne({ studentid: studentid });
-
-    if (!studentData) {
-        return res.status(404).json({ message: "Student not found with provided ID." });
-    }
-
-    const name = studentData.firstname + (studentData.middlename ? ' ' + studentData.middlename : '') + ' ' + studentData.lastname;
-    const std = studentData.admission.admissionstd;
-    const div = studentData.admission.admissiondivision;
-
     const newEntry = new PaymentEntry({
-      name, 
+      name, // This was missing in your Postman body
       std,
       div,
-      studentid, // NEW FIELD ADDED
-      totalFees: amount, 
+      totalFees: amount, // 'amount' from body is used as totalFees initially
       status: "Unpaid",
-      installments: [{ date, amount, mode }],
+      installments: [{ date, amount, mode }], // Initialize with the first installment
     });
-    
     const savedEntry = await newEntry.save();
     res.status(201).json(savedEntry);
   } catch (error) {
-    console.error("Error adding payment entry:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -287,7 +268,7 @@ exports.updatePaymentEntry = async (req, res) => {
     const totalFees = paymentEntry.totalFees;
 
     // Update status
-    paymentEntry.status = totalPaid >= totalFees ? "Paid" : "Unpaid"; // Note: Schema only uses "Paid"/"Unpaid"
+    paymentEntry.status = totalPaid >= totalFees ? "Paid" : "Partial"; // Note: Schema only uses "Paid"/"Unpaid"
 
     const updatedEntry = await paymentEntry.save();
     res.status(200).json(updatedEntry);
@@ -302,7 +283,7 @@ exports.filterTransactions = async (req, res) => {
 
     let query = {};
 
-    // Filter by standard (std)
+    // Filter by standard (std), which is now correctly passed as "5" or "6"
     if (std) {
       query.std = std; 
     }
