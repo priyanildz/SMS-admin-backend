@@ -123,39 +123,13 @@ exports.getFees = async (req, res) => {
 };
 
 exports.addCategory = async (req, res) => {
-  try {
-    // 1. Extract the array of categories from the request body.
-    const { categories } = req.body; 
-    
-    if (!Array.isArray(categories) || categories.length === 0) {
-        return res.status(400).json({ error: "No categories provided." });
-    }
-
-    // 2. Join the array into a comma-separated string as expected by the logic 
-    //    that parses the fetched categories in the frontend.
-    const categoriesString = categories.join(", ");
-
-    // 3. Create and save the new Category document with the 'title' field.
-    // NOTE: This approach overwrites previous categories, which seems to be the intended behavior
-    // based on the single-document parsing logic in fetchCategories.
-    
-    // Attempt to find an existing category document to update (recommended for configuration-like data)
-    let existingCategory = await Category.findOne({});
-
-    if (existingCategory) {
-        existingCategory.title = categoriesString;
-        await existingCategory.save();
-    } else {
-        // If no document exists, create a new one
-        existingCategory = new Category({ title: categoriesString });
-        await existingCategory.save();
-    }
-
-    return res.status(200).json({ message: "added category successfully" });
-  } catch (error) {
-    console.error("Category save error:", error);
-    return res.status(500).json({ error: error.message });
-  }
+  try {
+    const response = new Category(req.body);
+    await response.save();
+    return res.status(200).json({ message: "added category successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getCategory = async (req, res) => {
