@@ -208,7 +208,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 
@@ -229,16 +228,17 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
-  const { name, std, div, date, installmentType, amount, mode } = req.body;
+  // FIX: Ensure 'name' is destructured, along with 'amount' and 'date'
+  const { name, std, div, date, amount, mode } = req.body; 
 
   try {
     const newEntry = new PaymentEntry({
-      name,
+      name, // This was missing in your Postman body
       std,
       div,
-      totalFees: amount,
+      totalFees: amount, // 'amount' from body is used as totalFees initially
       status: "Unpaid",
-      installments: [{ date, amount }],
+      installments: [{ date, amount, mode }], // Initialize with the first installment
     });
     const savedEntry = await newEntry.save();
     res.status(201).json(savedEntry);
@@ -268,7 +268,7 @@ exports.updatePaymentEntry = async (req, res) => {
     const totalFees = paymentEntry.totalFees;
 
     // Update status
-    paymentEntry.status = totalPaid >= totalFees ? "Paid" : "Partial";
+    paymentEntry.status = totalPaid >= totalFees ? "Paid" : "Partial"; // Note: Schema only uses "Paid"/"Unpaid"
 
     const updatedEntry = await paymentEntry.save();
     res.status(200).json(updatedEntry);
