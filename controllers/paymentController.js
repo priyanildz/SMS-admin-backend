@@ -207,7 +207,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 
@@ -228,18 +227,21 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
-  // FIX: Ensure 'name' is destructured, along with 'amount' and 'date'
   const { name, std, div, date, amount, mode } = req.body; 
 
   try {
+    // FIX 1: Set status to "Paid" on initial entry, assuming the provided amount covers the total fee set by this transaction.
+    const initialStatus = "Paid"; 
+
     const newEntry = new PaymentEntry({
-      name, // This was missing in your Postman body
+      name, 
       std,
       div,
-      totalFees: amount, // 'amount' from body is used as totalFees initially
-      status: "Unpaid",
-      installments: [{ date, amount, mode }], // Initialize with the first installment
+      totalFees: amount, // The 'amount' in the body sets the total fee due for this entry
+      status: initialStatus, 
+      installments: [{ date, amount, mode }], 
     });
+    
     const savedEntry = await newEntry.save();
     res.status(201).json(savedEntry);
   } catch (error) {
@@ -267,8 +269,13 @@ exports.updatePaymentEntry = async (req, res) => {
     );
     const totalFees = paymentEntry.totalFees;
 
-    // Update status
-    paymentEntry.status = totalPaid >= totalFees ? "Paid" : "Partial"; // Note: Schema only uses "Paid"/"Unpaid"
+    // FIX 2: Update status dynamically based on amount paid vs total fees
+    let newStatus = "Unpaid";
+    if (totalPaid >= totalFees) {
+        newStatus = "Paid";
+    }
+    
+    paymentEntry.status = newStatus;
 
     const updatedEntry = await paymentEntry.save();
     res.status(200).json(updatedEntry);
@@ -283,7 +290,7 @@ exports.filterTransactions = async (req, res) => {
 
     let query = {};
 
-    // Filter by standard (std), which is now correctly passed as "5" or "6"
+    // Filter by standard (std)
     if (std) {
       query.std = std; 
     }
