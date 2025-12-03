@@ -284,25 +284,53 @@ exports.updatePaymentEntry = async (req, res) => {
   }
 };
 
+// exports.filterTransactions = async (req, res) => {
+//   try {
+//     const { std } = req.query;
+
+//     let query = {};
+
+//     // Filter by standard (std)
+//     if (std) {
+//       query.std = std; 
+//     }
+    
+//     // Fetch transactions based on std filter
+//     const transactions = await PaymentEntry.find(query).lean().exec();
+    
+//     // Calculate totalPaid for each entry as required by the frontend
+//     const result = transactions.map(entry => ({
+//         ...entry,
+//         totalPaid: entry.installments.reduce((sum, inst) => sum + (inst.amount || 0), 0)
+//     }));
+
+
+//     res.status(200).json(result);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 exports.filterTransactions = async (req, res) => {
   try {
-    const { std } = req.query;
+    const { std } = req.query; // std filter is optional, used for performance if only one class is needed
 
     let query = {};
 
-    // Filter by standard (std)
+    // Filter by standard (std) - NOTE: This only filters by the single standard number. 
+    // Aggregation for Primary/Secondary is done on the frontend.
     if (std) {
       query.std = std; 
     }
-    
-    // Fetch transactions based on std filter
+    
+    // Fetch ALL transactions (or filtered by single standard if `std` is provided)
     const transactions = await PaymentEntry.find(query).lean().exec();
-    
-    // Calculate totalPaid for each entry as required by the frontend
-    const result = transactions.map(entry => ({
-        ...entry,
-        totalPaid: entry.installments.reduce((sum, inst) => sum + (inst.amount || 0), 0)
-    }));
+    
+    // Calculate totalPaid for each entry
+    const result = transactions.map(entry => ({
+        ...entry,
+        // The frontend only needs the total amount paid so far
+        totalPaid: entry.installments.reduce((sum, inst) => sum + (inst.amount || 0), 0)
+    }));
 
 
     res.status(200).json(result);
@@ -310,6 +338,8 @@ exports.filterTransactions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 
 exports.getMetrices = async (req, res) => {
   try {
