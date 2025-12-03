@@ -133,6 +133,99 @@
 
 
 
+// const Fee = require("../models/feeModel");
+// const Category = require("../models/categoryModel");
+
+// // add fees structure
+// exports.addFee = async (req, res) => {
+//   try {
+//     const newFee = new Fee(req.body);
+//     await newFee.save();
+//     res.status(201).json({ message: "Fee structure created", data: newFee });
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
+
+// // get all fees structure
+// exports.getFees = async (req, res) => {
+//   try {
+//     const allFees = await Fee.find().sort({ createdAt: -1 });
+//     res.status(200).json(allFees);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// exports.addCategory = async (req, res) => {
+//   try {
+//     // FIX for 500 Error: Handle array input and Mongoose model structure
+//     const { categories } = req.body; 
+    
+//     if (!Array.isArray(categories) || categories.length === 0) {
+//         return res.status(400).json({ error: "No categories provided." });
+//     }
+    
+//     const categoriesString = categories.join(", ");
+
+//     // Attempt to find and update the single category config document
+//     let existingCategory = await Category.findOne({});
+
+//     if (existingCategory) {
+//         existingCategory.title = categoriesString;
+//         await existingCategory.save();
+//     } else {
+//         // Create a new document if none exists
+//         existingCategory = new Category({ title: categoriesString });
+//         await existingCategory.save();
+//     }
+
+//     return res.status(200).json({ message: "added category successfully" });
+//   } catch (error) {
+//     console.error("Category save error:", error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// exports.getCategory = async (req, res) => {
+//   try {
+//     const response = await Category.find();
+//     return res.status(200).json(response);
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // ✅ Get combined fee totals for Primary (1-7) and Secondary (8-10)
+// exports.getCombinedFees = async (req, res) => {
+//   try {
+//     const fees = await Fee.find();
+
+//     let primaryTotal = 0;
+//     let secondaryTotal = 0;
+
+//     fees.forEach((fee) => {
+//       const stdNum = parseInt(fee.standard); // convert "2nd" → 2, "10th" → 10
+//       if (!isNaN(stdNum)) {
+//         if (stdNum >= 1 && stdNum <= 7) {
+//           primaryTotal += fee.total;
+//         } else if (stdNum >= 8 && stdNum <= 10) {
+//           secondaryTotal += fee.total;
+//         }
+//       }
+//     });
+
+//     res.json({
+//       primary: { standards: "1-7", totalAmount: primaryTotal },
+//       secondary: { standards: "8-10", totalAmount: secondaryTotal },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+// // ... (rest of the file is omitted as it was commented out/unchanged)
+
+
 const Fee = require("../models/feeModel");
 const Category = require("../models/categoryModel");
 
@@ -159,7 +252,6 @@ exports.getFees = async (req, res) => {
 
 exports.addCategory = async (req, res) => {
   try {
-    // FIX for 500 Error: Handle array input and Mongoose model structure
     const { categories } = req.body; 
     
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -168,14 +260,12 @@ exports.addCategory = async (req, res) => {
     
     const categoriesString = categories.join(", ");
 
-    // Attempt to find and update the single category config document
     let existingCategory = await Category.findOne({});
 
     if (existingCategory) {
         existingCategory.title = categoriesString;
         await existingCategory.save();
     } else {
-        // Create a new document if none exists
         existingCategory = new Category({ title: categoriesString });
         await existingCategory.save();
     }
@@ -196,31 +286,42 @@ exports.getCategory = async (req, res) => {
   }
 };
 
-// ✅ Get combined fee totals for Primary (1-7) and Secondary (8-10)
+// FIX: Get combined fee totals for Primary (1-7), Secondary (8-10), and All
 exports.getCombinedFees = async (req, res) => {
   try {
     const fees = await Fee.find();
 
     let primaryTotal = 0;
     let secondaryTotal = 0;
+    let allTotal = 0;
 
     fees.forEach((fee) => {
-      const stdNum = parseInt(fee.standard); // convert "2nd" → 2, "10th" → 10
-      if (!isNaN(stdNum)) {
-        if (stdNum >= 1 && stdNum <= 7) {
-          primaryTotal += fee.total;
-        } else if (stdNum >= 8 && stdNum <= 10) {
-          secondaryTotal += fee.total;
+        // Use the saved annualfee from the Fee model
+        const annualFeeAmount = fee.annualfee || 0;
+        allTotal += annualFeeAmount;
+        
+        // Extract standard number from string (e.g., "1st" -> 1)
+        const stdNum = parseInt(fee.standard.replace(/\D/g, "")); 
+        
+        if (!isNaN(stdNum)) {
+            // Primary standards 1-7
+            if (stdNum >= 1 && stdNum <= 7) { 
+              primaryTotal += annualFeeAmount;
+            } 
+            // Secondary standards 8-10
+            else if (stdNum >= 8 && stdNum <= 10) { 
+              secondaryTotal += annualFeeAmount;
+            }
         }
-      }
     });
 
     res.json({
-      primary: { standards: "1-7", totalAmount: primaryTotal },
-      secondary: { standards: "8-10", totalAmount: secondaryTotal },
+      primary: primaryTotal,
+      secondary: secondaryTotal,
+      all: allTotal, 
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-// ... (rest of the file is omitted as it was commented out/unchanged)
+// ... (rest of feeController.js remains unchanged)
