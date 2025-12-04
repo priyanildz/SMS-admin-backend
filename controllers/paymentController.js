@@ -380,9 +380,74 @@ exports.getMetrices = async (req, res) => {
 }
 
 exports.sendReminder = async (req, res) => {
-    // In a real application, this function would handle fetching pending students
-    // based on date/category filters and sending SMS/email reminders.
-    
-    // For now, return success to resolve the 404 error in the frontend.
-    return res.status(200).json({ message: "Reminder function placeholder executed successfully." });
+    try {
+        const { fromDate, toDate, category } = req.body;
+
+        // --- Step 1: Find Payment Entries with Pending Status ---
+        // In a real scenario, we'd query PaymentEntry for unpaid/partially paid status
+        // and filter by date/standard (derived from category).
+        
+        // Placeholder for transaction IDs (In a real app, this would be complex SQL/Mongoose aggregation)
+        // For simplicity, we'll fetch all students and filter/check their fee status later.
+        
+        // --- Step 2: Fetch Student Records ---
+        let studentQuery = { status: true };
+
+        if (category && category !== "All") {
+            if (category === "Primary") {
+                // Assuming standards 1 to 7 for primary
+                studentQuery["admission.admissionstd"] = { $in: ["1", "2", "3", "4", "5", "6", "7", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"] };
+            } else if (category === "Secondary") {
+                // Assuming standards 8 to 10 for secondary
+                studentQuery["admission.admissionstd"] = { $in: ["8", "9", "10", "8th", "9th", "10th"] };
+            }
+            // Add logic for filtering by a specific single standard if needed here
+        }
+        
+        // Fetch students based on filters
+        const students = await Student.find(studentQuery).lean();
+        
+        let remindersSent = 0;
+        let remindersSimulated = [];
+
+        // --- Step 3: Loop through students and simulate sending reminders ---
+        for (const student of students) {
+            const studentName = `${student.firstname} ${student.lastname}`;
+            const studentStd = student.admission.admissionstd;
+            const contact = student.parent.primarycontact;
+
+            // In a real application: Check if fee is pending for this student within date range
+            // MOCK: Assuming all students fetched need a reminder for demonstration purposes.
+
+            if (contact) {
+                const message = `🔔 Fee Reminder: Annual fee is pending for your child ${studentName} (${studentStd}). Please make the payment by ${new Date(toDate).toDateString()}.`;
+                
+                // --- Step 4: Simulate Notification/SMS Delivery ---
+                console.log(`[REMINDER SENT SIMULATION] 
+                To: ${studentName} 
+                Std: ${studentStd} 
+                Contact: ${contact} 
+                Message: ${message}`);
+                
+                remindersSimulated.push({ name: studentName, contact: contact });
+                remindersSent++;
+            }
+        }
+
+        if (remindersSent > 0) {
+            return res.status(200).json({ 
+                message: `Successfully simulated sending fee reminders to ${remindersSent} students.`,
+                recipients: remindersSimulated
+            });
+        } else {
+            return res.status(200).json({ 
+                message: "No students found matching the criteria or no contact information available.",
+                recipients: []
+            });
+        }
+
+    } catch (error) {
+        console.error("Error executing sendReminder:", error);
+        return res.status(500).json({ error: error.message || "Failed to process reminder request." });
+    }
 };
