@@ -397,6 +397,54 @@ exports.getCategory = async (req, res) => {
 };
 
 // FIX: Get combined fee totals including Pre-Primary
+// exports.getCombinedFees = async (req, res) => {
+//   try {
+//     const fees = await Fee.find();
+
+//     let prePrimaryTotal = 0; 
+//     let primaryTotal = 0;
+//     let secondaryTotal = 0;
+//     let allTotal = 0;
+
+//     // Define Pre-Primary standard names for checking the 'standard' field
+//     const prePrimaryNames = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+
+//     fees.forEach((fee) => {
+//         // Use the saved annualfee from the Fee model
+//         const annualFeeAmount = fee.annualfee || 0;
+//         allTotal += annualFeeAmount;
+//         
+//         // Extract standard number from string (e.g., "1st" -> 1)
+//         const stdNum = parseInt(fee.standard.replace(/\D/g, "")); 
+//         
+//         // Check for Pre-Primary first by name
+//         if (prePrimaryNames.includes(fee.standard)) {
+//             prePrimaryTotal += annualFeeAmount;
+//         }
+//         else if (!isNaN(stdNum)) {
+//             // Primary standards 1-7
+//             if (stdNum >= 1 && stdNum <= 7) { 
+//               primaryTotal += annualFeeAmount;
+//             } 
+//             // Secondary standards 8-10
+//             else if (stdNum >= 8 && stdNum <= 10) { 
+//               secondaryTotal += annualFeeAmount;
+//             }
+//         }
+//     });
+
+//     res.json({
+//         preprimary: prePrimaryTotal, // NEW: Include Pre-Primary total
+//       primary: primaryTotal,
+//       secondary: secondaryTotal,
+//       all: allTotal, 
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
 exports.getCombinedFees = async (req, res) => {
   try {
     const fees = await Fee.find();
@@ -434,7 +482,7 @@ exports.getCombinedFees = async (req, res) => {
     });
 
     res.json({
-        preprimary: prePrimaryTotal, // NEW: Include Pre-Primary total
+        preprimary: prePrimaryTotal, // Ensure this key is returned
       primary: primaryTotal,
       secondary: secondaryTotal,
       all: allTotal, 
