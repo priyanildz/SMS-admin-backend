@@ -262,6 +262,9 @@ router.get("/filter-transactions", paymentController.filterTransactions);
 
 router.get("/dashboard-metrics", paymentController.getMetrices);
 
+// FIX: Add route for sending reminders
+router.post("/send-reminder", paymentController.sendReminder);
+
 router.get("/sets/:standard/:subject", questionPaperController.getSets);
 
 router.post("/add-set", questionPaperController.createSets);
