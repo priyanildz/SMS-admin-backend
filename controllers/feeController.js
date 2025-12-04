@@ -226,6 +226,116 @@
 // // ... (rest of the file is omitted as it was commented out/unchanged)
 
 
+
+
+
+
+
+
+// const Fee = require("../models/feeModel");
+// const Category = require("../models/categoryModel");
+
+// // add fees structure
+// exports.addFee = async (req, res) => {
+//   try {
+//     const newFee = new Fee(req.body);
+//     await newFee.save();
+//     res.status(201).json({ message: "Fee structure created", data: newFee });
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
+
+// // get all fees structure
+// exports.getFees = async (req, res) => {
+//   try {
+//     const allFees = await Fee.find().sort({ createdAt: -1 });
+//     res.status(200).json(allFees);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// exports.addCategory = async (req, res) => {
+//   try {
+//     const { categories } = req.body; 
+    
+//     if (!Array.isArray(categories) || categories.length === 0) {
+//         return res.status(400).json({ error: "No categories provided." });
+//     }
+    
+//     const categoriesString = categories.join(", ");
+
+//     let existingCategory = await Category.findOne({});
+
+//     if (existingCategory) {
+//         existingCategory.title = categoriesString;
+//         await existingCategory.save();
+//     } else {
+//         existingCategory = new Category({ title: categoriesString });
+//         await existingCategory.save();
+//     }
+
+//     return res.status(200).json({ message: "added category successfully" });
+//   } catch (error) {
+//     console.error("Category save error:", error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// exports.getCategory = async (req, res) => {
+//   try {
+//     const response = await Category.find();
+//     return res.status(200).json(response);
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // FIX: Get combined fee totals for Primary (1-7), Secondary (8-10), and All
+// exports.getCombinedFees = async (req, res) => {
+//   try {
+//     const fees = await Fee.find();
+
+//     let primaryTotal = 0;
+//     let secondaryTotal = 0;
+//     let allTotal = 0;
+
+//     fees.forEach((fee) => {
+//         // Use the saved annualfee from the Fee model
+//         const annualFeeAmount = fee.annualfee || 0;
+//         allTotal += annualFeeAmount;
+        
+//         // Extract standard number from string (e.g., "1st" -> 1)
+//         const stdNum = parseInt(fee.standard.replace(/\D/g, "")); 
+        
+//         if (!isNaN(stdNum)) {
+//             // Primary standards 1-7
+//             if (stdNum >= 1 && stdNum <= 7) { 
+//               primaryTotal += annualFeeAmount;
+//             } 
+//             // Secondary standards 8-10
+//             else if (stdNum >= 8 && stdNum <= 10) { 
+//               secondaryTotal += annualFeeAmount;
+//             }
+//         }
+//     });
+
+//     res.json({
+//       primary: primaryTotal,
+//       secondary: secondaryTotal,
+//       all: allTotal, 
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+// // ... (rest of feeController.js remains unchanged)
+
+
+
+
+
 const Fee = require("../models/feeModel");
 const Category = require("../models/categoryModel");
 
@@ -253,11 +363,11 @@ exports.getFees = async (req, res) => {
 exports.addCategory = async (req, res) => {
   try {
     const { categories } = req.body; 
-    
-    if (!Array.isArray(categories) || categories.length === 0) {
-        return res.status(400).json({ error: "No categories provided." });
-    }
-    
+    
+    if (!Array.isArray(categories) || categories.length === 0) {
+        return res.status(400).json({ error: "No categories provided." });
+    }
+    
     const categoriesString = categories.join(", ");
 
     let existingCategory = await Category.findOne({});
@@ -272,7 +382,7 @@ exports.addCategory = async (req, res) => {
 
     return res.status(200).json({ message: "added category successfully" });
   } catch (error) {
-    console.error("Category save error:", error);
+    console.error("Category save error:", error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -286,31 +396,31 @@ exports.getCategory = async (req, res) => {
   }
 };
 
-// FIX: Get combined fee totals for Primary (1-7), Secondary (8-10), and All
+// FIX: Get combined fee totals including Pre-Primary
 exports.getCombinedFees = async (req, res) => {
   try {
     const fees = await Fee.find();
 
-    let prePrimaryTotal = 0; // NEW: Total for Pre-Primary
+    let prePrimaryTotal = 0; 
     let primaryTotal = 0;
     let secondaryTotal = 0;
-    let allTotal = 0;
+    let allTotal = 0;
 
-    // Define Pre-Primary standard names for checking the 'standard' field
-    const prePrimaryNames = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+    // Define Pre-Primary standard names for checking the 'standard' field
+    const prePrimaryNames = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
 
     fees.forEach((fee) => {
-        // Use the saved annualfee from the Fee model
-        const annualFeeAmount = fee.annualfee || 0;
-        allTotal += annualFeeAmount;
-        
+        // Use the saved annualfee from the Fee model
+        const annualFeeAmount = fee.annualfee || 0;
+        allTotal += annualFeeAmount;
+        
         // Extract standard number from string (e.g., "1st" -> 1)
         const stdNum = parseInt(fee.standard.replace(/\D/g, "")); 
-        
-        // Check for Pre-Primary first by name
-        if (prePrimaryNames.includes(fee.standard)) {
-            prePrimaryTotal += annualFeeAmount;
-        }
+        
+        // Check for Pre-Primary first by name
+        if (prePrimaryNames.includes(fee.standard)) {
+            prePrimaryTotal += annualFeeAmount;
+        }
         else if (!isNaN(stdNum)) {
             // Primary standards 1-7
             if (stdNum >= 1 && stdNum <= 7) { 
@@ -324,10 +434,10 @@ exports.getCombinedFees = async (req, res) => {
     });
 
     res.json({
-        preprimary: prePrimaryTotal, // NEW: Include Pre-Primary total
+        preprimary: prePrimaryTotal, // NEW: Include Pre-Primary total
       primary: primaryTotal,
       secondary: secondaryTotal,
-      all: allTotal, 
+      all: allTotal, 
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
