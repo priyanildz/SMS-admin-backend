@@ -291,9 +291,13 @@ exports.getCombinedFees = async (req, res) => {
   try {
     const fees = await Fee.find();
 
+    let prePrimaryTotal = 0; // NEW: Total for Pre-Primary
     let primaryTotal = 0;
     let secondaryTotal = 0;
     let allTotal = 0;
+
+    // Define Pre-Primary standard names for checking the 'standard' field
+    const prePrimaryNames = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
 
     fees.forEach((fee) => {
         // Use the saved annualfee from the Fee model
@@ -303,7 +307,11 @@ exports.getCombinedFees = async (req, res) => {
         // Extract standard number from string (e.g., "1st" -> 1)
         const stdNum = parseInt(fee.standard.replace(/\D/g, "")); 
         
-        if (!isNaN(stdNum)) {
+        // Check for Pre-Primary first by name
+        if (prePrimaryNames.includes(fee.standard)) {
+            prePrimaryTotal += annualFeeAmount;
+        }
+        else if (!isNaN(stdNum)) {
             // Primary standards 1-7
             if (stdNum >= 1 && stdNum <= 7) { 
               primaryTotal += annualFeeAmount;
@@ -316,6 +324,7 @@ exports.getCombinedFees = async (req, res) => {
     });
 
     res.json({
+        preprimary: prePrimaryTotal, // NEW: Include Pre-Primary total
       primary: primaryTotal,
       secondary: secondaryTotal,
       all: allTotal, 
@@ -324,4 +333,3 @@ exports.getCombinedFees = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// ... (rest of feeController.js remains unchanged)

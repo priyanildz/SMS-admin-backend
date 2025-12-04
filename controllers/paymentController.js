@@ -386,27 +386,32 @@ exports.sendReminder = async (req, res) => {
 
         // --- Step 1: Initialize Student Query based on category filter ---
         let studentQuery = { status: true };
+        
+        // Pre-Primary standard names
+        const prePrimaryStandards = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+        // Primary and Secondary standards for querying
+        const primaryStandards = ["1", "2", "3", "4", "5", "6", "7", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+        const secondaryStandards = ["8", "9", "10", "8th", "9th", "10th"];
 
         if (category && category !== "All") {
             let standardList = [];
             
-            if (category === "Primary") {
-                // FIX: Correctly defining the array of standard strings for Primary (1st to 7th)
-                standardList = ["1", "2", "3", "4", "5", "6", "7", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+            if (category === "Pre-Primary") { // NEW Pre-Primary logic
+                standardList = prePrimaryStandards;
+            }
+            else if (category === "Primary") {
+                standardList = primaryStandards;
             } else if (category === "Secondary") {
-                // FIX: Correctly defining the array of standard strings for Secondary (8th to 10th)
-                standardList = ["8", "9", "10", "8th", "9th", "10th"];
+                standardList = secondaryStandards;
             }
             
-            // Only apply the filter if the category was Primary or Secondary
+            // Apply the filter
             if (standardList.length > 0) {
                 studentQuery["admission.admissionstd"] = { $in: standardList };
             }
-            // Note: Add logic here if you want to filter by a specific single standard string
         }
         
         // --- Step 2: Fetch Student Records ---
-        // Ensure the Student model is correctly imported (FIX)
         const students = await Student.find(studentQuery).lean();
         
         let remindersSent = 0;
@@ -414,15 +419,13 @@ exports.sendReminder = async (req, res) => {
 
         // --- Step 3: Loop through students and simulate sending reminders ---
         for (const student of students) {
-            // MOCK: In a real app, you would join PaymentEntry data here to check for pending fees.
-            // Since we assume all fetched students need a reminder:
+            // MOCK: Assuming all fetched students need a reminder
             
             const studentName = `${student.firstname} ${student.lastname}`;
             const studentStd = student.admission.admissionstd;
             const contact = student.parent.primarycontact;
 
             if (contact) {
-                // The toDate should ideally be converted to a readable format
                 const dueDate = toDate ? new Date(toDate).toDateString() : 'the next due date';
                 const message = `🔔 Fee Reminder: A payment is pending for your child ${studentName} (${studentStd}). Please make the payment by ${dueDate}.`;
                 
@@ -452,8 +455,6 @@ exports.sendReminder = async (req, res) => {
 
     } catch (error) {
         console.error("Error executing sendReminder (Fatal):", error);
-        // Returning 500 error details here to help debugging, but the user requested fixing the 500.
-        // The most likely fix is the Student model import/definition.
         return res.status(500).json({ error: error.message || "Failed to process reminder request (Server Error)." });
     }
 };
