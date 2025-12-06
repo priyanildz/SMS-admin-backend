@@ -466,7 +466,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -482,19 +481,17 @@ const normalizeStd = (std) => {
     return num || std; 
 };
 
-// --- Standard Definitions (Matching your Fee Structure) ---
-const PP_STDS = ["Nursery", "Junior", "Senior"];
-const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; // Primary: 1 to 7
-const S_STDS = ["8", "9", "10"]; // Secondary: 8 to 10
-// Include string forms for robust querying
-const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
-const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
-const PP_STDS_EXT = PP_STDS; // Simple mapping for Pre-Primary names
+// --- Standard Definitions for Group Filtering ---
+const PP_STDS_QUERY = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+const P_STDS_QUERY = [
+    "1", "2", "3", "4", "5", "6", "7", 
+    "1st", "2nd", "3rd", "4th", "5th", "6th", "7th" 
+]; 
+const S_STDS_QUERY = ["8", "9", "10", "8th", "9th", "10th"]; 
+// ----------------------------------------------
 
-// --------------------------------------------------------
 
 exports.getPaymentEntries = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   try {
     const { std, div, search } = req.query;
     let query = {};
@@ -578,11 +575,11 @@ exports.filterTransactions = async (req, res) => {
     let stdFilterList = [];
     if (category) {
         if (category === "Pre-Primary") {
-            stdFilterList = PP_STDS;
+            stdFilterList = PP_STDS_QUERY;
         } else if (category === "Primary") {
-            stdFilterList = P_STDS;
+            stdFilterList = P_STDS_QUERY;
         } else if (category === "Secondary") {
-            stdFilterList = S_STDS;
+            stdFilterList = S_STDS_QUERY;
         }
     }
     
@@ -625,7 +622,7 @@ exports.filterTransactions = async (req, res) => {
 
         return {
             ...entry,
-            // OVERRIDE totalFees with the correct Annual Fee Due
+            // OVERRIDE totalFees with the correct value from the master fees table
             totalFees: correctAnnualFee, 
             totalPaid: totalPaid,
         };
@@ -684,26 +681,25 @@ exports.sendReminder = async (req, res) => {
         // --- Step 1: Initialize Student Query based on category filter ---
         let studentQuery = { status: true };
         
-        // FIX: Define the required standard groups for accurate filtering (using names from above)
-        const PP_STDS = ["Nursery", "Junior", "Senior"];
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
-        const S_STDS = ["8", "9", "10"]; 
+        // Define standard lists using the groups defined above
+        const PP_STDS = ["Nursery", "Junior", "Senior"];
+        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
+        const S_STDS = ["8", "9", "10"]; 
         
         // Include both numeric and string forms for robust filtering
         const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
         const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
 
-
         if (category && category !== "All") {
             let standardList = [];
             
             if (category === "Pre-Primary") { 
-                standardList = PP_STDS; 
+                standardList = PP_STDS_QUERY; // Use the comprehensive list
             }
             else if (category === "Primary") {
-                standardList = P_STDS_EXT;
+                standardList = P_STDS_QUERY; // Use the comprehensive list
             } else if (category === "Secondary") {
-                standardList = S_STDS_EXT;
+                standardList = S_STDS_QUERY; // Use the comprehensive list
             }
             
             // Apply the filter
