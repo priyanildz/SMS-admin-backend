@@ -465,7 +465,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -481,7 +480,7 @@ const normalizeStd = (std) => {
     return num || std; 
 };
 
-// --- Standard Definitions for Group Filtering ---
+// --- Standard Definitions for Group Filtering (Re-defined for controller scope) ---
 const PP_STDS_QUERY = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
 const P_STDS_QUERY = [
     "1", "2", "3", "4", "5", "6", "7", 
@@ -572,26 +571,30 @@ exports.filterTransactions = async (req, res) => {
     const { std, div, search, category, mode } = req.query; 
     
     // --- Determine Standard Filter List (if category group is used) ---
-    let stdFilterList = [];
-    if (category) {
+    let finalStdQuery = std;
+
+    if (category && category !== "All") {
+        let standardList = [];
         if (category === "Pre-Primary") {
-            stdFilterList = PP_STDS_QUERY;
+            standardList = PP_STDS_QUERY;
         } else if (category === "Primary") {
-            stdFilterList = P_STDS_QUERY;
+            standardList = P_STDS_QUERY;
         } else if (category === "Secondary") {
-            stdFilterList = S_STDS_QUERY;
+            standardList = S_STDS_QUERY;
+        }
+        
+        // If a category group is selected AND no specific standard is provided, use the list.
+        if (standardList.length > 0 && !std) {
+            finalStdQuery = { $in: standardList };
         }
     }
     
     // --- Build Query ---
     let query = {};
 
-    // 1. Filter by Standard (individual standard overrides category group)
-    if (std) {
-        query.std = std;
-    } else if (stdFilterList.length > 0) {
-        // Use $in to query all standards within the selected category group
-        query.std = { $in: stdFilterList }; 
+    // 1. Filter by Standard (using individual standard OR category list)
+    if (finalStdQuery) {
+        query.std = finalStdQuery;
     }
     
     // 2. Filter by Division and Search
@@ -602,8 +605,8 @@ exports.filterTransactions = async (req, res) => {
     if (mode) {
         query["installments.mode"] = mode;
     }
-
-    // 4. Fetch Master Fee Structure for lookup
+    
+    // --- Fetch Master Fee Structure for lookup (to get correct Total Fees Due) ---
     const allFees = await Fee.find().lean();
     const feeMap = allFees.reduce((acc, fee) => {
         acc[normalizeStd(fee.standard)] = fee.annualfee || 0;
@@ -682,9 +685,9 @@ exports.sendReminder = async (req, res) => {
         let studentQuery = { status: true };
         
         // Define standard lists using the groups defined above
-        const PP_STDS = ["Nursery", "Junior", "Senior"];
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
-        const S_STDS = ["8", "9", "10"]; 
+        const PP_STDS = ["Nursery", "Junior", "Senior"];
+        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
+        const S_STDS = ["8", "9", "10"]; 
         
         // Include both numeric and string forms for robust filtering
         const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
@@ -694,12 +697,12 @@ exports.sendReminder = async (req, res) => {
             let standardList = [];
             
             if (category === "Pre-Primary") { 
-                standardList = PP_STDS_QUERY; // Use the comprehensive list
+                standardList = PP_STDS_QUERY; 
             }
             else if (category === "Primary") {
-                standardList = P_STDS_QUERY; // Use the comprehensive list
+                standardList = P_STDS_QUERY;
             } else if (category === "Secondary") {
-                standardList = S_STDS_QUERY; // Use the comprehensive list
+                standardList = S_STDS_QUERY;
             }
             
             // Apply the filter
