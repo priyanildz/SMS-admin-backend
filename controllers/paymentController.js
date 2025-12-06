@@ -468,7 +468,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -503,6 +502,7 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
+// ... (omitted for brevity - unchanged)
   const { name, std, div, date, amount, mode } = req.body; 
 
   try {
@@ -525,6 +525,7 @@ exports.addPaymentEntry = async (req, res) => {
 };
 
 exports.updatePaymentEntry = async (req, res) => {
+// ... (omitted for brevity - unchanged)
   const { id } = req.params;
   const { date, amount, mode } = req.body;
 
@@ -559,7 +560,7 @@ exports.updatePaymentEntry = async (req, res) => {
   }
 };
 
-// FIX: This API provides the data for the Fees Collection table.
+// FIX: Corrected filterTransactions to look up and apply the Annual Fee Due
 exports.filterTransactions = async (req, res) => {
   try {
     const { std, div, search } = req.query; 
@@ -570,7 +571,7 @@ exports.filterTransactions = async (req, res) => {
     if (div) query.div = div;
     if (search) query.name = { $regex: search, $options: "i" };
     
-    // Fetch all master fee structures once (required for lookup)
+    // Fetch all master fee structures once
     const allFees = await Fee.find().lean();
     const feeMap = allFees.reduce((acc, fee) => {
         // Map fees by normalized standard name/number
@@ -590,7 +591,7 @@ exports.filterTransactions = async (req, res) => {
 
         return {
             ...entry,
-            // OVERRIDE totalFees with the correct value from the master fees table
+            // OVERRIDE totalFees with the correct value from the master fees table (e.g., 4797, 5500)
             totalFees: correctAnnualFee, 
             totalPaid: totalPaid,
         };
@@ -604,6 +605,7 @@ exports.filterTransactions = async (req, res) => {
 };
 
 exports.getMetrices = async (req, res) => {
+// ... (omitted for brevity - unchanged)
   try {
     const transactions = await paymentEntry.find();
 
@@ -642,6 +644,7 @@ exports.getMetrices = async (req, res) => {
 }
 
 exports.sendReminder = async (req, res) => {
+// ... (omitted for brevity - unchanged)
     try {
         const { fromDate, toDate, category } = req.body;
 
