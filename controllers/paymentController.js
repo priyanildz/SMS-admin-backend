@@ -464,7 +464,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -480,17 +479,26 @@ const normalizeStd = (std) => {
     return num || std; 
 };
 
-// --- Standard Definitions for Group Filtering (Re-defined for controller scope) ---
+// --- FIX: Define comprehensive standard lists for robust Category filtering ---
 const PP_STDS_QUERY = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+
 const P_STDS_QUERY = [
+    // Primary (1 to 7) - Includes numeric, 'st', 'nd', 'rd', 'th' forms for robust matching
     "1", "2", "3", "4", "5", "6", "7", 
-    "1st", "2nd", "3rd", "4th", "5th", "6th", "7th" 
+    "1st", "2nd", "3rd", "4th", "5th", "6th", "7th",
+    "Jr KG", "Sr KG" // Included just in case Primary contains KG standards in some data entry
 ]; 
-const S_STDS_QUERY = ["8", "9", "10", "8th", "9th", "10th"]; 
+
+const S_STDS_QUERY = [
+    // Secondary (8 to 10) - Includes numeric and 'th' forms
+    "8", "9", "10", 
+    "8th", "9th", "10th"
+]; 
 // ----------------------------------------------
 
 
 exports.getPaymentEntries = async (req, res) => {
+// ... (omitted for brevity - unchanged)
   try {
     const { std, div, search } = req.query;
     let query = {};
@@ -605,8 +613,8 @@ exports.filterTransactions = async (req, res) => {
     if (mode) {
         query["installments.mode"] = mode;
     }
-    
-    // --- Fetch Master Fee Structure for lookup (to get correct Total Fees Due) ---
+
+    // 4. Fetch Master Fee Structure for lookup
     const allFees = await Fee.find().lean();
     const feeMap = allFees.reduce((acc, fee) => {
         acc[normalizeStd(fee.standard)] = fee.annualfee || 0;
