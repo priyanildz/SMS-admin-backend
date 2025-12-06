@@ -460,6 +460,15 @@
 // };
 
 
+
+
+
+
+
+
+
+
+
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -478,7 +487,6 @@ const normalizeStd = (std) => {
 };
 
 exports.getPaymentEntries = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   try {
     const { std, div, search } = req.query;
     let query = {};
@@ -495,7 +503,6 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   const { name, std, div, date, amount, mode } = req.body; 
 
   try {
@@ -518,7 +525,6 @@ exports.addPaymentEntry = async (req, res) => {
 };
 
 exports.updatePaymentEntry = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   const { id } = req.params;
   const { date, amount, mode } = req.body;
 
@@ -598,7 +604,6 @@ exports.filterTransactions = async (req, res) => {
 };
 
 exports.getMetrices = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   try {
     const transactions = await paymentEntry.find();
 
@@ -643,35 +648,26 @@ exports.sendReminder = async (req, res) => {
         // --- Step 1: Initialize Student Query based on category filter ---
         let studentQuery = { status: true };
         
-        // FIX: Updated standard lists based on request: Pre-Primary (Nursery, Junior, Senior), Primary (1-7), Secondary (8-10)
-        const prePrimaryStandards = ["Nursery", "Junior", "Senior"];
-        const primaryStandards = ["1", "2", "3", "4", "5", "6", "7"];
-        const secondaryStandards = ["8", "9", "10"];
+        // FIX: Define the required standard groups for accurate filtering
+        const PP_STDS = ["Nursery", "Junior", "Senior"];
+        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; // Primary: 1 to 7
+        const S_STDS = ["8", "9", "10"]; // Secondary: 8 to 10
         
-        // Include 'string' versions for querying consistency
-        const allPrimaryNames = primaryStandards.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`].filter((n, i) => i === Number(s)-1 || Number(s)>3) || s).concat(primaryStandards);
-        const allSecondaryNames = secondaryStandards.flatMap(s => [`${s}th`]).concat(secondaryStandards);
-        
-        const prePrimaryQueryNames = prePrimaryStandards.map(s => s).concat(["Jr KG", "Sr KG"]);
-        const primaryQueryNames = allPrimaryNames.filter(n => !n.match(/[a-zA-Z]/)).concat(allPrimaryNames.filter(n => n.match(/[a-zA-Z]/)));
-        const secondaryQueryNames = allSecondaryNames.filter(n => !n.match(/[a-zA-Z]/)).concat(allSecondaryNames.filter(n => n.match(/[a-zA-Z]/)));
-        
-        // Clean up: Use only the required numeric and string forms for concise querying
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
-        const S_STDS = ["8", "9", "10", "8th", "9th", "10th"];
-        const PP_STDS = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
+        // Include both numeric and string forms for robust filtering
+        const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
+        const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
 
-
+        // Filter based on the selected category name from the frontend
         if (category && category !== "All") {
             let standardList = [];
             
             if (category === "Pre-Primary") { 
-                standardList = PP_STDS;
+                standardList = PP_STDS; 
             }
             else if (category === "Primary") {
-                standardList = P_STDS;
+                standardList = P_STDS_EXT;
             } else if (category === "Secondary") {
-                standardList = S_STDS;
+                standardList = S_STDS_EXT;
             }
             
             // Apply the filter
