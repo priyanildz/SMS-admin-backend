@@ -467,11 +467,9 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
-// Assuming Fee model is required to access the fee structure
 const Fee = require("../models/feeModel"); 
 
 // Helper to normalize standard name/number for Fee lookup
@@ -480,12 +478,23 @@ const normalizeStd = (std) => {
     if (["Nursery", "Junior", "Senior"].includes(std)) {
         return std;
     }
-    // Normalize numeric standards (e.g., '1st' or '10') to their number string
     const num = String(std).replace(/\D/g, ""); 
     return num || std; 
 };
 
+// --- Standard Definitions (Matching your Fee Structure) ---
+const PP_STDS = ["Nursery", "Junior", "Senior"];
+const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; // Primary: 1 to 7
+const S_STDS = ["8", "9", "10"]; // Secondary: 8 to 10
+// Include string forms for robust querying
+const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
+const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
+const PP_STDS_EXT = PP_STDS; // Simple mapping for Pre-Primary names
+
+// --------------------------------------------------------
+
 exports.getPaymentEntries = async (req, res) => {
+// ... (omitted for brevity - unchanged)
   try {
     const { std, div, search } = req.query;
     let query = {};
@@ -560,26 +569,51 @@ exports.updatePaymentEntry = async (req, res) => {
   }
 };
 
-// FIX: Corrected filterTransactions to look up and apply the Annual Fee Due
+// FIX: Corrected filterTransactions to handle Category filters and enrich data
 exports.filterTransactions = async (req, res) => {
   try {
-    const { std, div, search } = req.query; 
-
+    const { std, div, search, category, mode } = req.query; 
+    
+    // --- Determine Standard Filter List (if category group is used) ---
+    let stdFilterList = [];
+    if (category) {
+        if (category === "Pre-Primary") {
+            stdFilterList = PP_STDS;
+        } else if (category === "Primary") {
+            stdFilterList = P_STDS;
+        } else if (category === "Secondary") {
+            stdFilterList = S_STDS;
+        }
+    }
+    
+    // --- Build Query ---
     let query = {};
 
-    if (std) query.std = std; 
+    // 1. Filter by Standard (individual standard overrides category group)
+    if (std) {
+        query.std = std;
+    } else if (stdFilterList.length > 0) {
+        // Use $in to query all standards within the selected category group
+        query.std = { $in: stdFilterList }; 
+    }
+    
+    // 2. Filter by Division and Search
     if (div) query.div = div;
     if (search) query.name = { $regex: search, $options: "i" };
-    
-    // Fetch all master fee structures once
+    
+    // 3. Filter by Mode (requires matching mode in at least one installment)
+    if (mode) {
+        query["installments.mode"] = mode;
+    }
+
+    // 4. Fetch Master Fee Structure for lookup
     const allFees = await Fee.find().lean();
     const feeMap = allFees.reduce((acc, fee) => {
-        // Map fees by normalized standard name/number
         acc[normalizeStd(fee.standard)] = fee.annualfee || 0;
         return acc;
     }, {});
     
-    // Fetch transactions based on filters
+    // Fetch filtered transactions
     const transactions = await PaymentEntry.find(query).lean().exec();
     
     // Calculate totalPaid and apply the TRUE Annual Fee Due
@@ -591,7 +625,7 @@ exports.filterTransactions = async (req, res) => {
 
         return {
             ...entry,
-            // OVERRIDE totalFees with the correct value from the master fees table (e.g., 4797, 5500)
+            // OVERRIDE totalFees with the correct Annual Fee Due
             totalFees: correctAnnualFee, 
             totalPaid: totalPaid,
         };
@@ -644,23 +678,22 @@ exports.getMetrices = async (req, res) => {
 }
 
 exports.sendReminder = async (req, res) => {
-// ... (omitted for brevity - unchanged)
     try {
         const { fromDate, toDate, category } = req.body;
 
         // --- Step 1: Initialize Student Query based on category filter ---
         let studentQuery = { status: true };
         
-        // FIX: Define the required standard groups for accurate filtering
+        // FIX: Define the required standard groups for accurate filtering (using names from above)
         const PP_STDS = ["Nursery", "Junior", "Senior"];
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; // Primary: 1 to 7
-        const S_STDS = ["8", "9", "10"]; // Secondary: 8 to 10
+        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
+        const S_STDS = ["8", "9", "10"]; 
         
         // Include both numeric and string forms for robust filtering
         const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
         const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
 
-        // Filter based on the selected category name from the frontend
+
         if (category && category !== "All") {
             let standardList = [];
             
