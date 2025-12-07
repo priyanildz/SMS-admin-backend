@@ -463,7 +463,6 @@
 
 
 
-
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
@@ -471,28 +470,28 @@ const Fee = require("../models/feeModel");
 
 // Helper to normalize standard name/number for Fee lookup
 const normalizeStd = (std) => {
-    if (!std) return '';
-    if (["Nursery", "Junior", "Senior"].includes(std)) {
-        return std;
-    }
-    const num = String(std).replace(/\D/g, ""); 
-    return num || std; 
+    if (!std) return '';
+    if (["Nursery", "Junior", "Senior"].includes(std)) {
+        return std;
+    }
+    const num = String(std).replace(/\D/g, ""); 
+    return num || std; 
 };
 
 // --- FIX: Define comprehensive standard lists for robust Category filtering ---
 const PP_STDS_QUERY = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
 
 const P_STDS_QUERY = [
-    // Primary (1 to 7) - Includes numeric, 'st', 'nd', 'rd', 'th' forms for robust matching
-    "1", "2", "3", "4", "5", "6", "7", 
-    "1st", "2nd", "3rd", "4th", "5th", "6th", "7th",
-    "Jr KG", "Sr KG" // Included just in case Primary contains KG standards in some data entry
+    // Primary (1 to 7) - Includes numeric, 'st', 'nd', 'rd', 'th' forms for robust matching
+    "1", "2", "3", "4", "5", "6", "7", 
+    "1st", "2nd", "3rd", "4th", "5th", "6th", "7th",
+    "Jr KG", "Sr KG" // Included just in case Primary contains KG standards in some data entry
 ]; 
 
 const S_STDS_QUERY = [
-    // Secondary (8 to 10) - Includes numeric and 'th' forms
-    "8", "9", "10", 
-    "8th", "9th", "10th"
+    // Secondary (8 to 10) - Includes numeric and 'th' forms
+    "8", "9", "10", 
+    "8th", "9th", "10th"
 ]; 
 // ----------------------------------------------
 
@@ -577,64 +576,64 @@ exports.updatePaymentEntry = async (req, res) => {
 exports.filterTransactions = async (req, res) => {
   try {
     const { std, div, search, category, mode } = req.query; 
-    
-    // --- Determine Standard Filter List (if category group is used) ---
-    let finalStdQuery = std;
+    
+    // --- Determine Standard Filter List (if category group is used) ---
+    let finalStdQuery = std;
 
-    if (category && category !== "All") {
-        let standardList = [];
-        if (category === "Pre-Primary") {
-            standardList = PP_STDS_QUERY;
-        } else if (category === "Primary") {
-            standardList = P_STDS_QUERY;
-        } else if (category === "Secondary") {
-            standardList = S_STDS_QUERY;
-        }
-        
-        // If a category group is selected AND no specific standard is provided, use the list.
-        if (standardList.length > 0 && !std) {
-            finalStdQuery = { $in: standardList };
-        }
-    }
-    
-    // --- Build Query ---
+    if (category && category !== "All") {
+        let standardList = [];
+        if (category === "Pre-Primary") {
+            standardList = PP_STDS_QUERY;
+        } else if (category === "Primary") {
+            standardList = P_STDS_QUERY;
+        } else if (category === "Secondary") {
+            standardList = S_STDS_QUERY;
+        }
+        
+        // If a category group is selected AND no specific standard is provided, use the list.
+        if (standardList.length > 0 && !std) {
+            finalStdQuery = { $in: standardList };
+        }
+    }
+    
+    // --- Build Query ---
     let query = {};
 
-    // 1. Filter by Standard (using individual standard OR category list)
-    if (finalStdQuery) {
-        query.std = finalStdQuery;
-    }
-    
-    // 2. Filter by Division and Search
-    if (div) query.div = div;
-    if (search) query.name = { $regex: search, $options: "i" };
-    
-    // 3. Filter by Mode (requires matching mode in at least one installment)
-    if (mode) {
-        query["installments.mode"] = mode;
-    }
+    // 1. Filter by Standard (using individual standard OR category list)
+    if (finalStdQuery) {
+        query.std = finalStdQuery;
+    }
+    
+    // 2. Filter by Division and Search
+    if (div) query.div = div;
+    if (search) query.name = { $regex: search, $options: "i" };
+    
+    // 3. Filter by Mode (requires matching mode in at least one installment)
+    if (mode) {
+        query["installments.mode"] = mode;
+    }
 
-    // 4. Fetch Master Fee Structure for lookup
-    const allFees = await Fee.find().lean();
-    const feeMap = allFees.reduce((acc, fee) => {
-        acc[normalizeStd(fee.standard)] = fee.annualfee || 0;
-        return acc;
-    }, {});
-    
+    // 4. Fetch Master Fee Structure for lookup
+    const allFees = await Fee.find().lean();
+    const feeMap = allFees.reduce((acc, fee) => {
+        acc[normalizeStd(fee.standard)] = fee.annualfee || 0;
+        return acc;
+    }, {});
+    
     // Fetch filtered transactions
     const transactions = await PaymentEntry.find(query).lean().exec();
     
     // Calculate totalPaid and apply the TRUE Annual Fee Due
     const result = transactions.map(entry => {
-        const totalPaid = entry.installments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
-        
-        // Get the correct Annual Fee from the fee map
-        const correctAnnualFee = feeMap[normalizeStd(entry.std)] || 0;
+        const totalPaid = entry.installments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+        
+        // Get the correct Annual Fee from the fee map
+        const correctAnnualFee = feeMap[normalizeStd(entry.std)] || 0;
 
-        return {
+        return {
             ...entry,
-            // OVERRIDE totalFees with the correct value from the master fees table
-            totalFees: correctAnnualFee, 
+            // OVERRIDE totalFees with the correct value from the master fees table
+            totalFees: correctAnnualFee, 
             totalPaid: totalPaid,
         };
     });
@@ -692,15 +691,9 @@ exports.sendReminder = async (req, res) => {
         // --- Step 1: Initialize Student Query based on category filter ---
         let studentQuery = { status: true };
         
-        // Define standard lists using the groups defined above
-        const PP_STDS = ["Nursery", "Junior", "Senior"];
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
-        const S_STDS = ["8", "9", "10"]; 
-        
-        // Include both numeric and string forms for robust filtering
-        const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
-        const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
-
+        // Removed redundant standard definitions (PP_STDS, P_STDS, S_STDS, etc.)
+        // and now using the centrally defined PP_STDS_QUERY, P_STDS_QUERY, S_STDS_QUERY.
+        
         if (category && category !== "All") {
             let standardList = [];
             
