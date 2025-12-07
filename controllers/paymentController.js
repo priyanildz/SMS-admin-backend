@@ -762,22 +762,29 @@
 
 
 
+
+
+
+
 const paymentEntry = require("../models/paymentEntry");
 const PaymentEntry = require("../models/paymentEntry");
 const Student = require("../models/studentModel"); 
+// Assuming Fee model is required to access the fee structure
 const Fee = require("../models/feeModel"); 
 
 // Helper to normalize standard name/number for Fee lookup
 const normalizeStd = (std) => {
     if (!std) return '';
+    // Handle Pre-Primary names directly as they are strings
     if (["Nursery", "Junior", "Senior"].includes(std)) {
         return std;
     }
+    // Normalize numeric standards (e.g., '1st' or '10') to their number string
     const num = String(std).replace(/\D/g, ""); 
     return num || std; 
 };
 
-// --- Standard Definitions for Group Filtering (Used in FeesCollection/Dashboard) ---
+// --- Standard Definitions for Group Filtering ---
 const PP_STDS_QUERY = ["Nursery", "Junior", "Senior", "Jr KG", "Sr KG"];
 
 const P_STDS_QUERY = [
@@ -812,7 +819,6 @@ exports.getPaymentEntries = async (req, res) => {
 };
 
 exports.addPaymentEntry = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   const { name, std, div, date, amount, mode } = req.body; 
 
   try {
@@ -835,7 +841,6 @@ exports.addPaymentEntry = async (req, res) => {
 };
 
 exports.updatePaymentEntry = async (req, res) => {
-// ... (omitted for brevity - unchanged)
   const { id } = req.params;
   const { date, amount, mode } = req.body;
 
@@ -870,15 +875,34 @@ exports.updatePaymentEntry = async (req, res) => {
   }
 };
 
-// FIX: Final corrected filterTransactions to handle Category filters and enrich data
+// FIX: Corrected filterTransactions to handle Category filters and enrich data
 exports.filterTransactions = async (req, res) => {
   try {
     const { std, div, search, category, mode } = req.query; 
     
-    // --- Determine Standard Filter ---
+    // --- Determine Standard Filter List (if category group is used) ---
+    let finalStdQuery = std;
+
+    if (category && category !== "All") {
+        let standardList = [];
+        if (category === "Pre-Primary") {
+            standardList = PP_STDS_QUERY;
+        } else if (category === "Primary") {
+            standardList = P_STDS_QUERY;
+        } else if (category === "Secondary") {
+            standardList = S_STDS_QUERY;
+        }
+        
+        // If a category group is selected AND no specific standard is provided, use the list.
+        if (standardList.length > 0 && !std) {
+            query.std = { $in: standardList }; // Query the database using the list
+        }
+    }
+    
+    // --- Build Query ---
     let query = {};
 
-    // 1. Determine Standard Filter (Individual Standard takes precedence over Category Group)
+    // 1. Filter by Standard (individual standard OR category list)
     if (std) {
         query.std = std;
     } else if (category && category !== "All") {
@@ -900,7 +924,7 @@ exports.filterTransactions = async (req, res) => {
     if (div) query.div = div;
     if (search) query.name = { $regex: search, $options: "i" };
     
-    // 3. Filter by Mode 
+    // 3. Filter by Mode (requires matching mode in at least one installment)
     if (mode) {
         query["installments.mode"] = mode;
     }
@@ -984,13 +1008,11 @@ exports.sendReminder = async (req, res) => {
         let studentQuery = { status: true };
         
         // Define standard lists using the groups defined above
-        const PP_STDS = ["Nursery", "Junior", "Senior"];
-        const P_STDS = ["1", "2", "3", "4", "5", "6", "7"]; 
-        const S_STDS = ["8", "9", "10"]; 
-        
-        // Include both numeric and string forms for robust filtering
-        const P_STDS_EXT = P_STDS.flatMap(s => [`${s}st`, `${s}nd`, `${s}rd`, `${s}th`]).filter(n => n).concat(P_STDS);
-        const S_STDS_EXT = S_STDS.flatMap(s => [`${s}th`]).concat(S_STDS);
+        const P_STDS_EXT = [
+            "1", "2", "3", "4", "5", "6", "7", 
+            "1st", "2nd", "3rd", "4th", "5th", "6th", "7th" 
+        ];
+        const S_STDS_EXT = ["8", "9", "10", "8th", "9th", "10th"];
 
         if (category && category !== "All") {
             let standardList = [];
@@ -999,9 +1021,9 @@ exports.sendReminder = async (req, res) => {
                 standardList = PP_STDS_QUERY; 
             }
             else if (category === "Primary") {
-                standardList = P_STDS_QUERY;
+                standardList = P_STDS_EXT;
             } else if (category === "Secondary") {
-                standardList = S_STDS_QUERY;
+                standardList = S_STDS_EXT;
             }
             
             // Apply the filter
