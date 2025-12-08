@@ -49,3 +49,19 @@ exports.getEvents = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
+// 💡 NEW LOGIC: Function to gracefully handle populated data OR raw IDs
+const getParticipantNames = (participants) => {
+    if (!participants || !Array.isArray(participants)) return [];
+    
+    return participants.map(p => {
+        // 1. Check if the item is an OBJECT (Mongoose populated data)
+        if (typeof p === 'object' && p !== null && p.firstname) {
+            // Return the clean name (e.g., "Aman Khan")
+            return `${p.firstname} ${p.lastname || ''}`.trim();
+        }
+        // 2. Assume item is a raw ID string (unpopulated or old data)
+        // This stops the crash and ensures old IDs are passed through without error
+        return p; 
+    }).filter(name => name.length > 0);
+};
