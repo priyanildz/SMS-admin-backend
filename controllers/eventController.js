@@ -22,6 +22,10 @@
 
 
 
+
+
+
+
 // controllers/eventsController.js
 
 const Event = require("../models/eventsModel");
@@ -39,29 +43,12 @@ exports.addEvent = async (req, res) => {
 // list of all events
 exports.getEvents = async (req, res) => {
     try {
-        // 💡 FIX 2: Use populate to fetch student names from the linked collection
+        // FIX: Use populate to fetch student names from the linked collection
         const response = await Event.find()
-            // Fetch participant names (firstname and lastname)
             .populate('participants', 'firstname lastname'); 
 
         return res.status(200).json(response);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-};
-
-// 💡 NEW LOGIC: Function to gracefully handle populated data OR raw IDs
-const getParticipantNames = (participants) => {
-    if (!participants || !Array.isArray(participants)) return [];
-    
-    return participants.map(p => {
-        // 1. Check if the item is an OBJECT (Mongoose populated data)
-        if (typeof p === 'object' && p !== null && p.firstname) {
-            // Return the clean name (e.g., "Aman Khan")
-            return `${p.firstname} ${p.lastname || ''}`.trim();
-        }
-        // 2. Assume item is a raw ID string (unpopulated or old data)
-        // This stops the crash and ensures old IDs are passed through without error
-        return p; 
-    }).filter(name => name.length > 0);
 };

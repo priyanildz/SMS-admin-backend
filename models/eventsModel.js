@@ -23,6 +23,12 @@
 
 
 
+
+
+
+
+
+
 // models/eventsModel.js
 const mongoose = require("mongoose");
 
@@ -35,19 +41,17 @@ const EventSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  // We keep staffid field for proper relational link (optional reference)
   staffid: {
     type: String, 
-    ref: "staff", // Assuming staff model is named 'staff'
+    ref: "staff", 
   },
-  // We keep managedby string field because the frontend saves the name here
   managedby: String, 
   standard: String,
   division: String,
-  // 💡 FIX 1: Change to ObjectId array referencing the student model for population
+  // FIX: Changed to ObjectId array referencing the student model for population
   participants: [{ 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "student" // Replace with your actual Student Model name if different
+    ref: "student" 
   }]
 }, { timestamps: true });
 
