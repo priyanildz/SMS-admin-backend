@@ -68,3 +68,28 @@ exports.deleteEvent = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
+
+
+exports.updateEvent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        // Use findByIdAndUpdate to find the event by its MongoDB _id and update it
+        const updatedEvent = await Event.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true } // new: true returns the updated document
+        );
+
+        if (!updatedEvent) {
+            return res.status(404).json({ message: "Event not found." });
+        }
+
+        return res.status(200).json({ message: "Event updated successfully", data: updatedEvent });
+    } catch (error) {
+        console.error("Error updating event:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};

@@ -98,8 +98,8 @@ router.post("/addevent", eventController.addEvent);
 // displaying all events
 router.get("/events", eventController.getEvents);
 
-// displaying all events
-router.get("/events", eventController.getEvents);
+// Route for updating an event by its MongoDB _id
+router.put("/events/:id", eventController.updateEvent); // <-- NEW UPDATE ROUTE
 
 // 🚨 ADD THIS ROUTE FOR DELETE FUNCTIONALITY:
 router.delete("/events/:id", eventController.deleteEvent);
