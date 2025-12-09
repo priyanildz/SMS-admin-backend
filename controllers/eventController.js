@@ -52,3 +52,19 @@ exports.getEvents = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
+
+
+exports.deleteEvent = async (req, res) => {
+    try {
+        const { id } = req.params; // Get event ID from route parameters
+        const result = await Event.findByIdAndDelete(id);
+
+        if (!result) {
+            return res.status(404).json({ message: "Event not found" });
+        }
+        return res.status(200).json({ message: "Event deleted successfully" });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
