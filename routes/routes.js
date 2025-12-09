@@ -98,6 +98,12 @@ router.post("/addevent", eventController.addEvent);
 // displaying all events
 router.get("/events", eventController.getEvents);
 
+// displaying all events
+router.get("/events", eventController.getEvents);
+
+// 🚨 ADD THIS ROUTE FOR DELETE FUNCTIONALITY:
+router.delete("/events/:id", eventController.deleteEvent);
+
 // updating leave request by accept/reject
 router.put("/update-req/:id", staffController.updateRequest);
 
