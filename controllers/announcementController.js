@@ -94,32 +94,49 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const announcement = require("../models/announcementModel");
+
+// Helper function for simple ID generation
+const generateUniqueId = () => {
+    return `ANN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+};
 
 // add announcement
 exports.addAnnouncement = async (req, res) => {
   try {
-    // Get the schedule date from the request body
-    const { schedule, ...restOfBody } = req.body;
+    const { schedule, announcementId, ...restOfBody } = req.body;
     
-    // 🟢 NEW LOGIC: Determine the status based on the schedule date
+    // FIX 1: Generate announcementId if it's missing from the frontend payload
+    const finalAnnouncementId = announcementId || generateUniqueId();
+    
+    // Determine status based on the schedule date
     const scheduleDate = new Date(schedule);
     const currentDate = new Date();
-    
-    let initialStatus = "draft"; 
-    
-    // If the scheduled time is in the past or now, set status to 'sent'
-    if (scheduleDate <= currentDate) {
-      initialStatus = "sent";
-    } else {
-      // If the scheduled time is in the future, keep status as 'draft' (scheduled)
-      initialStatus = "draft";
-    }
+    // If scheduled time is in the past or now, set status to 'sent', otherwise 'draft'
+    let initialStatus = (scheduleDate <= currentDate) ? "sent" : "draft";
 
-    // Create the announcement object with the determined status
+    // Create the announcement object with the determined status and generated ID
     const response = new announcement({
       ...restOfBody,
-      schedule: scheduleDate, // Ensure schedule is a Date object
+      announcementId: finalAnnouncementId,
+      schedule: scheduleDate, 
       status: initialStatus
     });
 
@@ -127,7 +144,10 @@ exports.addAnnouncement = async (req, res) => {
     
     return res.status(200).json({ message: "announcement added successfully", data: response });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+     // Return a more specific error message from Mongoose validation
+     console.error("Mongoose Error:", error.message);
+     const errorMessage = error.name === 'ValidationError' ? error.message : "Internal Server Error";
+    return res.status(500).json({ error: errorMessage });
   }
 };
 
@@ -141,7 +161,7 @@ exports.getAnnouncement = async (req, res) => {
   }
 };
 
-// modify draft mail to sent (used when manually sending a draft or when cron job executes a scheduled draft)
+// modify draft mail to sent
 exports.updateAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
