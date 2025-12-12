@@ -1506,9 +1506,9 @@ const nodemailer = require('nodemailer'); // 👈 ADDED NODEMAILER
 // ----------------------------------------------------
 
 // !! IMPORTANT: REPLACE THESE PLACEHOLDERS !!
-const SENDER_EMAIL = 'YOUR_SENDER_EMAIL@gmail.com'; // e.g., school.admin@myschool.edu
-const APP_PASSWORD = 'YOUR_APP_PASSWORD'; // Must be an App Password if using Gmail
-const SCHOOL_NAME = 'ACME International School'; // Used in the email template
+const SENDER_EMAIL = 'mrviplaptop@gmail.com'; // e.g., school.admin@myschool.edu
+const APP_PASSWORD = '#Spreadlove18'; // Must be an App Password if using Gmail
+const SCHOOL_NAME = 'SSPD SMS'; // Used in the email template
 
 /**
  * Sends a confirmation email to the student's parent/guardian.
