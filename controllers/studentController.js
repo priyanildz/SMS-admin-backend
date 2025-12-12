@@ -1494,7 +1494,6 @@
 
 
 
-
 const StudentLC = require("../models/StudentLCModel");
 const User = require("../models/studentModel");
 const studentsAttendence = require("../models/studentAttendence");
@@ -1504,11 +1503,13 @@ const nodemailer = require('nodemailer');
 // Nodemailer Email Sending Utility 
 // ----------------------------------------------------
 
-// !! IMPORTANT: REPLACE THESE PLACEHOLDERS !!
-// Ensure these credentials are correct and use an App Password for Gmail.
-const SENDER_EMAIL = 'YOUR_SENDER_EMAIL@gmail.com'; // e.g., school.admin@myschool.edu
-const APP_PASSWORD = 'YOUR_APP_PASSWORD'; // Must be an App Password if using Gmail
-const SCHOOL_NAME = 'ACME International School'; // Used in the email template
+// !! IMPORTANT: Credential placeholders updated with user provided data !!
+// WARNING: The provided password is very likely NOT the Google App Password required.
+// You MUST generate an App Password in your Google Account security settings 
+// and use it here instead of your regular password.
+const SENDER_EMAIL = 'mrviplaptop@gmail.com'; 
+const APP_PASSWORD = '#Spreadlove18'; // <- REPLACE THIS with the actual Gmail App Password
+const SCHOOL_NAME = 'SSPD SMS'; 
 
 /**
  * Sends a confirmation email to the student's parent/guardian.
@@ -1518,6 +1519,9 @@ const SCHOOL_NAME = 'ACME International School'; // Used in the email template
  * @param {string} birthdate - The student's birthdate (as password).
  */
 const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, birthdate) => {
+    // Console log the start of the email attempt (as requested)
+    console.log(`Attempting to send admission email to ${toEmail} for student ${firstName}...`);
+
     const transporter = nodemailer.createTransport({
         service: 'gmail', 
         auth: {
@@ -1527,7 +1531,7 @@ const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, b
     });
 
     const mailOptions = {
-        from: `"${SCHOOL_NAME}" <${SENDER_EMAIL}>`, 
+        from: `"${SCHOOL_NAME} Admission" <${SENDER_EMAIL}>`, // Changed display name
         to: toEmail,
         subject: `✅ Admission Confirmed - Welcome to ${SCHOOL_NAME}!`, 
         html: `
@@ -1557,9 +1561,12 @@ const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, b
 
     try {
         const info = await transporter.sendMail(mailOptions);
-        console.log(`Admission Confirmation Email sent successfully to ${toEmail}. Message ID: ${info.messageId}`); 
+        // Success log (as requested)
+        console.log(`[SUCCESS] Admission Confirmation Email sent to ${toEmail}. Message ID: ${info.messageId}`); 
     } catch (error) {
-        console.error(`Error sending admission confirmation email to ${toEmail}:`, error.message);
+        // Error log (as requested)
+        console.error(`[EMAIL FAILED] Error sending confirmation email to ${toEmail}:`, error.message);
+        console.error(`[EMAIL FAILED] Status: Check SENDER_EMAIL (${SENDER_EMAIL}) and APP_PASSWORD for correctness. If using Gmail, an App Password is required.`);
     }
 };
 
@@ -1577,8 +1584,6 @@ exports.createUser = async (req, res) => {
         // 🔥 MODIFICATION START: Call email function after successful save 🔥
         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
         const firstName = userData.firstname;
-        // Use auto-generated IDs if not provided in the original request body, 
-        // but note that the actual saved user object might have the final ID if Mongoose modified it.
         const admissionNo = userData.admission?.admissionno || 'N/A'; 
         const birthdate = userData.dob; 
 
@@ -1586,7 +1591,7 @@ exports.createUser = async (req, res) => {
         if (toEmail && firstName && birthdate) {
             sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
         } else {
-            console.log(`Admission email skipped for ${firstName}. Missing email, or birthdate in payload.`);
+            console.log(`Admission email skipped for ${firstName}. Missing parent email or DOB in payload.`);
         }
         // 🔥 MODIFICATION END 🔥
 
@@ -1597,7 +1602,6 @@ exports.createUser = async (req, res) => {
 
         // Mongoose duplicate unique fields (Code 11000)
         if (error.code && error.code === 11000) {
-            // Include specific duplicate field info from the error for better debugging
             const duplicateKeyMatch = error.message.match(/index: (\w+)_1 dup key: { (.*) }/);
             const duplicateField = duplicateKeyMatch ? duplicateKeyMatch[1] : "unique ID/number";
 
@@ -1622,7 +1626,7 @@ exports.createUser = async (req, res) => {
 
 
 // =================================================================
-// 🔥 FIX APPLIED HERE 🔥: Implement filtering using req.query parameters
+// The remaining controller code remains unchanged.
 // =================================================================
 exports.getStudents = async (req, res) => {
     try {
@@ -1678,12 +1682,7 @@ exports.getStudents = async (req, res) => {
     }
 };
 
-// =================================================================
-// 🔥 END OF FIX 🔥
-// =================================================================
-
-
-
+// ... (rest of controller functions: getNewStudents, getStudentById, getStudentByStd, editStudent, addLcStudents, getLCStudents, addAttendence, getAttendance, getAllAttendance, promoteStudents) ...
 exports.getNewStudents = async (req, res) => {
     try {
         const students = await User.find({
@@ -1969,7 +1968,6 @@ exports.getAttendance = async (req, res) => {
         if (!attendance) {
             return res.status(404).send({ message: "No attendance found for the specified criteria!" });
         }
-
 
 
         return res.status(200).send(attendance);
