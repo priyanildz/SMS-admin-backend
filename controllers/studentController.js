@@ -1493,7 +1493,6 @@
 
 
 
-
 const StudentLC = require("../models/StudentLCModel");
 const User = require("../models/studentModel");
 const studentsAttendence = require("../models/studentAttendence");
@@ -1504,9 +1503,7 @@ const nodemailer = require('nodemailer');
 // ----------------------------------------------------
 
 // !! IMPORTANT: Credential placeholders updated with user provided data !!
-// WARNING: The provided password is very likely NOT the Google App Password required.
-// You MUST generate an App Password in your Google Account security settings 
-// and use it here instead of your regular password.
+// REMINDER: #Spreadlove18 must be a Google App Password, not the primary password.
 const SENDER_EMAIL = 'mrviplaptop@gmail.com'; 
 const APP_PASSWORD = '#Spreadlove18'; // <- REPLACE THIS with the actual Gmail App Password
 const SCHOOL_NAME = 'SSPD SMS'; 
@@ -1519,19 +1516,32 @@ const SCHOOL_NAME = 'SSPD SMS';
  * @param {string} birthdate - The student's birthdate (as password).
  */
 const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, birthdate) => {
-    // Console log the start of the email attempt (as requested)
-    console.log(`Attempting to send admission email to ${toEmail} for student ${firstName}...`);
-
+    // 1. Configure the Transporter
     const transporter = nodemailer.createTransport({
         service: 'gmail', 
         auth: {
             user: SENDER_EMAIL,
             pass: APP_PASSWORD,
         },
+        // IMPORTANT: Add detailed logging for connection and authentication attempts
+        logger: true,
+        debug: true,
     });
-
+    
+    // 2. Verify connection settings before attempting to send the email
+    try {
+        await transporter.verify();
+        console.log(`[EMAIL CHECK] SMTP server connection verified for ${SENDER_EMAIL}.`);
+    } catch (verifyError) {
+        console.error(`[EMAIL FATAL ERROR] SMTP Connection/Authentication Failed:`, verifyError.message);
+        console.error(`[EMAIL FATAL ERROR] Check 1: SENDER_EMAIL is correct?`);
+        console.error(`[EMAIL FATAL ERROR] Check 2: APP_PASSWORD is correct and is a *Google App Password*?`);
+        return; // Stop execution if we can't connect/authenticate
+    }
+    
+    // 3. Define Mail Options
     const mailOptions = {
-        from: `"${SCHOOL_NAME} Admission" <${SENDER_EMAIL}>`, // Changed display name
+        from: `"${SCHOOL_NAME} Admission" <${SENDER_EMAIL}>`, 
         to: toEmail,
         subject: `✅ Admission Confirmed - Welcome to ${SCHOOL_NAME}!`, 
         html: `
@@ -1559,20 +1569,21 @@ const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, b
         `,
     };
 
+    // 4. Send the Mail
     try {
         const info = await transporter.sendMail(mailOptions);
         // Success log (as requested)
-        console.log(`[SUCCESS] Admission Confirmation Email sent to ${toEmail}. Message ID: ${info.messageId}`); 
+        console.log(`[EMAIL SUCCESS] Confirmation Email sent to ${toEmail}. Message ID: ${info.messageId}`); 
+        console.log(`[EMAIL SUCCESS] Nodemailer Response: ${info.response}`); 
     } catch (error) {
-        // Error log (as requested)
-        console.error(`[EMAIL FAILED] Error sending confirmation email to ${toEmail}:`, error.message);
-        console.error(`[EMAIL FAILED] Status: Check SENDER_EMAIL (${SENDER_EMAIL}) and APP_PASSWORD for correctness. If using Gmail, an App Password is required.`);
+        // Error log for sending failure
+        console.error(`[EMAIL SENDING ERROR] Failed to send email for ${firstName}:`, error.message);
     }
 };
 
 
 // ----------------------------------------------------
-// Student Management Endpoints (Updated createUser)
+// Student Management Endpoints (No change to logic flow)
 // ----------------------------------------------------
 
 exports.createUser = async (req, res) => {
@@ -1581,7 +1592,7 @@ exports.createUser = async (req, res) => {
         const user = new User(userData);
         await user.save();
 
-        // 🔥 MODIFICATION START: Call email function after successful save 🔥
+        // Call email function after successful save
         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
         const firstName = userData.firstname;
         const admissionNo = userData.admission?.admissionno || 'N/A'; 
@@ -1593,7 +1604,6 @@ exports.createUser = async (req, res) => {
         } else {
             console.log(`Admission email skipped for ${firstName}. Missing parent email or DOB in payload.`);
         }
-        // 🔥 MODIFICATION END 🔥
 
         // Use 201 for resource creation
         res.status(201).json({ message: "Student created successfully" });
@@ -1625,9 +1635,7 @@ exports.createUser = async (req, res) => {
 };
 
 
-// =================================================================
-// The remaining controller code remains unchanged.
-// =================================================================
+// ... (rest of controller functions remain identical) ...
 exports.getStudents = async (req, res) => {
     try {
         const { std, div, search } = req.query;
@@ -1682,7 +1690,6 @@ exports.getStudents = async (req, res) => {
     }
 };
 
-// ... (rest of controller functions: getNewStudents, getStudentById, getStudentByStd, editStudent, addLcStudents, getLCStudents, addAttendence, getAttendance, getAllAttendance, promoteStudents) ...
 exports.getNewStudents = async (req, res) => {
     try {
         const students = await User.find({
@@ -1985,7 +1992,7 @@ exports.getAllAttendance = async (req, res) => {
 
 
         if (attendance.length === 0) {
-            return res.status(200).send({ message: "No attendance records found." });
+            return res.status(200).send({ message: "No attendance records found." })
         }
 
 
