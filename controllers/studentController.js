@@ -753,8 +753,8 @@ const sendAdmissionEmail = async (studentName, recipientEmail, loginId, password
     const transporter = nodemailer.createTransport({
         service: 'gmail', // Or 'SendGrid', 'SMTP', etc.
         auth: {
-            user: process.env.EMAIL_USER || 'mrviplaptop@gmail.com', 
-            pass: process.env.EMAIL_PASS || '#Spreadlove18' 
+            user: process.env.EMAIL_USER || 'your_school_email@gmail.com', 
+            pass: process.env.EMAIL_PASS || 'your_app_password_or_key' 
         },
     });
 
