@@ -2046,3 +2046,34 @@ exports.promoteStudents = async (req, res) => {
         return res.status(500).json({ error: error.message, message: "Internal Server Error during promotion." });
     }
 };
+
+exports.getAllCurrentYearStudents = async (req, res) => {
+    try {
+        // --- ⚠️ IMPORTANT: Define the Start Date for 'Current Year Admissions' ---
+        // For example, January 1st of the current year, or the start of the academic session.
+        // Assuming the client will pass this date via query parameter for flexibility.
+        const startDate = req.query.startDate || new Date('2024-01-01'); 
+        
+        let query = {
+            "admission.admissiondate": {
+                $gte: new Date(startDate) // Students admitted on or after this date
+            }
+        };
+
+        // Optional: Apply Std/Div filters if the client passes them (though less common for a 'new' list)
+        if (req.query.std) {
+            query["admission.admissionstd"] = req.query.std;
+        }
+        if (req.query.div) {
+            query["admission.admissiondivision"] = req.query.div;
+        }
+
+        // Fetch ALL students matching the admission date criteria (Active + Inactive)
+        const students = await User.find(query);
+
+        return res.status(200).send(students);
+    } catch (error) {
+        console.error("Error fetching current year students:", error);
+        return res.status(500).send({ message: "Error fetching current year admissions: " + error.message });
+    }
+};
