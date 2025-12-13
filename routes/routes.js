@@ -120,17 +120,7 @@ router.post("/add-announcement", announcementController.addAnnouncement);
 router.get("/get-announcement", announcementController.getAnnouncement);
 
 // add a vehicle
-// router.post("/add-vehicle", transportController.addVehicle);
-router.post(
-    "/add-vehicle",
-    upload.fields([
-        { name: 'vehicle_docs', maxCount: 1 },
-        { name: 'puc', maxCount: 1 },
-        { name: 'insurance', maxCount: 1 },
-        { name: 'registration_cert', maxCount: 1 }
-    ]),
-    transportController.addVehicle
-);
+router.post("/add-vehicle", transportController.addVehicle);
 
 // display all registered vehicles
 router.get("/vehicles", transportController.getVehicle);
