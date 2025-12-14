@@ -5,6 +5,7 @@ const adminController = require("../controllers/adminController");
 const staffController = require("../controllers/staffController");
 const eventController = require("../controllers/eventController");
 const announcementController = require("../controllers/announcementController");
+// const transportController = require("../controllers/transportController");
 const transportController = require("../controllers/transportController");
 const examController = require("../controllers/examController");
 const paymentController = require("../controllers/paymentController");
@@ -27,6 +28,7 @@ const supervisiorController = require("../controllers/supervisorController");
 const reportController = require("../controllers/reportController");
 const eblockController = require("../controllers/eblockController");
 const recheckingController = require("../controllers/recheckingController")
+// const vehicleSupController = require("../controllers/vehicleSupervisorController");
 const vehicleSupController = require("../controllers/vehicleSupervisorController");
 
 router.post("/assign-recheck", recheckingController.addRechecking);
@@ -34,7 +36,10 @@ router.get("/recheck", recheckingController.getRechecking);
 router.delete("/recheck/:id", recheckingController.deleteRechecking);
 
 
+// router.post("/add-vsupervisior", vehicleSupController.registerStaff);
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
+
+
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
 router.get(
   "/:standard/:division/validate",
@@ -120,13 +125,14 @@ router.post("/add-announcement", announcementController.addAnnouncement);
 router.get("/get-announcement", announcementController.getAnnouncement);
 
 // add a vehicle
-router.post("/add-vehicle", transportController.addVehicle);
+router.post("/add-vehicle", nnsportController.addVehicle);
 
 // display all registered vehicles
 router.get("/vehicles", transportController.getVehicle);
 
 // add a driver
-router.post("/add-driver", transportController.addDriver);
+// router.post("/add-driver", transportController.addDriver);
+router.post("/add-driver", vehicleSupController.registerStaff);
 
 // display all drivers connected with vid of vehicle
 router.get("/drivers", transportController.getDrivers);
