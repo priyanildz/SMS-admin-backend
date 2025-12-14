@@ -190,19 +190,30 @@
 const vehicleModel = require("../models/vehicleModel");
 const driverModel = require("../models/driverModel")
 
+// exports.addVehicle = async (req, res) => {
+//   try {
+//     // req.body now contains ONLY the basic vehicle details
+//     const vehicle = new vehicleModel(req.body);
+//     await vehicle.save()
+//     return res.status(200).json({ message: "added vehicle successfully" });
+//   } catch (error) {
+//     // The error will now include validation errors for the original required fields only
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
 exports.addVehicle = async (req, res) => {
-  try {
-    // req.body now contains ONLY the basic vehicle details
-    const vehicle = new vehicleModel(req.body);
-    await vehicle.save()
-    return res.status(200).json({ message: "added vehicle successfully" });
-  } catch (error) {
-    // The error will now include validation errors for the original required fields only
-    return res.status(500).json({ error: error.message });
-  }
+  try {
+    // req.body now contains the basic vehicle details PLUS the uploaded document URLs
+    // e.g., req.body = { ..., vehicleno: "MH12AB1234", vehicleImageUrl: "https://...", pucUrl: "https://...", ... }
+    const vehicle = new vehicleModel(req.body);
+    await vehicle.save()
+    return res.status(200).json({ message: "added vehicle successfully" });
+  } catch (error) {
+    // This will now catch validation errors for the new required URL fields if the front-end fails to upload them
+    return res.status(500).json({ error: error.message });
+  }
 };
-
-
 
 exports.getVehicle = async (req, res) => {
   try {
