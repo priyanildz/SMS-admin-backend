@@ -96,6 +96,7 @@
 
 
 
+
 const mongoose = require("mongoose");
 
 const DriverSchema = new mongoose.Schema({
@@ -108,12 +109,13 @@ const DriverSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // supervisorName: { type: String, optional: true }, // Removed as it's not in the current form structure
   
-  // 🌟 NEW: Personal Details (Split) - Required by Frontend Validation 🌟
+  // 🌟 NEW: Personal Details (Split) 🌟
   firstName: { type: String, required: true },
   middleName: { type: String, default: "" },
   lastName: { type: String, required: true },
-  dob: { type: String, required: true },
+  dob: { type: String, required: true }, // Storing as String from date picker
   maritalStatus: { type: String, required: true },
   bloodGroup: { type: String, required: true },
   gender: { type: String, required: true },
@@ -162,10 +164,10 @@ const DriverSchema = new mongoose.Schema({
   ifscCode: { type: String, required: true },
   panNumber: { type: String, required: true, unique: true },
 
-  // 🌟 NEW: Document URLs (Required by frontend validation)
+  // 🌟 NEW: Document URLs
   photoUrl: { type: String, default: null },
-  aadhaarFileUrl: { type: String, required: true }, 
-  resumeFileUrl: { type: String, required: true }, 
+  aadhaarFileUrl: { type: String, required: true }, // URL after upload
+  resumeFileUrl: { type: String, required: true }, // URL after upload
 
 }, { timestamps: true });
 
