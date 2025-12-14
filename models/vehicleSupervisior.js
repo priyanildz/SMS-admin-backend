@@ -63,7 +63,6 @@
 
 
 
-
 const mongoose = require("mongoose");
 
 const StaffSchema = new mongoose.Schema({
@@ -77,7 +76,7 @@ const StaffSchema = new mongoose.Schema({
     required: true,
   },
   
-  // 🌟 NEW: Personal Details (Split) 🌟
+  // 🌟 NEW: Personal Details (Split) - Required by Frontend Validation 🌟
   firstName: { type: String, required: true },
   middleName: { type: String, default: "" },
   lastName: { type: String, required: true },
@@ -109,7 +108,7 @@ const StaffSchema = new mongoose.Schema({
   // 🌟 NEW: Statutory IDs and Licenses 🌟
   licenseNumber: {
     type: String,
-    default: null, // Should be optional for Supervisors
+    default: null, // Optional for Supervisors
   },
   aadhaarNumber: {
     type: String,
@@ -140,9 +139,9 @@ const StaffSchema = new mongoose.Schema({
   ifscCode: { type: String, required: true },
   panNumber: { type: String, required: true, unique: true },
   
-  // 🌟 NEW: Document URLs
-  aadhaarFileUrl: { type: String, required: true }, // URL after upload
-  resumeFileUrl: { type: String, required: true }, // URL after upload
+  // 🌟 NEW: Document URLs (Required by frontend validation)
+  aadhaarFileUrl: { type: String, required: true }, 
+  resumeFileUrl: { type: String, required: true }, 
 
   createdAt: {
     type: Date,

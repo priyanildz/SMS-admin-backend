@@ -132,16 +132,26 @@ exports.registerStaff = async (req, res) => {
             accountNumber,
             ifscCode,
             panNumber,
-            // Split name fields (needed for schema validation)
-            firstName,
-            middleName,
-            lastName,
+            // Split name fields (needed for schema validation)
+            firstName,
+            middleName,
+            lastName,
+            // vid is sent by FE for Driver schema validation
+            vid
         } = req.body;
         
-        // 🚨 IMPORTANT: The backend must be configured to upload files (photo, aadhaar, resume) 
-        // using middleware (like Multer) and then replace the file objects with the final Cloudinary URLs.
-        // Assuming file paths are available here (or replaced with URLs in middleware):
-        const getFileUrl = (fieldName) => req.body[`${fieldName}Url`] || (req.files && req.files[fieldName] ? req.files[fieldName][0].path : null);
+        // --- File/URL Mapping ---
+        // Checks req.body (for pre-uploaded URLs) or req.files (for local upload paths)
+        // NOTE: This assumes the frontend sends fields named 'photo', 'aadhaarFile', 'resumeFile'
+        const getFileUrl = (fieldName) => {
+            const file = req.files && req.files[fieldName] ? req.files[fieldName][0] : null;
+            return file ? file.path : null; // Use Multer path as URL placeholder
+        };
+        // Use req.body for fields passed through FormData but not file inputs (if applicable)
+        const photoUrl = getFileUrl('photo') || req.body.photoUrl; 
+        const aadhaarFileUrl = getFileUrl('aadhaarFile') || req.body.aadhaarFileUrl;
+        const resumeFileUrl = getFileUrl('resumeFile') || req.body.resumeFileUrl;
+
 
         const staffData = {
             fullName,
@@ -161,16 +171,15 @@ exports.registerStaff = async (req, res) => {
             totalExperience, previousEmployer,
             // Status & Files
             status,
-            photoUrl: getFileUrl('photo'),
-            aadhaarFileUrl: getFileUrl('aadhaarFile'),
-            resumeFileUrl: getFileUrl('resumeFile'),
+            photoUrl: photoUrl,
+            aadhaarFileUrl: aadhaarFileUrl,
+            resumeFileUrl: resumeFileUrl,
         };
 
         let savedStaff;
         if (designation === 'Driver') {
-            // 🚨 ISSUE: The FE generates a DUMMY_VID. We need a real logic for 'vid'.
-            // For now, we assume vid comes from req.body (as the FE sends it)
-            const driverData = { ...staffData, vid: req.body.vid || `AUTO_VID_${Date.now()}` }; 
+            // Use FE-generated vid
+            const driverData = { ...staffData, vid: vid }; 
             savedStaff = new Driver(driverData);
         } else if (designation === 'Supervisor') {
             savedStaff = new Staff(staffData);
@@ -187,9 +196,10 @@ exports.registerStaff = async (req, res) => {
         });
     } catch (error) {
         console.error("Registration Error:", error);
+        // 🚨 Returning 400 status with error details helps debug Mongoose validation errors
         res.status(400).json({
             success: false,
-            message: "Error registering staff/driver",
+            message: "Error registering staff/driver (Validation or DB issue)",
             error: error.message || error.toString(),
         });
     }
