@@ -34,7 +34,10 @@ router.get("/recheck", recheckingController.getRechecking);
 router.delete("/recheck/:id", recheckingController.deleteRechecking);
 
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
+router.put("/edit-staff/:id", staffController.editStaff);
+
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
+
 router.get(
   "/:standard/:division/validate",
   timetableController.validateTimetable
