@@ -33,9 +33,6 @@ router.post("/assign-recheck", recheckingController.addRechecking);
 router.get("/recheck", recheckingController.getRechecking);
 router.delete("/recheck/:id", recheckingController.deleteRechecking);
 
-router.post("/add-vsupervisior", (req, res) => {
-  res.sendStatus(200);
-});
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
 router.get(
