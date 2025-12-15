@@ -34,7 +34,7 @@ router.get("/recheck", recheckingController.getRechecking);
 router.delete("/recheck/:id", recheckingController.deleteRechecking);
 
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
-
+router.put("/update-vsupervisior/:id", vehicleSupController.updateStaffDetails);
 
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
 
