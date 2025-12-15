@@ -608,6 +608,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
 const Staff = require("../models/vehicleSupervisior.js");
 const Driver = require("../models/driverModel.js");
 
@@ -786,7 +795,9 @@ exports.registerStaff = async (req, res) => {
 	}
 };
 
-// 🚨 NEW FUNCTION: Handles PUT request from EditTransportStaff.js
+/**
+ * NEW FUNCTION: Handles PUT request to update Driver/Supervisor data.
+ */
 exports.updateStaffDetails = async (req, res) => {
 	try {
 		const staffId = req.params.id;
@@ -796,14 +807,15 @@ exports.updateStaffDetails = async (req, res) => {
 		let Model;
 		let staffType = designation;
 
-		// 1. Determine the correct Mongoose Model based on designation
+		// 1. Determine the correct Mongoose Model
 		if (designation === 'Driver') {
 			Model = Driver;
+            // The Driver model uses 'driverName' instead of 'fullName'
+            updateData.driverName = updateData.fullName;
 		} else if (designation === 'Supervisor') {
 			Model = Staff;
 		} else {
-			// If designation is missing or invalid in the update body
-			// Try to find the model by checking both collections (Less efficient but safer)
+			// Fallback check if designation is missing in update body
 			const foundStaff = await Staff.findById(staffId);
 			if (foundStaff) {
 				Model = Staff;
@@ -886,7 +898,14 @@ exports.getAllStaff = async (req, res) => {
  */
 exports.getStaffById = async (req, res) => {
 	try {
-		const staff = await Staff.findById(req.params.id);
+        // Find staff in supervisor collection
+		let staff = await Staff.findById(req.params.id); 
+
+        // If not found, try driver collection (handles combined list viewing)
+        if (!staff) {
+            staff = await Driver.findById(req.params.id);
+        }
+
 		if (!staff) {
 			return res.status(404).json({ success: false, message: "Staff not found" });
 		}
