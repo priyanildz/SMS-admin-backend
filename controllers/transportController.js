@@ -215,15 +215,15 @@ exports.addVehicle = async (req, res) => {
   }
 };
 
-// exports.getVehicle = async (req, res) => {
-//   try {
-//     const response = await vehicleModel.find();
-//     return res.status(200).json(response);
-//   }
-//   catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// }
+exports.getVehicle = async (req, res) => {
+  try {
+    const response = await vehicleModel.find();
+    return res.status(200).json(response);
+  }
+  catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
 // exports.addDriver = async (req, res) => {
 //   try {
 //     const driver = new driverModel(req.body);
@@ -234,48 +234,6 @@ exports.addVehicle = async (req, res) => {
 //     return res.status(500).json({ error: error.message })
 //   }
 // }
-
-
-exports.getVehicle = async (req, res) => {
-  try {
-    // Use populate to fetch the assigned Driver, Supervisor, and Route objects
-    const response = await vehicleModel.find()
-      .populate({
-        path: 'assignedDriverId',
-        select: 'driverName' // Select the name field needed by the frontend
-      })
-      .populate({
-        path: 'assignedSupervisorId',
-        select: 'fullName' // Select the name field needed by the frontend
-      })
-      .populate({
-        path: 'assignedRouteId',
-        select: 'routeName' // Assuming Route model has a 'routeName' field
-      });
-      
-    // Map the result to flatten the names for the frontend's expected structure
-    const mappedResponse = response.map(vehicle => {
-      const vehicleObj = vehicle.toObject();
-      return {
-        ...vehicleObj,
-        // Map populated object to the flat field names expected by the frontend
-        assignedDriverName: vehicleObj.assignedDriverId ? vehicleObj.assignedDriverId.driverName : 'Unassigned',
-        assignedSupervisorName: vehicleObj.assignedSupervisorId ? vehicleObj.assignedSupervisorId.fullName : 'Unassigned',
-        assignedRoute: vehicleObj.assignedRouteId ? vehicleObj.assignedRouteId.routeName : 'No Route',
-      };
-    });
-
-    // Return the mapped response which now contains the assigned names
-    return res.status(200).json({ success: true, data: mappedResponse });
-
-  } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
-}
-
-
-
-
 exports.addDriver = async (req, res) => {
   try {
     // req.body should now contain ALL fields necessary for the updated DriverSchema
