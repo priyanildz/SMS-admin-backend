@@ -35,6 +35,17 @@ router.delete("/recheck/:id", recheckingController.deleteRechecking);
 
 router.post("/add-vsupervisior", vehicleSupController.registerStaff);
 
+
+
+// ✅ PUT ROUTE: Handles update logic for Drivers/Supervisors (used by EditTransportStaff.js Save button)
+router.put("/update-vsupervisior/:id", vehicleSupController.updateStaffDetails); 
+
+// ✅ GET ROUTE: Fetches single staff details (used by EditTransportStaff.js initial load)
+router.get("/staff-details/:id", vehicleSupController.getStaffById);
+
+
+
+
 router.get("/vsupervisior", vehicleSupController.getAllStaff);
 
 router.get(
