@@ -158,7 +158,7 @@ exports.registerStaff = async (req, res) => {
       resumeFileUrl,
     } = req.body;
 
-    // 🌟 REQUIRED FILE VALIDATION (same logic, new source)
+    // 🌟 REQUIRED FILE VALIDATION 
     if (!aadhaarFileUrl) {
       return res.status(400).json({
         success: false,
@@ -211,18 +211,24 @@ exports.registerStaff = async (req, res) => {
 
       // Status & Files
       status,
-      photoUrl,           // ✅ URL from Cloudinary
-      aadhaarFileUrl,     // ✅ URL from Cloudinary
-      resumeFileUrl,      // ✅ URL from Cloudinary
+      photoUrl,
+      aadhaarFileUrl,
+      resumeFileUrl,
     };
 
     let savedStaff;
 
     if (designation === "Driver") {
-      const driverData = { ...staffData, vid };
+      // ✅ CRITICAL FIX: Add the required 'driverName' field for the Driver schema
+      const driverData = { 
+        ...staffData, 
+        vid,
+        driverName: fullName, // <-- ADDED: Maps the frontend's fullName to the schema's driverName
+      };
       savedStaff = new Driver(driverData);
     } 
     else if (designation === "Supervisor") {
+      // Supervisor schema does not require 'driverName' or 'vid'
       savedStaff = new Staff(staffData);
     } 
     else {
