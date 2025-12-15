@@ -106,6 +106,256 @@
 
 
 
+// const Staff = require("../models/vehicleSupervisior.js");
+// const Driver = require("../models/driverModel.js");
+
+// /**
+//  * REGISTER SUPERVISOR / DRIVER
+//  * Files are ALREADY uploaded from frontend to Cloudinary.
+//  * Backend receives ONLY URLs in req.body.
+//  */
+// exports.registerStaff = async (req, res) => {
+//   try {
+//     // Destructure all expected fields from req.body
+//     const {
+//       fullName,
+//       designation,
+//       contactNumber,
+//       alternateContactNumber,
+//       licenseNumber,
+//       aadhaarNumber,
+//       completeAddress,
+
+//       // Personal details
+//       status,
+//       dob,
+//       maritalStatus,
+//       bloodGroup,
+//       gender,
+//       nationality,
+//       category,
+//       totalExperience,
+//       previousEmployer,
+
+//       // Bank details
+//       bankName,
+//       branchName,
+//       accountNumber,
+//       ifscCode,
+//       panNumber,
+
+//       // Split name fields
+//       firstName,
+//       middleName,
+//       lastName,
+
+//       // Driver-specific
+//       vid,
+
+//       // ✅ PRE-UPLOADED FILE URLS (from frontend)
+//       photoUrl,
+//       aadhaarFileUrl,
+//       resumeFileUrl,
+//     } = req.body;
+
+//     // 🌟 REQUIRED FILE VALIDATION 
+//     if (!aadhaarFileUrl) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Aadhaar document file is missing.",
+//       });
+//     }
+
+//     if (!resumeFileUrl) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Resume document file is missing.",
+//       });
+//     }
+
+//     // Construct common staff data
+//     const staffData = {
+//       fullName,
+//       designation,
+//       contactNumber,
+//       alternateContactNumber,
+
+//       // 🚨 FIX: licenseNumber only for Driver
+//       licenseNumber: designation === "Driver" ? licenseNumber : null,
+
+//       aadhaarNumber,
+//       completeAddress,
+
+//       // Personal
+//       dob,
+//       maritalStatus,
+//       bloodGroup,
+//       gender,
+//       nationality,
+//       category,
+
+//       firstName,
+//       middleName,
+//       lastName,
+
+//       // Bank
+//       bankName,
+//       branchName,
+//       accountNumber,
+//       ifscCode,
+//       panNumber,
+
+//       // Experience
+//       totalExperience,
+//       previousEmployer,
+
+//       // Status & Files
+//       status,
+//       photoUrl,
+//       aadhaarFileUrl,
+//       resumeFileUrl,
+//     };
+
+//     let savedStaff;
+
+//     if (designation === "Driver") {
+//       // ✅ CRITICAL FIX: Add the required 'driverName' field for the Driver schema
+//       const driverData = { 
+//         ...staffData, 
+//         vid,
+//         driverName: fullName, // <-- ADDED: Maps the frontend's fullName to the schema's driverName
+//       };
+//       savedStaff = new Driver(driverData);
+//     } 
+//     else if (designation === "Supervisor") {
+//       // Supervisor schema does not require 'driverName' or 'vid'
+//       savedStaff = new Staff(staffData);
+//     } 
+//     else {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid designation",
+//       });
+//     }
+
+//     await savedStaff.save();
+
+//     res.status(201).json({
+//       success: true,
+//       message: `${designation} registered successfully`,
+//       data: savedStaff,
+//     });
+//   } catch (error) {
+//     console.error("Registration Error:", error);
+
+//     // Handle Mongoose validation errors cleanly
+//     if (error.name === "ValidationError") {
+//       const validationErrors = {};
+//       Object.keys(error.errors).forEach((key) => {
+//         validationErrors[key] = error.errors[key].message;
+//       });
+
+//       return res.status(400).json({
+//         success: false,
+//         message: "Mongoose Validation Failed",
+//         errors: validationErrors,
+//       });
+//     }
+
+//     // Handle duplicate key errors (unique fields)
+//     if (error.code === 11000) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Duplicate entry detected",
+//         error: error.keyValue,
+//       });
+//     }
+
+//     // Generic error
+//     res.status(400).json({
+//       success: false,
+//       message: "Error registering staff/driver",
+//       error: error.message || error.toString(),
+//     });
+//   }
+// };
+
+// /**
+//  * GET ALL SUPERVISORS
+//  */
+// exports.getAllStaff = async (req, res) => {
+//   try {
+//     const staff = await Staff.find();
+//     res.status(200).json({ success: true, data: staff });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// /**
+//  * GET SUPERVISOR BY ID
+//  */
+// exports.getStaffById = async (req, res) => {
+//   try {
+//     const staff = await Staff.findById(req.params.id);
+//     if (!staff) {
+//       return res.status(404).json({ success: false, message: "Staff not found" });
+//     }
+//     res.status(200).json({ success: true, data: staff });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// /**
+//  * UPDATE SUPERVISOR
+//  */
+// exports.updateStaff = async (req, res) => {
+//   try {
+//     const staff = await Staff.findByIdAndUpdate(req.params.id, req.body, {
+//       new: true,
+//       runValidators: true,
+//     });
+
+//     if (!staff) {
+//       return res.status(404).json({ success: false, message: "Staff not found" });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Staff updated",
+//       data: staff,
+//     });
+//   } catch (error) {
+//     res.status(400).json({ success: false, message: error.message });
+//   }
+// };
+
+// /**
+//  * DELETE SUPERVISOR
+//  */
+// exports.deleteStaff = async (req, res) => {
+//   try {
+//     const staff = await Staff.findByIdAndDelete(req.params.id);
+//     if (!staff) {
+//       return res.status(404).json({ success: false, message: "Staff not found" });
+//     }
+//     res.status(200).json({ success: true, message: "Staff deleted" });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
 const Staff = require("../models/vehicleSupervisior.js");
 const Driver = require("../models/driverModel.js");
 
@@ -148,10 +398,13 @@ exports.registerStaff = async (req, res) => {
       firstName,
       middleName,
       lastName,
-
+      
       // Driver-specific
       vid,
-
+      
+      // ✅ CRITICAL FIX: Add the email field to the destructuring
+      email, // <--- ADDED THE MISSING EMAIL FIELD
+      
       // ✅ PRE-UPLOADED FILE URLS (from frontend)
       photoUrl,
       aadhaarFileUrl,
@@ -179,6 +432,9 @@ exports.registerStaff = async (req, res) => {
       designation,
       contactNumber,
       alternateContactNumber,
+      
+      // The local variable 'email' is now defined and holds the correct value
+      email, // <--- THIS NOW INCLUDES THE EMAIL VALUE
 
       // 🚨 FIX: licenseNumber only for Driver
       licenseNumber: designation === "Driver" ? licenseNumber : null,
@@ -223,7 +479,7 @@ exports.registerStaff = async (req, res) => {
       const driverData = { 
         ...staffData, 
         vid,
-        driverName: fullName, // <-- ADDED: Maps the frontend's fullName to the schema's driverName
+        driverName: fullName, // Maps the frontend's fullName to the schema's driverName
       };
       savedStaff = new Driver(driverData);
     } 
