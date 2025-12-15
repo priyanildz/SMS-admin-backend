@@ -237,40 +237,106 @@ exports.addVehicle = async (req, res) => {
 // }
 
 
+// exports.getVehicle = async (req, res) => {
+//   try {
+//     // The implementation for populate is complex and requires all models to be imported.
+//     // For now, we will return the raw data and assume the frontend handles the names.
+//     // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
+    
+//     // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
+//     const vehicles = await vehicleModel.find();
+    
+//     // --- Manual Mapping to mimic population (You need to implement population on your server) ---
+//     const mappedResponse = vehicles.map(vehicle => {
+//         const vehicleObj = vehicle.toObject();
+//         return {
+//             ...vehicleObj,
+//             // These fields MUST be looked up and attached by your backend
+//             assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
+//             assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
+//             assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
+//             currentStudents: vehicleObj.currentStudents || 0,
+//         };
+//     });
+
+//     // NOTE: If the Mongoose population is correctly configured and working, 
+//     // you would return: res.status(200).json({ success: true, data: populatedVehicles });
+    
+//     // Using the structure the frontend expects:
+//     return res.status(200).json({ success: true, data: mappedResponse });
+    
+//   }
+//   catch (error) {
+//     return res.status(500).json({ success: false, error: error.message });
+//   }
+// }
+
+
+
 exports.getVehicle = async (req, res) => {
   try {
-    // The implementation for populate is complex and requires all models to be imported.
-    // For now, we will return the raw data and assume the frontend handles the names.
-    // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
+    // Fetch vehicles and use populate to replace the assigned IDs with the corresponding documents
+    const vehicles = await vehicleModel.find()
+      .populate({
+        path: 'assignedDriverId',
+        // Select the name field from the Driver model ('driverName')
+        select: 'driverName' 
+      })
+      .populate({
+        path: 'assignedSupervisorId',
+        // Select the name field from the Supervisor model ('fullName')
+        select: 'fullName'
+      })
+      .populate({
+        path: 'assignedRouteId',
+        // Select the name field from the Route model ('routeName' or appropriate field)
+        select: 'routeName' // Assuming 'routeName' exists in your route schema
+      })
+      .lean(); // Use .lean() for faster processing of large datasets
+
     
-    // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
-    const vehicles = await vehicleModel.find();
-    
-    // --- Manual Mapping to mimic population (You need to implement population on your server) ---
+    // --- Map populated data to the flat structure expected by the frontend ---
     const mappedResponse = vehicles.map(vehicle => {
-        const vehicleObj = vehicle.toObject();
+        
+        // 🚨 CRITICAL FIX: If assignedDriverId exists, use its name property. Otherwise, use 'Unassigned'.
+        const assignedDriverName = vehicle.assignedDriverId 
+                                   ? vehicle.assignedDriverId.driverName 
+                                   : 'Unassigned';
+
+        const assignedSupervisorName = vehicle.assignedSupervisorId 
+                                       ? vehicle.assignedSupervisorId.fullName 
+                                       : 'Unassigned';
+
+        const assignedRouteName = vehicle.assignedRouteId 
+                                  ? vehicle.assignedRouteId.routeName 
+                                  : 'No Route';
+        
         return {
-            ...vehicleObj,
-            // These fields MUST be looked up and attached by your backend
-            assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
-            assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
-            assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
-            currentStudents: vehicleObj.currentStudents || 0,
+            ...vehicle, // Includes vehicle details like vehicleno, vehiclename, status
+            
+            // These are the name fields the frontend expects to display:
+            assignedDriverName: assignedDriverName,
+            assignedSupervisorName: assignedSupervisorName,
+            assignedRoute: assignedRouteName,
+            
+            // Re-attach the raw IDs for the Modal/Action logic
+            assignedDriverId: vehicle.assignedDriverId ? vehicle.assignedDriverId._id : null,
+            assignedSupervisorId: vehicle.assignedSupervisorId ? vehicle.assignedSupervisorId._id : null,
+            assignedRouteId: vehicle.assignedRouteId ? vehicle.assignedRouteId._id : null,
+            currentStudents: vehicle.currentStudents || 0,
         };
     });
 
-    // NOTE: If the Mongoose population is correctly configured and working, 
-    // you would return: res.status(200).json({ success: true, data: populatedVehicles });
-    
-    // Using the structure the frontend expects:
+    // The frontend expects the data nested under a 'data' key for this response:
     return res.status(200).json({ success: true, data: mappedResponse });
     
   }
   catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    console.error("Vehicle Fetch Error:", error);
+    // If population fails (e.g., ref or path is wrong), Mongoose might throw an error.
+    return res.status(500).json({ success: false, error: "Failed to fetch vehicle list with assignments: " + error.message });
   }
 }
-
 
 
 
