@@ -91,7 +91,7 @@ const StaffSchema = new mongoose.Schema({
         type: String, 
         required: true,
         unique: true,
-        match: [/.+@.+\..+/, 'Please fill a valid email address'],
+        match: [/.+\@.+\..+/, 'Please fill a valid email address'],
     },
     contactNumber: {
         type: String,
