@@ -74,14 +74,30 @@ const driver = require("../models/driverModel");
 const studentAssign = require("../models/studentTransport");
 
 exports.addRoute = async (req, res) => {
-  try {
-    const response = new Route(req.body);
-    await response.save();
-    // Return the created route data, including the new _id, for the frontend to use in the PUT update
-    return res.status(200).json({ success: true, message: "route added successfully", data: response });
-  } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        // Destructure the required fields. Extract from/to specifically.
+        const { routeName, from, to, vehicleNumber, ...rest } = req.body;
+
+        // --- FIX: Insert Placeholder if required fields are missing/empty ---
+        const routeData = {
+            routeName,
+            vehicleNumber,
+            // Use provided 'from' or 'to', otherwise use a default string to satisfy Mongoose's 'required: true'
+            from: from || 'Not Set',
+            to: to || 'Not Set',
+            ...rest
+        };
+
+        // If the 'from' and 'to' fields are removed in the frontend, 
+        // the payload might not include them, or they might be empty.
+        
+        const response = new Route(routeData);
+        await response.save();
+        // Return the created route data, including the new _id, for the frontend to use in the PUT update
+        return res.status(200).json({ success: true, message: "route added successfully", data: response });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
 };
 
 exports.getRoutes = async (req, res) => {
