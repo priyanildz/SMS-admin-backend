@@ -218,7 +218,75 @@
 
 
 
-// --- vehicleModel.js (Updated Schema) ---
+// // --- vehicleModel.js (Updated Schema) ---
+// const mongoose = require("mongoose");
+// const VehicleSchema = new mongoose.Schema({
+//   vid: {
+//     type: String,
+//     required: true,
+//     unique: true,
+//   },
+//   type: {
+//     type: String,
+//     required: true, 
+//   },
+//   vehiclename: {
+//     type: String,
+//     required: true, 
+//   },
+//   capacity: {
+//     type: String,
+//     required: true, 
+//   },
+//   regno: {
+//     type: String, 
+//     required: true, 
+//   },
+//   status: {
+//     type: String,
+//     enum: ["active", "inactive","Active","Inactive"],
+//     default: "active",
+//     required: true, 
+//   },
+//   vehicleno: {
+//     type: String,
+//     required: true, 
+//   },
+//     // 🌟 NEW ASSIGNMENT FIELDS 🌟
+//     assignedDriverId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'driver', // Assuming your Driver model is named 'driver'
+//         default: null,
+//     },
+//     assignedSupervisorId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'vehicle-supervisior', // Assuming your Supervisor model is named 'vehicle-supervisior'
+//         default: null,
+//     },
+//     assignedRouteId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'route', // Assuming you have a 'route' model
+//         default: null,
+//     },
+//     // Optional: for current student count, can be updated on assignment or route change
+//     currentStudents: {
+//         type: Number,
+//         default: 0,
+//     },
+    
+//   vehicleImageUrl: { type: String, required: true },
+//   pucUrl: { type: String, required: true },
+//   insuranceUrl: { type: String, required: true },
+//   registrationCertificateUrl: { type: String, required: true },
+// }, { timestamps: true });
+
+// module.exports = mongoose.model("vehicle", VehicleSchema);
+
+
+
+
+
+// --- vehicleModel.js (Updated Schema for Multiple Routes) ---
 const mongoose = require("mongoose");
 const VehicleSchema = new mongoose.Schema({
   vid: {
@@ -252,28 +320,28 @@ const VehicleSchema = new mongoose.Schema({
     type: String,
     required: true, 
   },
-    // 🌟 NEW ASSIGNMENT FIELDS 🌟
-    assignedDriverId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'driver', // Assuming your Driver model is named 'driver'
-        default: null,
-    },
-    assignedSupervisorId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'vehicle-supervisior', // Assuming your Supervisor model is named 'vehicle-supervisior'
-        default: null,
-    },
-    assignedRouteId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'route', // Assuming you have a 'route' model
-        default: null,
-    },
-    // Optional: for current student count, can be updated on assignment or route change
-    currentStudents: {
-        type: Number,
-        default: 0,
-    },
-    
+    // 🌟 NEW ASSIGNMENT FIELDS 🌟
+    assignedDriverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'driver', 
+        default: null,
+    },
+    assignedSupervisorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'vehicle-supervisior', 
+        default: null,
+    },
+    assignedRouteId: {
+        type: [mongoose.Schema.Types.ObjectId], // <--- CHANGED TO AN ARRAY
+        ref: 'route', 
+        default: [], // Default to empty array
+    },
+    // Optional: for current student count, can be updated on assignment or route change
+    currentStudents: {
+        type: Number,
+        default: 0,
+    },
+    
   vehicleImageUrl: { type: String, required: true },
   pucUrl: { type: String, required: true },
   insuranceUrl: { type: String, required: true },
