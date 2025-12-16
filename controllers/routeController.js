@@ -185,3 +185,26 @@ exports.deleteRoute = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+
+
+exports.deleteAssignment = async (req, res) => {
+    try {
+        const assignmentId = req.params.id; // This ID is the _id of the studentTransport document
+
+        const deletedAssignment = await studentAssign.findByIdAndDelete(assignmentId);
+
+        if (!deletedAssignment) {
+            return res.status(404).json({ success: false, message: "Student assignment not found" });
+        }
+
+        // NOTE: We do not need to update the student's record here, 
+        // as the student's transport fields (busroute, pickuppoint) should be handled 
+        // by a separate controller that processes this assignment status.
+        
+        return res.status(200).json({ success: true, message: "Student successfully removed from route assignment" });
+    } catch (error) {
+        console.error("Delete Student Assignment Error:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};

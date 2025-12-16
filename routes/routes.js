@@ -246,6 +246,9 @@ router.post("/add-student-route", routeController.assignStudent);
 // get students list
 router.get("/students-route", routeController.getAssignedStudents);
 
+// NEW DELETE ROUTE for student assignment
+router.delete("/students-route/:id", routeController.deleteAssignment);
+
 //get student by ID
 router.post("/student-by-id", studentController.getStudentById);
 
