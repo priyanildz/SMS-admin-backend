@@ -481,33 +481,24 @@ exports.updateVehicle = async (req, res) => {
 
 exports.removeRouteAssignment = async (req, res) => {
     try {
-        const { vehicleId, routeId } = req.body; // Expecting vehicle ID and route ID to delete
+        const vehicleId = req.params.id; // Get the vehicle ID from URL parameter
 
-        const vehicle = await vehicleModel.findById(vehicleId);
-        if (!vehicle) {
+        const response = await vehicleModel.findByIdAndUpdate(
+            vehicleId,
+            { 
+                $set: { assignedRouteId: [] } // CRITICAL: Set the entire array to empty
+            },
+            { new: true }
+        );
+        
+        if (!response) {
             return res.status(404).json({ success: false, message: "Vehicle not found" });
         }
+        
+        // NOTE: Student assignment cascade delete is omitted here and must be handled separately by you.
 
-        // 1. Remove the specific routeId from the assignedRouteId array on the vehicle
-        vehicle.assignedRouteId.pull(routeId);
-        await vehicle.save();
-        
-        // 2. CRITICAL STEP: Cascade Delete related Student Assignments
-        // Find the route name associated with the routeId (assuming you can lookup the route)
-        // Since we don't have the Route model here, we rely on the route name stored in studentAssign.
-        // This requires an extra step, or a redesign. For now, we clean the students based on the vehicle being unassigned from ALL routes.
-
-        // Assuming a simpler scenario where unassigning the route means clearing relevant student routes:
-        
-        // NOTE: A robust solution requires querying studentAssign documents where 
-        // the assignment routeName matches the route name of the deleted routeId.
-        
-        // For a minimal working example, we only handle the vehicle update:
-        
-        return res.status(200).json({ success: true, message: "Route successfully unassigned from vehicle" });
-
+        return res.status(200).json({ success: true, message: "Route assignment cleared from vehicle", data: response });
     } catch (error) {
-        console.error("Remove Route Assignment Error:", error);
-        return res.status(500).json({ success: false, message: "Error unassigning route", error: error.message });
+        return res.status(500).json({ success: false, message: "Error clearing route assignment", error: error.message });
     }
 };
