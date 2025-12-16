@@ -237,40 +237,67 @@ exports.addVehicle = async (req, res) => {
 // }
 
 
+// exports.getVehicle = async (req, res) => {
+//   try {
+//     // The implementation for populate is complex and requires all models to be imported.
+//     // For now, we will return the raw data and assume the frontend handles the names.
+//     // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
+    
+//     // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
+//     const vehicles = await vehicleModel.find();
+    
+//     // --- Manual Mapping to mimic population (You need to implement population on your server) ---
+//     const mappedResponse = vehicles.map(vehicle => {
+//         const vehicleObj = vehicle.toObject();
+//         return {
+//             ...vehicleObj,
+//             // These fields MUST be looked up and attached by your backend
+//             assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
+//             assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
+//             assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
+//             currentStudents: vehicleObj.currentStudents || 0,
+//         };
+//     });
+
+//     // NOTE: If the Mongoose population is correctly configured and working, 
+//     // you would return: res.status(200).json({ success: true, data: populatedVehicles });
+    
+//     // Using the structure the frontend expects:
+//     return res.status(200).json({ success: true, data: mappedResponse });
+    
+//   }
+//   catch (error) {
+//     return res.status(500).json({ success: false, error: error.message });
+//   }
+// }
+
+
 exports.getVehicle = async (req, res) => {
-  try {
-    // The implementation for populate is complex and requires all models to be imported.
-    // For now, we will return the raw data and assume the frontend handles the names.
-    // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
-    
-    // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
-    const vehicles = await vehicleModel.find();
-    
-    // --- Manual Mapping to mimic population (You need to implement population on your server) ---
+  try {
+    // Fetch the raw vehicle data. Mongoose Population (recommended) is not used here.
+    const vehicles = await vehicleModel.find();
+    
+    // --- Cleaned Response Mapping ---
+    // The frontend handles the ID-to-Name mapping using allDrivers/allSupervisors lists.
+    // The backend should only return the raw data, including assignedDriverId and assignedSupervisorId.
     const mappedResponse = vehicles.map(vehicle => {
-        const vehicleObj = vehicle.toObject();
-        return {
-            ...vehicleObj,
-            // These fields MUST be looked up and attached by your backend
-            assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
-            assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
-            assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
-            currentStudents: vehicleObj.currentStudents || 0,
-        };
-    });
-
-    // NOTE: If the Mongoose population is correctly configured and working, 
-    // you would return: res.status(200).json({ success: true, data: populatedVehicles });
-    
-    // Using the structure the frontend expects:
-    return res.status(200).json({ success: true, data: mappedResponse });
-    
-  }
-  catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
+        const vehicleObj = vehicle.toObject();
+        return {
+            ...vehicleObj,
+            // REMOVED: assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned',
+            // REMOVED: assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned',
+            assignedRoute: vehicleObj.assignedRouteId || 'No Route', // This route ID field is harmless
+            currentStudents: vehicleObj.currentStudents || 0,
+        };
+    });
+    
+    return res.status(200).json({ success: true, data: mappedResponse });
+    
+  }
+  catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 }
-
 
 
 
