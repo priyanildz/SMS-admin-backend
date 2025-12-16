@@ -187,54 +187,54 @@
 
 
 
-const vehicleModel = require("../models/vehicleModel");
-const driverModel = require("../models/driverModel");
-const staffModel = require("../models/vehicleSupervisior");
+// const vehicleModel = require("../models/vehicleModel");
+// const driverModel = require("../models/driverModel");
+// const staffModel = require("../models/vehicleSupervisior");
+
+// // exports.addVehicle = async (req, res) => {
+// //   try {
+// //     // req.body now contains ONLY the basic vehicle details
+// //     const vehicle = new vehicleModel(req.body);
+// //     await vehicle.save()
+// //     return res.status(200).json({ message: "added vehicle successfully" });
+// //   } catch (error) {
+// //     // The error will now include validation errors for the original required fields only
+// //     return res.status(500).json({ error: error.message });
+// //   }
+// // };
 
 // exports.addVehicle = async (req, res) => {
-//   try {
-//     // req.body now contains ONLY the basic vehicle details
-//     const vehicle = new vehicleModel(req.body);
-//     await vehicle.save()
-//     return res.status(200).json({ message: "added vehicle successfully" });
-//   } catch (error) {
-//     // The error will now include validation errors for the original required fields only
-//     return res.status(500).json({ error: error.message });
-//   }
+//   try {
+//     // req.body now contains the basic vehicle details PLUS the uploaded document URLs
+//     // e.g., req.body = { ..., vehicleno: "MH12AB1234", vehicleImageUrl: "https://...", pucUrl: "https://...", ... }
+//     const vehicle = new vehicleModel(req.body);
+//     await vehicle.save()
+//     return res.status(200).json({ message: "added vehicle successfully" });
+//   } catch (error) {
+//     // This will now catch validation errors for the new required URL fields if the front-end fails to upload them
+//     return res.status(500).json({ error: error.message });
+//   }
 // };
 
-exports.addVehicle = async (req, res) => {
-  try {
-    // req.body now contains the basic vehicle details PLUS the uploaded document URLs
-    // e.g., req.body = { ..., vehicleno: "MH12AB1234", vehicleImageUrl: "https://...", pucUrl: "https://...", ... }
-    const vehicle = new vehicleModel(req.body);
-    await vehicle.save()
-    return res.status(200).json({ message: "added vehicle successfully" });
-  } catch (error) {
-    // This will now catch validation errors for the new required URL fields if the front-end fails to upload them
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// exports.getVehicle = async (req, res) => {
-//   try {
-//     const response = await vehicleModel.find();
-//     return res.status(200).json(response);
-//   }
-//   catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// }
-// exports.addDriver = async (req, res) => {
-//   try {
-//     const driver = new driverModel(req.body);
-//     await driver.save()
-//     return res.status(200).json({ message: 'driver added successfully' })
-//   }
-//   catch (error) {
-//     return res.status(500).json({ error: error.message })
-//   }
-// }
+// // exports.getVehicle = async (req, res) => {
+// //   try {
+// //     const response = await vehicleModel.find();
+// //     return res.status(200).json(response);
+// //   }
+// //   catch (error) {
+// //     return res.status(500).json({ error: error.message });
+// //   }
+// // }
+// // exports.addDriver = async (req, res) => {
+// //   try {
+// //     const driver = new driverModel(req.body);
+// //     await driver.save()
+// //     return res.status(200).json({ message: 'driver added successfully' })
+// //   }
+// //   catch (error) {
+// //     return res.status(500).json({ error: error.message })
+// //   }
+// // }
 
 
 // exports.getVehicle = async (req, res) => {
@@ -272,6 +272,122 @@ exports.addVehicle = async (req, res) => {
 // }
 
 
+
+
+// exports.addDriver = async (req, res) => {
+//   try {
+//     // req.body should now contain ALL fields necessary for the updated DriverSchema
+//     // including firstName, lastName, email, licenseNumber, completeAddress, etc.
+    
+//     // The frontend logic sends: 
+//     // { vid: 'DUMMY...', driverName: 'Full Name' }
+//     // This will now FAIL validation against the new schema!
+
+//     // If the frontend is meant to send the FULL data (which is what you should do):
+//     // const driverData = { ...req.body, driverName: `${req.body.firstName} ${req.body.lastName}` };
+    
+//     // For simplicity, we keep the controller simple and rely on the full data being present in req.body
+//     const driver = new driverModel(req.body);
+//     await driver.save()
+//     return res.status(200).json({ message: 'driver added successfully' })
+//   }
+//   catch (error) {
+//     // This will catch the Mongoose validation errors if the full data isn't provided
+//     return res.status(500).json({ error: error.message })
+//   }
+// }
+
+// exports.getDrivers = async (req, res) => {
+//   try {
+//     const drivers = await driverModel.find();
+//     const vehicles = await vehicleModel.find();
+
+//     const merged = drivers.map(driver => {
+//       const vehicle = vehicles.find(v => 
+//         v.vehicleno?.toString() === driver.vid?.toString()
+//       );
+
+//       return {
+//         ...driver.toObject(),
+//         vehicles: vehicle || {} // agar vehicle na mile to empty object
+//       };
+//     });
+
+//     return res.status(200).json(merged);
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+// // exports.updateVehicle = async (req, res) => {
+// //   try {
+// //     const { id } = req.params;
+// //     const updatedData = req.body; 
+// //     const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { new: true });
+// //     if (!vehicle) {
+// //       return res.status(404).json({ message: "Vehicle not found" });
+// //     }
+// //     return res.status(200).json({ message: "Vehicle updated successfully", vehicle });
+// //   } catch (error) {
+// //     return res.status(500).json({ error: error.message });
+// //   }
+// // };
+
+
+
+// exports.updateVehicle = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updatedData = req.body; 
+    
+//     // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
+//     // to the vehicle document. Mongoose will ignore fields not in the schema.
+//     const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
+//         new: true,
+//         runValidators: true 
+//     });
+    
+//     if (!vehicle) {
+//       return res.status(404).json({ success: false, message: "Vehicle not found" });
+//     }
+    
+//     // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
+//     // schema recently and are not sending all required fields (e.g., document URLs) 
+//     // during this assignment update, or if the ObjectId validation fails.
+    
+//     return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
+//   } catch (error) {
+//     console.error("Vehicle Assignment Update Error:", error);
+//     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+const vehicleModel = require("../models/vehicleModel");
+const driverModel = require("../models/driverModel");
+const staffModel = require("../models/vehicleSupervisior");
+
+exports.addVehicle = async (req, res) => {
+  try {
+    // req.body now contains the basic vehicle details PLUS the uploaded document URLs
+    const vehicle = new vehicleModel(req.body);
+    await vehicle.save()
+    return res.status(200).json({ message: "added vehicle successfully" });
+  } catch (error) {
+    // This will now catch validation errors for the new required URL fields if the front-end fails to upload them
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.getVehicle = async (req, res) => {
   try {
     // Fetch the raw vehicle data. Mongoose Population (recommended) is not used here.
@@ -300,92 +416,63 @@ exports.getVehicle = async (req, res) => {
 }
 
 
-
 exports.addDriver = async (req, res) => {
-  try {
-    // req.body should now contain ALL fields necessary for the updated DriverSchema
-    // including firstName, lastName, email, licenseNumber, completeAddress, etc.
-    
-    // The frontend logic sends: 
-    // { vid: 'DUMMY...', driverName: 'Full Name' }
-    // This will now FAIL validation against the new schema!
-
-    // If the frontend is meant to send the FULL data (which is what you should do):
-    // const driverData = { ...req.body, driverName: `${req.body.firstName} ${req.body.lastName}` };
-    
-    // For simplicity, we keep the controller simple and rely on the full data being present in req.body
-    const driver = new driverModel(req.body);
-    await driver.save()
-    return res.status(200).json({ message: 'driver added successfully' })
-  }
-  catch (error) {
-    // This will catch the Mongoose validation errors if the full data isn't provided
-    return res.status(500).json({ error: error.message })
-  }
+  try {
+    // For simplicity, we keep the controller simple and rely on the full data being present in req.body
+    const driver = new driverModel(req.body);
+    await driver.save()
+    return res.status(200).json({ message: 'driver added successfully' })
+  }
+  catch (error) {
+    // This will catch the Mongoose validation errors if the full data isn't provided
+    return res.status(500).json({ error: error.message })
+  }
 }
 
 exports.getDrivers = async (req, res) => {
-  try {
-    const drivers = await driverModel.find();
-    const vehicles = await vehicleModel.find();
+  try {
+    const drivers = await driverModel.find();
+    const vehicles = await vehicleModel.find();
 
-    const merged = drivers.map(driver => {
-      const vehicle = vehicles.find(v => 
-        v.vehicleno?.toString() === driver.vid?.toString()
-      );
+    const merged = drivers.map(driver => {
+      const vehicle = vehicles.find(v => 
+        v.vehicleno?.toString() === driver.vid?.toString()
+      );
 
-      return {
-        ...driver.toObject(),
-        vehicles: vehicle || {} // agar vehicle na mile to empty object
-      };
-    });
+      return {
+        ...driver.toObject(),
+        vehicles: vehicle || {} // agar vehicle na mile to empty object
+      };
+    });
 
-    return res.status(200).json(merged);
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    // NOTE: Assuming this endpoint should return the list of drivers without the "data" wrapper.
+    // If your frontend expects a { data: [] } wrapper, you need to add it here.
+    return res.status(200).json(merged);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 
-// exports.updateVehicle = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const updatedData = req.body; 
-//     const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { new: true });
-//     if (!vehicle) {
-//       return res.status(404).json({ message: "Vehicle not found" });
-//     }
-//     return res.status(200).json({ message: "Vehicle updated successfully", vehicle });
-//   } catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
-
-
-
 exports.updateVehicle = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedData = req.body; 
-    
-    // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
-    // to the vehicle document. Mongoose will ignore fields not in the schema.
-    const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
-        new: true,
-        runValidators: true 
-    });
-    
-    if (!vehicle) {
-      return res.status(404).json({ success: false, message: "Vehicle not found" });
-    }
-    
-    // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
-    // schema recently and are not sending all required fields (e.g., document URLs) 
-    // during this assignment update, or if the ObjectId validation fails.
-    
-    return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
-  } catch (error) {
-    console.error("Vehicle Assignment Update Error:", error);
-    return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
-  }
+  try {
+    const { id } = req.params;
+    const updatedData = req.body; 
+    
+    // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
+    // to the vehicle document. Mongoose will ignore fields not in the schema.
+    const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
+        new: true,
+        runValidators: true 
+    });
+    
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: "Vehicle not found" });
+    }
+    
+    return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
+  } catch (error) {
+    console.error("Vehicle Assignment Update Error:", error);
+    return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
+  }
 };
