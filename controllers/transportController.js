@@ -284,7 +284,7 @@ exports.getVehicle = async (req, res) => {
         path: 'assignedSupervisorId',
         select: 'fullName' 
       })
-      .lean(); // Use .lean() for efficient object manipulation
+      .lean(); 
 
     
     // 2. Map populated data to the flat structure expected by the frontend
@@ -387,29 +387,67 @@ exports.getDrivers = async (req, res) => {
 
 
 
+// exports.updateVehicle = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updatedData = req.body; 
+    
+//     // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
+//     // to the vehicle document. Mongoose will ignore fields not in the schema.
+//     const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
+//         new: true,
+//         runValidators: true 
+//     });
+    
+//     if (!vehicle) {
+//       return res.status(404).json({ success: false, message: "Vehicle not found" });
+//     }
+    
+//     // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
+//     // schema recently and are not sending all required fields (e.g., document URLs) 
+//     // during this assignment update, or if the ObjectId validation fails.
+    
+//     return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
+//   } catch (error) {
+//     console.error("Vehicle Assignment Update Error:", error);
+//     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
+//   }
+// };
+
+
+
+
 exports.updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedData = req.body; 
+    const assignmentData = req.body; 
     
-    // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
-    // to the vehicle document. Mongoose will ignore fields not in the schema.
-    const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
+    // 1. Fetch the existing vehicle document to get required fields (URLs)
+    const existingVehicle = await vehicleModel.findById(id).lean();
+
+    if (!existingVehicle) {
+      return res.status(404).json({ success: false, message: "Vehicle not found." });
+    }
+
+    // 2. Merge assignment data with existing required fields (URLs)
+    // This prevents Mongoose validation failure on required fields (vehicleImageUrl, pucUrl, etc.)
+    const mergedUpdateData = {
+        ...existingVehicle, // Copy existing data (including URLs)
+        ...assignmentData   // Override with new assignment IDs
+    };
+
+    // 3. Perform the update with validation
+    const vehicle = await vehicleModel.findByIdAndUpdate(id, mergedUpdateData, { 
         new: true,
         runValidators: true 
     });
     
-    if (!vehicle) {
-      return res.status(404).json({ success: false, message: "Vehicle not found" });
-    }
-    
-    // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
-    // schema recently and are not sending all required fields (e.g., document URLs) 
-    // during this assignment update, or if the ObjectId validation fails.
-    
     return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
   } catch (error) {
     console.error("Vehicle Assignment Update Error:", error);
+    if (error.name === "ValidationError") {
+        return res.status(400).json({ success: false, message: "Mongoose Validation Failed during update.", errors: error.errors });
+    }
     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
   }
 };
