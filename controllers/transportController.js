@@ -237,91 +237,40 @@ exports.addVehicle = async (req, res) => {
 // }
 
 
-// exports.getVehicle = async (req, res) => {
-//   try {
-//     // The implementation for populate is complex and requires all models to be imported.
-//     // For now, we will return the raw data and assume the frontend handles the names.
-//     // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
-    
-//     // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
-//     const vehicles = await vehicleModel.find();
-    
-//     // --- Manual Mapping to mimic population (You need to implement population on your server) ---
-//     const mappedResponse = vehicles.map(vehicle => {
-//         const vehicleObj = vehicle.toObject();
-//         return {
-//             ...vehicleObj,
-//             // These fields MUST be looked up and attached by your backend
-//             assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
-//             assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
-//             assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
-//             currentStudents: vehicleObj.currentStudents || 0,
-//         };
-//     });
-
-//     // NOTE: If the Mongoose population is correctly configured and working, 
-//     // you would return: res.status(200).json({ success: true, data: populatedVehicles });
-    
-//     // Using the structure the frontend expects:
-//     return res.status(200).json({ success: true, data: mappedResponse });
-    
-//   }
-//   catch (error) {
-//     return res.status(500).json({ success: false, error: error.message });
-//   }
-// }
-
-
 exports.getVehicle = async (req, res) => {
   try {
-    // 1. Fetch vehicles and use populate to retrieve names
-    const vehicles = await vehicleModel.find()
-      .populate({
-        path: 'assignedDriverId',
-        select: 'driverName' 
-      })
-      .populate({
-        path: 'assignedSupervisorId',
-        select: 'fullName' 
-      })
-      .lean(); 
-
+    // The implementation for populate is complex and requires all models to be imported.
+    // For now, we will return the raw data and assume the frontend handles the names.
+    // **IMPORTANT: Your backend MUST populate this data for the frontend to show names.**
     
-    // 2. Map populated data to the flat structure expected by the frontend
+    // For testing simplicity, assume 'assignedDriverId' etc. are present on the vehicle object.
+    const vehicles = await vehicleModel.find();
+    
+    // --- Manual Mapping to mimic population (You need to implement population on your server) ---
     const mappedResponse = vehicles.map(vehicle => {
-        
-        // Use the populated name if it exists, otherwise default to 'Unassigned'
-        const assignedDriverName = vehicle.assignedDriverId 
-                                   ? vehicle.assignedDriverId.driverName 
-                                   : 'Unassigned';
-
-        const assignedSupervisorName = vehicle.assignedSupervisorId 
-                                       ? vehicle.assignedSupervisorId.fullName 
-                                       : 'Unassigned';
-        
+        const vehicleObj = vehicle.toObject();
         return {
-            ...vehicle, 
-            
-            // These are the display fields the frontend uses:
-            assignedDriverName: assignedDriverName,
-            assignedSupervisorName: assignedSupervisorName,
-            
-            // Ensure the raw IDs are still returned for the Modal's initial state and save logic
-            assignedDriverId: vehicle.assignedDriverId ? vehicle.assignedDriverId._id : null,
-            assignedSupervisorId: vehicle.assignedSupervisorId ? vehicle.assignedSupervisorId._id : null,
-            assignedRouteId: vehicle.assignedRouteId || null,
-            currentStudents: vehicle.currentStudents || 0,
+            ...vehicleObj,
+            // These fields MUST be looked up and attached by your backend
+            assignedDriverName: vehicleObj.assignedDriverId || 'Unassigned', // Placeholder
+            assignedSupervisorName: vehicleObj.assignedSupervisorId || 'Unassigned', // Placeholder
+            assignedRoute: vehicleObj.assignedRouteId || 'No Route', // Placeholder
+            currentStudents: vehicleObj.currentStudents || 0,
         };
     });
 
+    // NOTE: If the Mongoose population is correctly configured and working, 
+    // you would return: res.status(200).json({ success: true, data: populatedVehicles });
+    
+    // Using the structure the frontend expects:
     return res.status(200).json({ success: true, data: mappedResponse });
     
   }
   catch (error) {
-    console.error("Vehicle Fetch Error with Population:", error);
-    return res.status(500).json({ success: false, error: "Failed to fetch vehicle list: " + error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
+
 
 
 
@@ -387,67 +336,29 @@ exports.getDrivers = async (req, res) => {
 
 
 
-// exports.updateVehicle = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const updatedData = req.body; 
-    
-//     // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
-//     // to the vehicle document. Mongoose will ignore fields not in the schema.
-//     const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
-//         new: true,
-//         runValidators: true 
-//     });
-    
-//     if (!vehicle) {
-//       return res.status(404).json({ success: false, message: "Vehicle not found" });
-//     }
-    
-//     // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
-//     // schema recently and are not sending all required fields (e.g., document URLs) 
-//     // during this assignment update, or if the ObjectId validation fails.
-    
-//     return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
-//   } catch (error) {
-//     console.error("Vehicle Assignment Update Error:", error);
-//     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
-//   }
-// };
-
-
-
-
 exports.updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
-    const assignmentData = req.body; 
+    const updatedData = req.body; 
     
-    // 1. Fetch the existing vehicle document to get required fields (URLs)
-    const existingVehicle = await vehicleModel.findById(id).lean();
-
-    if (!existingVehicle) {
-      return res.status(404).json({ success: false, message: "Vehicle not found." });
-    }
-
-    // 2. Merge assignment data with existing required fields (URLs)
-    // This prevents Mongoose validation failure on required fields (vehicleImageUrl, pucUrl, etc.)
-    const mergedUpdateData = {
-        ...existingVehicle, // Copy existing data (including URLs)
-        ...assignmentData   // Override with new assignment IDs
-    };
-
-    // 3. Perform the update with validation
-    const vehicle = await vehicleModel.findByIdAndUpdate(id, mergedUpdateData, { 
+    // Use findByIdAndUpdate to save the assignment IDs (driverId, supervisorId, etc.) 
+    // to the vehicle document. Mongoose will ignore fields not in the schema.
+    const vehicle = await vehicleModel.findByIdAndUpdate(id, updatedData, { 
         new: true,
         runValidators: true 
     });
     
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: "Vehicle not found" });
+    }
+    
+    // NOTE: A 500 error here is likely a Mongoose validation error if you updated the 
+    // schema recently and are not sending all required fields (e.g., document URLs) 
+    // during this assignment update, or if the ObjectId validation fails.
+    
     return res.status(200).json({ success: true, message: "Vehicle updated successfully", data: vehicle });
   } catch (error) {
     console.error("Vehicle Assignment Update Error:", error);
-    if (error.name === "ValidationError") {
-        return res.status(400).json({ success: false, message: "Mongoose Validation Failed during update.", errors: error.errors });
-    }
     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
   }
 };
