@@ -302,11 +302,11 @@ exports.getVehicle = async (req, res) => {
         return {
             ...vehicle, 
             
-            // These are the display fields the frontend uses:
+            // These are the fields the frontend displays (name if populated, ID if not)
             assignedDriverName: assignedDriverName,
             assignedSupervisorName: assignedSupervisorName,
             
-            // Ensure the raw IDs are still returned for the Modal's initial state and save logic
+            // Ensure the raw IDs are returned for the Modal and save payload
             assignedDriverId: vehicle.assignedDriverId ? vehicle.assignedDriverId._id : null,
             assignedSupervisorId: vehicle.assignedSupervisorId ? vehicle.assignedSupervisorId._id : null,
             assignedRouteId: vehicle.assignedRouteId || null,
@@ -314,6 +314,7 @@ exports.getVehicle = async (req, res) => {
         };
     });
 
+    // We return success: true and data: [...] as per your Postman response structure
     return res.status(200).json({ success: true, data: mappedResponse });
     
   }
@@ -422,7 +423,7 @@ exports.updateVehicle = async (req, res) => {
     const { id } = req.params;
     const assignmentData = req.body; 
     
-    // 1. Fetch the existing vehicle document to get required fields (URLs)
+    // 1. Fetch the existing vehicle document to get required fields (like all document URLs)
     const existingVehicle = await vehicleModel.findById(id).lean();
 
     if (!existingVehicle) {
@@ -430,7 +431,7 @@ exports.updateVehicle = async (req, res) => {
     }
 
     // 2. Merge assignment data with existing required fields (URLs)
-    // This prevents Mongoose validation failure on required fields (vehicleImageUrl, pucUrl, etc.)
+    // This prevents Mongoose validation failure on required document fields.
     const mergedUpdateData = {
         ...existingVehicle, // Copy existing data (including URLs)
         ...assignmentData   // Override with new assignment IDs
@@ -450,4 +451,3 @@ exports.updateVehicle = async (req, res) => {
     }
     return res.status(500).json({ success: false, message: "Error updating vehicle assignment", error: error.message });
   }
-};
