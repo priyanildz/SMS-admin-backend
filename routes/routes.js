@@ -233,6 +233,13 @@ router.post("/add-route", routeController.addRoute);
 // get routes
 router.get("/routes", routeController.getRoutes);
 
+
+// NEW ROUTE: Delete Route (implementing cascading cleanup logic)
+router.delete("/routes/:id", routeController.deleteRoute);
+
+
+
+
 // add student assigning to route
 router.post("/add-student-route", routeController.assignStudent);
 

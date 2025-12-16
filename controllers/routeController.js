@@ -133,3 +133,39 @@ exports.getAssignedStudents = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+
+exports.deleteRoute = async (req, res) => {
+    try {
+        const routeId = req.params.id;
+        
+        // 1. Find the route before deleting it to get the routeName
+        const routeToDelete = await Route.findById(routeId);
+        if (!routeToDelete) {
+            return res.status(404).json({ success: false, message: "Route not found" });
+        }
+
+        // 2. Perform the actual route deletion
+        await Route.findByIdAndDelete(routeId);
+
+        // 3. CLEANUP: Find the vehicle that referenced this route ID and unassign it
+        // We use the route's vehicleNumber field for the lookup if assignedRouteId on vehicle is not used.
+        // A more robust way is to find the vehicle where assignedRouteId matches routeId.
+        
+        // Find the vehicle by its internal route ID reference:
+        const unassignedVehicle = await vehicle.findOneAndUpdate(
+            { assignedRouteId: routeId },
+            { $set: { assignedRouteId: null } },
+            { new: true }
+        );
+
+        if (unassignedVehicle) {
+            console.log(`Vehicle ${unassignedVehicle.vehicleno} unassigned from route: ${routeToDelete.routeName}`);
+        }
+
+        return res.status(200).json({ success: true, message: "Route deleted and vehicle unassigned successfully" });
+    } catch (error) {
+        console.error("Route Deletion Error:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
