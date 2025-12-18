@@ -625,175 +625,346 @@ const Driver = require("../models/driverModel.js");
  * Files are ALREADY uploaded from frontend to Cloudinary.
  * Backend receives ONLY URLs in req.body.
  */
+// exports.registerStaff = async (req, res) => {
+// 	try {
+// 		// Destructure all expected fields from req.body
+// 		const {
+// 			fullName,
+// 			designation,
+// 			contactNumber,
+// 			alternateContactNumber,
+// 			licenseNumber,
+// 			aadhaarNumber,
+// 			completeAddress,
+
+// 			// Personal details
+// 			status,
+// 			dob,
+// 			maritalStatus,
+// 			bloodGroup,
+// 			gender,
+// 			nationality,
+// 			category,
+// 			totalExperience,
+// 			previousEmployer,
+
+// 			// Bank details
+// 			bankName,
+// 			branchName,
+// 			accountNumber,
+// 			ifscCode,
+// 			panNumber,
+
+// 			// Split name fields
+// 			firstName,
+// 			middleName,
+// 			lastName,
+
+// 			// Driver-specific
+// 			vid,
+
+// 			// ✅ CRITICAL FIX: Add the email field to the destructuring
+// 			email, // <--- ADDED THE MISSING EMAIL FIELD
+
+// 			// ✅ PRE-UPLOADED FILE URLS (from frontend)
+// 			photoUrl,
+// 			aadhaarFileUrl,
+// 			resumeFileUrl,
+// 		} = req.body;
+
+// 		// 🌟 REQUIRED FILE VALIDATION
+// 		if (!aadhaarFileUrl) {
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "Aadhaar document file is missing.",
+// 			});
+// 		}
+
+// 		if (!resumeFileUrl) {
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "Resume document file is missing.",
+// 			});
+// 		}
+
+// 		// Construct common staff data
+// 		const staffData = {
+// 			fullName,
+// 			designation,
+// 			contactNumber,
+// 			alternateContactNumber,
+
+// 			// The local variable 'email' is now defined and holds the correct value
+// 			email, // <--- THIS NOW INCLUDES THE EMAIL VALUE
+
+// 			// 🚨 FIX: licenseNumber only for Driver
+// 			licenseNumber: designation === "Driver" ? licenseNumber : null,
+
+// 			aadhaarNumber,
+// 			completeAddress,
+
+// 			// Personal
+// 			dob,
+// 			maritalStatus,
+// 			bloodGroup,
+// 			gender,
+// 			nationality,
+// 			category,
+
+// 			firstName,
+// 			middleName,
+// 			lastName,
+
+// 			// Bank
+// 			bankName,
+// 			branchName,
+// 			accountNumber,
+// 			ifscCode,
+// 			panNumber,
+
+// 			// Experience
+// 			totalExperience,
+// 			previousEmployer,
+
+// 			// Status & Files
+// 			status,
+// 			photoUrl,
+// 			aadhaarFileUrl,
+// 			resumeFileUrl,
+// 		};
+
+// 		let savedStaff;
+
+// 		if (designation === "Driver") {
+// 			// ✅ CRITICAL FIX: Add the required 'driverName' field for the Driver schema
+// 			const driverData = {
+// 				...staffData,
+// 				vid,
+// 				driverName: fullName, // Maps the frontend's fullName to the schema's driverName
+// 			};
+// 			savedStaff = new Driver(driverData);
+// 		} else if (designation === "Supervisor") {
+// 			// Supervisor schema does not require 'driverName' or 'vid'
+// 			savedStaff = new Staff(staffData);
+// 		} else {
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "Invalid designation",
+// 			});
+// 		}
+
+// 		await savedStaff.save();
+
+// 		res.status(201).json({
+// 			success: true,
+// 			message: `${designation} registered successfully`,
+// 			data: savedStaff,
+// 		});
+// 	} catch (error) {
+// 		console.error("Registration Error:", error);
+
+// 		// Handle Mongoose validation errors cleanly
+// 		if (error.name === "ValidationError") {
+// 			const validationErrors = {};
+// 			Object.keys(error.errors).forEach((key) => {
+// 				validationErrors[key] = error.errors[key].message;
+// 			});
+
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "Mongoose Validation Failed",
+// 				errors: validationErrors,
+// 			});
+// 		}
+
+// 		// Handle duplicate key errors (unique fields)
+// 		if (error.code === 11000) {
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "Duplicate entry detected",
+// 				error: error.keyValue,
+// 			});
+// 		}
+
+// 		// Generic error
+// 		res.status(400).json({
+// 			success: false,
+// 			message: "Error registering staff/driver",
+// 			error: error.message || error.toString(),
+// 		});
+// 	}
+// };
+
 exports.registerStaff = async (req, res) => {
-	try {
-		// Destructure all expected fields from req.body
-		const {
-			fullName,
-			designation,
-			contactNumber,
-			alternateContactNumber,
-			licenseNumber,
-			aadhaarNumber,
-			completeAddress,
+    try {
+        // Destructure all expected fields from req.body
+        const {
+            fullName,
+            designation,
+            contactNumber,
+            alternateContactNumber,
+            licenseNumber,
+            aadhaarNumber,
+            completeAddress,
 
-			// Personal details
-			status,
-			dob,
-			maritalStatus,
-			bloodGroup,
-			gender,
-			nationality,
-			category,
-			totalExperience,
-			previousEmployer,
+            // Personal details
+            status,
+            dob,
+            maritalStatus,
+            bloodGroup,
+            gender,
+            nationality,
+            category,
+            totalExperience,
+            previousEmployer,
 
-			// Bank details
-			bankName,
-			branchName,
-			accountNumber,
-			ifscCode,
-			panNumber,
+            // Bank details
+            bankName,
+            branchName,
+            accountNumber,
+            ifscCode,
+            panNumber,
 
-			// Split name fields
-			firstName,
-			middleName,
-			lastName,
+            // Split name fields
+            firstName,
+            middleName,
+            lastName,
 
-			// Driver-specific
-			vid,
+            // Driver-specific
+            vid,
 
-			// ✅ CRITICAL FIX: Add the email field to the destructuring
-			email, // <--- ADDED THE MISSING EMAIL FIELD
+            // Email field
+            email, 
 
-			// ✅ PRE-UPLOADED FILE URLS (from frontend)
-			photoUrl,
-			aadhaarFileUrl,
-			resumeFileUrl,
-		} = req.body;
+            // PRE-UPLOADED FILE URLS (from frontend)
+            photoUrl,
+            aadhaarFileUrl,
+            resumeFileUrl,
+        } = req.body;
 
-		// 🌟 REQUIRED FILE VALIDATION
-		if (!aadhaarFileUrl) {
-			return res.status(400).json({
-				success: false,
-				message: "Aadhaar document file is missing.",
-			});
-		}
+        // REQUIRED FILE VALIDATION
+        if (!aadhaarFileUrl) {
+            return res.status(400).json({
+                success: false,
+                message: "Aadhaar document file is missing.",
+            });
+        }
 
-		if (!resumeFileUrl) {
-			return res.status(400).json({
-				success: false,
-				message: "Resume document file is missing.",
-			});
-		}
+        if (!resumeFileUrl) {
+            return res.status(400).json({
+                success: false,
+                message: "Resume document file is missing.",
+            });
+        }
 
-		// Construct common staff data
-		const staffData = {
-			fullName,
-			designation,
-			contactNumber,
-			alternateContactNumber,
+        // Construct common staff data
+        const staffData = {
+            fullName,
+            designation,
+            contactNumber,
+            alternateContactNumber,
+            email,
+            aadhaarNumber,
+            completeAddress,
 
-			// The local variable 'email' is now defined and holds the correct value
-			email, // <--- THIS NOW INCLUDES THE EMAIL VALUE
+            // Personal
+            dob,
+            maritalStatus,
+            bloodGroup,
+            gender,
+            nationality,
+            category,
 
-			// 🚨 FIX: licenseNumber only for Driver
-			licenseNumber: designation === "Driver" ? licenseNumber : null,
+            firstName,
+            middleName,
+            lastName,
 
-			aadhaarNumber,
-			completeAddress,
+            // Bank
+            bankName,
+            branchName,
+            accountNumber,
+            ifscCode,
+            panNumber,
 
-			// Personal
-			dob,
-			maritalStatus,
-			bloodGroup,
-			gender,
-			nationality,
-			category,
+            // Experience
+            totalExperience,
+            previousEmployer,
 
-			firstName,
-			middleName,
-			lastName,
+            // Status & Files
+            status,
+            photoUrl,
+            aadhaarFileUrl,
+            resumeFileUrl,
+        };
 
-			// Bank
-			bankName,
-			branchName,
-			accountNumber,
-			ifscCode,
-			panNumber,
+        let savedStaff;
 
-			// Experience
-			totalExperience,
-			previousEmployer,
+        if (designation === "Driver") {
+            // Drivers require licenseNumber, driverName, and vid
+            const driverData = {
+                ...staffData,
+                licenseNumber, // Included only for Drivers
+                vid,
+                driverName: fullName, 
+            };
+            savedStaff = new Driver(driverData);
+        } else if (designation === "Supervisor") {
+            /**
+             * FIX: Completely exclude licenseNumber for Supervisors.
+             * This prevents Mongoose from sending 'null' and triggering 
+             * unique constraint errors in MongoDB.
+             */
+            savedStaff = new Staff(staffData);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid designation",
+            });
+        }
 
-			// Status & Files
-			status,
-			photoUrl,
-			aadhaarFileUrl,
-			resumeFileUrl,
-		};
+        await savedStaff.save();
 
-		let savedStaff;
+        res.status(201).json({
+            success: true,
+            message: `${designation} registered successfully`,
+            data: savedStaff,
+        });
+    } catch (error) {
+        console.error("Registration Error:", error);
 
-		if (designation === "Driver") {
-			// ✅ CRITICAL FIX: Add the required 'driverName' field for the Driver schema
-			const driverData = {
-				...staffData,
-				vid,
-				driverName: fullName, // Maps the frontend's fullName to the schema's driverName
-			};
-			savedStaff = new Driver(driverData);
-		} else if (designation === "Supervisor") {
-			// Supervisor schema does not require 'driverName' or 'vid'
-			savedStaff = new Staff(staffData);
-		} else {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid designation",
-			});
-		}
+        if (error.name === "ValidationError") {
+            const validationErrors = {};
+            Object.keys(error.errors).forEach((key) => {
+                validationErrors[key] = error.errors[key].message;
+            });
 
-		await savedStaff.save();
+            return res.status(400).json({
+                success: false,
+                message: "Mongoose Validation Failed",
+                errors: validationErrors,
+            });
+        }
 
-		res.status(201).json({
-			success: true,
-			message: `${designation} registered successfully`,
-			data: savedStaff,
-		});
-	} catch (error) {
-		console.error("Registration Error:", error);
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: "Duplicate entry detected",
+                error: error.keyValue,
+            });
+        }
 
-		// Handle Mongoose validation errors cleanly
-		if (error.name === "ValidationError") {
-			const validationErrors = {};
-			Object.keys(error.errors).forEach((key) => {
-				validationErrors[key] = error.errors[key].message;
-			});
-
-			return res.status(400).json({
-				success: false,
-				message: "Mongoose Validation Failed",
-				errors: validationErrors,
-			});
-		}
-
-		// Handle duplicate key errors (unique fields)
-		if (error.code === 11000) {
-			return res.status(400).json({
-				success: false,
-				message: "Duplicate entry detected",
-				error: error.keyValue,
-			});
-		}
-
-		// Generic error
-		res.status(400).json({
-			success: false,
-			message: "Error registering staff/driver",
-			error: error.message || error.toString(),
-		});
-	}
+        res.status(400).json({
+            success: false,
+            message: "Error registering staff/driver",
+            error: error.message || error.toString(),
+        });
+    }
 };
+
+
+
+
+
 
 /**
  * NEW FUNCTION: Handles PUT request to update Driver/Supervisor data.
