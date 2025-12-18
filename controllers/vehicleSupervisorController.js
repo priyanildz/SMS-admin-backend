@@ -795,131 +795,60 @@ const Driver = require("../models/driverModel.js");
 // 	}
 // };
 
+
+
+
+
 exports.registerStaff = async (req, res) => {
     try {
-        // Destructure all expected fields from req.body
         const {
-            fullName,
-            designation,
-            contactNumber,
-            alternateContactNumber,
-            licenseNumber,
-            aadhaarNumber,
-            completeAddress,
-
-            // Personal details
-            status,
-            dob,
-            maritalStatus,
-            bloodGroup,
-            gender,
-            nationality,
-            category,
-            totalExperience,
-            previousEmployer,
-
-            // Bank details
-            bankName,
-            branchName,
-            accountNumber,
-            ifscCode,
-            panNumber,
-
-            // Split name fields
-            firstName,
-            middleName,
-            lastName,
-
-            // Driver-specific
-            vid,
-
-            // Email field
-            email, 
-
-            // PRE-UPLOADED FILE URLS (from frontend)
-            photoUrl,
-            aadhaarFileUrl,
-            resumeFileUrl,
+            fullName, designation, contactNumber, alternateContactNumber,
+            licenseNumber, aadhaarNumber, completeAddress, status,
+            dob, maritalStatus, bloodGroup, gender, nationality,
+            category, totalExperience, previousEmployer, bankName,
+            branchName, accountNumber, ifscCode, panNumber,
+            firstName, middleName, lastName, vid, email,
+            photoUrl, aadhaarFileUrl, resumeFileUrl,
         } = req.body;
 
-        // REQUIRED FILE VALIDATION
-        if (!aadhaarFileUrl) {
+        // Validation for required files
+        if (!aadhaarFileUrl || !resumeFileUrl) {
             return res.status(400).json({
                 success: false,
-                message: "Aadhaar document file is missing.",
+                message: "Required documents (Aadhaar/Resume) are missing.",
             });
         }
 
-        if (!resumeFileUrl) {
-            return res.status(400).json({
-                success: false,
-                message: "Resume document file is missing.",
-            });
-        }
-
-        // Construct common staff data
+        // Base data object
         const staffData = {
-            fullName,
-            designation,
-            contactNumber,
-            alternateContactNumber,
-            email,
-            aadhaarNumber,
-            completeAddress,
-
-            // Personal
-            dob,
-            maritalStatus,
-            bloodGroup,
-            gender,
-            nationality,
-            category,
-
-            firstName,
-            middleName,
-            lastName,
-
-            // Bank
-            bankName,
-            branchName,
-            accountNumber,
-            ifscCode,
-            panNumber,
-
-            // Experience
-            totalExperience,
-            previousEmployer,
-
-            // Status & Files
-            status,
-            photoUrl,
-            aadhaarFileUrl,
-            resumeFileUrl,
+            fullName, firstName, middleName, lastName,
+            designation, contactNumber, alternateContactNumber,
+            email, aadhaarNumber, completeAddress, dob,
+            maritalStatus, bloodGroup, gender, nationality,
+            category, bankName, branchName, accountNumber,
+            ifscCode, panNumber, totalExperience, previousEmployer,
+            status, photoUrl, aadhaarFileUrl, resumeFileUrl,
         };
 
         let savedStaff;
 
         if (designation === "Driver") {
-            // Drivers require licenseNumber, driverName, and vid
-            const driverData = {
+            // Drivers MUST have a license number
+            savedStaff = new Driver({
                 ...staffData,
-                licenseNumber, // Included only for Drivers
+                licenseNumber, 
                 vid,
-                driverName: fullName, 
-            };
-            savedStaff = new Driver(driverData);
-        } else if (designation === "Supervisor") {
-            /**
-             * FIX: Completely exclude licenseNumber for Supervisors.
-             * This prevents Mongoose from sending 'null' and triggering 
-             * unique constraint errors in MongoDB.
-             */
-            savedStaff = new Staff(staffData);
-        } else {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid designation",
+                driverName: fullName,
             });
+        } else if (designation === "Supervisor") {
+            // Supervisors get licenseNumber set to null
+            // Ensure the UNIQUE index is deleted in Atlas for this to work
+            savedStaff = new Staff({
+                ...staffData,
+                licenseNumber: null 
+            });
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid designation" });
         }
 
         await savedStaff.save();
@@ -929,37 +858,22 @@ exports.registerStaff = async (req, res) => {
             message: `${designation} registered successfully`,
             data: savedStaff,
         });
+
     } catch (error) {
         console.error("Registration Error:", error);
-
-        if (error.name === "ValidationError") {
-            const validationErrors = {};
-            Object.keys(error.errors).forEach((key) => {
-                validationErrors[key] = error.errors[key].message;
-            });
-
-            return res.status(400).json({
-                success: false,
-                message: "Mongoose Validation Failed",
-                errors: validationErrors,
-            });
-        }
-
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
-                message: "Duplicate entry detected",
+                message: "Duplicate entry detected (Email, Aadhaar, PAN, or Account Number already exists).",
                 error: error.keyValue,
             });
         }
-
-        res.status(400).json({
-            success: false,
-            message: "Error registering staff/driver",
-            error: error.message || error.toString(),
-        });
+        res.status(400).json({ success: false, message: error.message });
     }
 };
+
+
+
 
 
 
