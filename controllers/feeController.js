@@ -340,15 +340,51 @@ const Fee = require("../models/feeModel");
 const Category = require("../models/categoryModel");
 
 // add fees structure
+// exports.addFee = async (req, res) => {
+//   try {
+//     const newFee = new Fee(req.body);
+//     await newFee.save();
+//     res.status(201).json({ message: "Fee structure created", data: newFee });
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
+
+
+
 exports.addFee = async (req, res) => {
-  try {
-    const newFee = new Fee(req.body);
-    await newFee.save();
-    res.status(201).json({ message: "Fee structure created", data: newFee });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+  try {
+    const { standard } = req.body;
+
+    // Use findOneAndUpdate to search by 'standard'. 
+    // If found, update with req.body; if not, create a new one.
+    const updatedFee = await Fee.findOneAndUpdate(
+      { standard: standard }, // Search criteria
+      req.body,               // Data to update/insert
+      { 
+        new: true,            // Return the modified document
+        upsert: true,         // Create a new document if one doesn't exist
+        runValidators: true   // Ensure the new data matches the Schema
+      }
+    );
+
+    const status = updatedFee.wasNew ? 201 : 200;
+    res.status(status).json({ 
+      message: `Fee structure for Standard ${standard} ${updatedFee.wasNew ? 'created' : 'updated'} successfully`, 
+      data: updatedFee 
+    });
+  } catch (err) {
+    console.error("Fee Structure save error:", err);
+    res.status(400).json({ error: err.message });
+  }
 };
+
+
+
+
+
+
+
 
 // get all fees structure
 exports.getFees = async (req, res) => {
