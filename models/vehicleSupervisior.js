@@ -105,12 +105,12 @@ const StaffSchema = new mongoose.Schema({
     },
     
     // 🌟 NEW: Statutory IDs and Licenses 🌟
-    // licenseNumber: {
-    //     type: String,
-    //     sparse: true,
-    //     // Default is null, not required. Explicitly remove unique: true if it was there before.
-    //     default: null, // Optional for Supervisors
-    // },
+    licenseNumber: {
+        type: String,
+        sparse: true,
+        // Default is null, not required. Explicitly remove unique: true if it was there before.
+        default: null, // Optional for Supervisors
+    },
     aadhaarNumber: {
         type: String,
         required: true,
