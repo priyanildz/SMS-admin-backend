@@ -174,3 +174,26 @@ exports.updateAnnouncement = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+exports.updateAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 🔥 NEW LOGIC: If a schedule is provided in the edit, re-calculate status
+    let updateData = { ...req.body };
+    if (updateData.schedule) {
+        const scheduleDate = new Date(updateData.schedule);
+        const currentDate = new Date();
+        updateData.status = (scheduleDate <= currentDate) ? "sent" : "draft";
+    }
+
+    const response = await announcement.findByIdAndUpdate(
+      id,
+      updateData, 
+      { new: true }
+    );
+    return res.status(200).json({message:'updated successfully', data: response})
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
