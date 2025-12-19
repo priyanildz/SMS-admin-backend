@@ -116,3 +116,36 @@ exports.getClassTeacherByClass = async (req, res) => {
         return res.status(404).json({ message: "Failed to fetch class teacher details." }); 
     }
 };
+
+
+exports.editClassroom = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Find the classroom by ID and update it with the new data from req.body
+        const updatedClassroom = await classroom.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true } // Return the updated document and run schema validations
+        );
+
+        if (!updatedClassroom) {
+            return res.status(404).json({ message: "Classroom assignment not found." });
+        }
+
+        return res.status(200).json({ 
+            message: "Classroom assignment updated successfully.", 
+            data: updatedClassroom 
+        });
+    } catch (error) {
+        console.error("Error updating classroom:", error);
+        
+        // Handle duplicate key errors if the user tries to edit a class to a combination that already exists
+        if (error.code === 11000) {
+            return res.status(409).json({ error: "This Standard and Division combination already exists." });
+        }
+
+        return res.status(500).json({ error: error.message, message: "Internal Server Error during update." });
+    }
+};
