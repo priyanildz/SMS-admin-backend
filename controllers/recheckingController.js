@@ -31,16 +31,53 @@
 const Rechecking = require("../models/recheckingModel");
 
 // Add new rechecking request
+// exports.addRechecking = async (req, res) => {
+//   try {
+//     const recheck = new Rechecking(req.body);
+//     await recheck.save();
+//     res.status(201).json({ message: "Rechecking assigned successfully", recheck });
+//   } catch (error) {
+//     console.error("Error adding rechecking:", error);
+//     res.status(500).json({ error: "Failed to assign rechecking" });
+//   }
+// };
+
+
 exports.addRechecking = async (req, res) => {
-  try {
-    const recheck = new Rechecking(req.body);
-    await recheck.save();
-    res.status(201).json({ message: "Rechecking assigned successfully", recheck });
-  } catch (error) {
-    console.error("Error adding rechecking:", error);
-    res.status(500).json({ error: "Failed to assign rechecking" });
-  }
+  try {
+    const { standard, division, subject } = req.body;
+
+    // Automatically find who was originally assigned to evaluate these papers
+    const originalEval = await PaperEvaluation.findOne({
+      standard,
+      division,
+      subject
+    });
+
+    const recheckData = {
+      ...req.body,
+      // If an original evaluator is found, set them as checkedBy
+      checkedBy: originalEval ? originalEval.assignedteacher : null
+    };
+
+    const recheck = new Rechecking(recheckData);
+    await recheck.save();
+    
+    res.status(201).json({ message: "Rechecking assigned successfully", recheck });
+  } catch (error) {
+    console.error("Error adding rechecking:", error);
+    res.status(500).json({ error: "Failed to assign rechecking" });
+  }
 };
+
+
+
+
+
+
+
+
+
 
 // Get all rechecking requests
 exports.getRechecking = async (req, res) => {
