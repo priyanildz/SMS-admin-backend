@@ -40,7 +40,7 @@ exports.addEval = async (req, res) => {
 exports.getEval = async (req, res) => {
   try {
     const papers = await paperEval.find()
-      .populate("assignedteacher", "firstname")
+      .populate("assignedteacher", "firstname lastname")
       .lean();
     res.json({ success: true, data: papers });
   } catch (err) {
