@@ -29,7 +29,7 @@
 
 // recheckingController
 const Rechecking = require("../models/recheckingModel");
-const PaperEvaluation = require("../models/paperEvaluationController");
+const PaperEvaluation = require("../models/paperEvaluation");
 
 // Add new rechecking request
 // exports.addRechecking = async (req, res) => {
@@ -44,39 +44,31 @@ const PaperEvaluation = require("../models/paperEvaluationController");
 // };
 
 
+
 exports.addRechecking = async (req, res) => {
   try {
     const { standard, division, subject } = req.body;
 
-    // 1. Automatically find who originally evaluated these papers
+    // Automatically find who was originally assigned to evaluate these papers
     const originalEval = await PaperEvaluation.findOne({
       standard,
       division,
       subject
     });
 
-    // 2. Prepare data, ensuring checkedBy is the ID from the evaluation table
     const recheckData = {
       ...req.body,
-      // Use the teacher found in the evaluation table, or null if not found
+      // If an original evaluator is found, set them as checkedBy
       checkedBy: originalEval ? originalEval.assignedteacher : null
     };
 
     const recheck = new Rechecking(recheckData);
     await recheck.save();
     
-    res.status(201).json({ 
-      success: true, 
-      message: "Rechecking assigned successfully", 
-      recheck 
-    });
+    res.status(201).json({ message: "Rechecking assigned successfully", recheck });
   } catch (error) {
     console.error("Error adding rechecking:", error);
-    // Returning a structured JSON error helps the frontend display the message
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to assign rechecking: " + error.message 
-    });
+    res.status(500).json({ error: "Failed to assign rechecking" });
   }
 };
 
