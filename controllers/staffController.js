@@ -705,82 +705,145 @@ exports.getStaffHistory = async (req, res) => {
 // =========================================================================
 // ADD STAFF (Refactored)
 // =========================================================================
+// exports.addStaff = async (req, res) => {
+//     try {
+//         const data = req.body;
+//         
+//         // --- 1. Save or Update the main Staff Document ---
+//         const staff = new Staff({
+//             staffid: data.staffid,
+//             firstname: data.firstname,
+//             middlename: data.middlename,
+//             lastname: data.lastname,
+//             dob: data.dob,
+//             maritalstatus: data.maritalstatus,
+//             bloodgroup: data.bloodgroup,
+//             gender: data.gender,
+//             category: data.category,
+//             nationality: data.nationality,
+//             aadharno: data.aadharno,
+//             photo: data.photo,
+//             status: data.status, 
+//             phoneno: data.phoneno,
+//             alternatephoneno: data.alternatephoneno,
+//             password: data.password, 
+//             emailaddress: data.emailaddress,
+//         });
+//         await staff.save();
+//         
+//         const staffId = data.staffid;
+
+//         // --- 2. Create Sub-Documents using the new upsert helper ---
+//         
+//         // Address
+//         await upsertStaffSubDoc(staffAddress, staffId, data, [
+//             "addressline1", "addressline2", "city", "postalcode", 
+//             "district", "state", "country"
+//         ]);
+
+//         // Education
+//         await upsertStaffSubDoc(staffEductaion, staffId, data, [
+//             "highestqualification", "yearofpassing", "specialization", 
+//             "certificates", "universityname"
+//         ]);
+
+//         // Experience
+//         await upsertStaffSubDoc(staffExperience, staffId, data, [
+//             "totalexperience", "designation", "previousemployer", 
+//             "subjectstaught", "reasonforleaving"
+//         ]);
+
+//         // Role
+//         await upsertStaffSubDoc(staffRole, staffId, data, [
+//             "position", "dept", "preferredgrades", "joiningdate"
+//         ]);
+
+//         // Bank
+//         await upsertStaffSubDoc(staffBank, staffId, data, [
+//             "bankname", "branchname", "accno", "ifccode", "panno"
+//         ]);
+
+//         // Transport
+//         await upsertStaffSubDoc(staffTransport, staffId, data, [
+//             "transportstatus", "pickuppoint", "droppoint", "modetransport"
+//         ]);
+
+//         // Documents
+//         await upsertStaffSubDoc(staffDocs, staffId, data, [
+//             "documentsurl"
+//         ]);
+
+//         return res.status(201).json({ message: "Staff added successfully" });
+//     } catch (error) {
+//         console.error("Error adding staff:", error);
+//         if (error.code === 11000) {
+//             return res.status(409).json({ error: "Duplicate key error. Staff ID or Aadhar already exists." });
+//         }
+//         return res.status(500).json({ error: error.message, message: "Internal Server Error during staff addition." });
+//     }
+// };
 exports.addStaff = async (req, res) => {
-    try {
-        const data = req.body;
-        
-        // --- 1. Save or Update the main Staff Document ---
-        const staff = new Staff({
-            staffid: data.staffid,
-            firstname: data.firstname,
-            middlename: data.middlename,
-            lastname: data.lastname,
-            dob: data.dob,
-            maritalstatus: data.maritalstatus,
-            bloodgroup: data.bloodgroup,
-            gender: data.gender,
-            category: data.category,
-            nationality: data.nationality,
-            aadharno: data.aadharno,
-            photo: data.photo,
-            status: data.status, 
-            phoneno: data.phoneno,
-            alternatephoneno: data.alternatephoneno,
-            password: data.password, 
-            emailaddress: data.emailaddress,
-        });
-        await staff.save();
-        
-        const staffId = data.staffid;
+    try {
+        const data = req.body;
+        const staffId = data.staffid;
 
-        // --- 2. Create Sub-Documents using the new upsert helper ---
-        
-        // Address
-        await upsertStaffSubDoc(staffAddress, staffId, data, [
-            "addressline1", "addressline2", "city", "postalcode", 
-            "district", "state", "country"
-        ]);
+        // 1. Save the main Staff Document first
+        const staff = new Staff({
+            staffid: staffId,
+            firstname: data.firstname,
+            middlename: data.middlename,
+            lastname: data.lastname,
+            dob: data.dob,
+            maritalstatus: data.maritalstatus,
+            bloodgroup: data.bloodgroup,
+            gender: data.gender,
+            category: data.category,
+            nationality: data.nationality,
+            aadharno: data.aadharno,
+            photo: data.photo,
+            status: data.status, 
+            phoneno: data.phoneno,
+            alternatephoneno: data.alternatephoneno,
+            password: data.password, 
+            emailaddress: data.emailaddress,
+        });
+        
+        await staff.save();
 
-        // Education
-        await upsertStaffSubDoc(staffEductaion, staffId, data, [
-            "highestqualification", "yearofpassing", "specialization", 
-            "certificates", "universityname"
-        ]);
+        // 2. Run all sub-document updates IN PARALLEL 🚀
+        // This prevents the Vercel 10s timeout issue
+        await Promise.all([
+            upsertStaffSubDoc(staffAddress, staffId, data, [
+                "addressline1", "addressline2", "city", "postalcode", "district", "state", "country"
+            ]),
+            upsertStaffSubDoc(staffEductaion, staffId, data, [
+                "highestqualification", "yearofpassing", "specialization", "certificates", "universityname"
+            ]),
+            upsertStaffSubDoc(staffExperience, staffId, data, [
+                "totalexperience", "designation", "previousemployer", "subjectstaught", "reasonforleaving"
+            ]),
+            upsertStaffSubDoc(staffRole, staffId, data, [
+                "position", "dept", "preferredgrades", "joiningdate"
+            ]),
+            upsertStaffSubDoc(staffBank, staffId, data, [
+                "bankname", "branchname", "accno", "ifccode", "panno"
+            ]),
+            upsertStaffSubDoc(staffTransport, staffId, data, [
+                "transportstatus", "pickuppoint", "droppoint", "modetransport"
+            ]),
+            upsertStaffSubDoc(staffDocs, staffId, data, [
+                "documentsurl"
+            ])
+        ]);
 
-        // Experience
-        await upsertStaffSubDoc(staffExperience, staffId, data, [
-            "totalexperience", "designation", "previousemployer", 
-            "subjectstaught", "reasonforleaving"
-        ]);
-
-        // Role
-        await upsertStaffSubDoc(staffRole, staffId, data, [
-            "position", "dept", "preferredgrades", "joiningdate"
-        ]);
-
-        // Bank
-        await upsertStaffSubDoc(staffBank, staffId, data, [
-            "bankname", "branchname", "accno", "ifccode", "panno"
-        ]);
-
-        // Transport
-        await upsertStaffSubDoc(staffTransport, staffId, data, [
-            "transportstatus", "pickuppoint", "droppoint", "modetransport"
-        ]);
-
-        // Documents
-        await upsertStaffSubDoc(staffDocs, staffId, data, [
-            "documentsurl"
-        ]);
-
-        return res.status(201).json({ message: "Staff added successfully" });
-    } catch (error) {
-        console.error("Error adding staff:", error);
-        if (error.code === 11000) {
-            return res.status(409).json({ error: "Duplicate key error. Staff ID or Aadhar already exists." });
-        }
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during staff addition." });
-    }
+        return res.status(201).json({ message: "Staff added successfully" });
+    } catch (error) {
+        console.error("Error adding staff:", error);
+        if (error.code === 11000) {
+            return res.status(409).json({ error: "Duplicate key error. Staff ID or Aadhar already exists." });
+        }
+        return res.status(500).json({ error: error.message, message: "Server timeout or internal error." });
+    }
 };
 
 // =========================================================================
