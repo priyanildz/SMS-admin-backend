@@ -1096,7 +1096,7 @@ exports.getStaffAttendance = async (req, res) => {
 // };
 
 // =========================================================================
-// GET STAFF BY ID (Modified to fetch all related documents with clean mapping)
+// GET STAFF BY ID (Updated for Case-Sensitivity Mapping)
 // =========================================================================
 exports.getStaffById = async (req, res) => {
     try {
@@ -1108,7 +1108,6 @@ exports.getStaffById = async (req, res) => {
         
         const staffId = staff.staffid;
 
-        // Fetch all related documents concurrently from sub-collections
         const [
             address, 
             education, 
@@ -1127,9 +1126,13 @@ exports.getStaffById = async (req, res) => {
             staffDocs.findOne({ staffid: staffId }),
         ]);
 
-        // ✅ FIX: Explicitly map fields to match the frontend 'name' attributes
+        // Helper to capitalize first letter to match frontend dropdowns
+        const formatValue = (val) => {
+            if (!val) return "";
+            return val.charAt(0).toUpperCase() + val.slice(1);
+        };
+
         const mergedStaffData = {
-            // MAIN STAFF FIELDS
             ...staff.toObject(),
 
             // ADDRESS
@@ -1148,16 +1151,16 @@ exports.getStaffById = async (req, res) => {
             certificates: education?.certificates || "",
             universityname: education?.universityname || "",
 
-            // EXPERIENCE (🚨 FIX: designation)
+            // EXPERIENCE (🚨 FIX: designation capitalization)
             totalexperience: experience?.totalexperience || "",
-            designation: experience?.designation || "",
+            designation: formatValue(experience?.designation),
             previousemployer: experience?.previousemployer || "",
             subjectstaught: experience?.subjectstaught || "",
             reasonforleaving: experience?.reasonforleaving || "",
 
-            // ROLE & DEPT (🚨 FIX: position + dept)
-            position: role?.position || "",
-            dept: role?.dept || "",
+            // ROLE & DEPT (🚨 FIX: position + dept capitalization)
+            position: formatValue(role?.position),
+            dept: formatValue(role?.dept),
             preferredgrades: role?.preferredgrades || "",
             joiningdate: role?.joiningdate || "",
 
@@ -1168,7 +1171,7 @@ exports.getStaffById = async (req, res) => {
             ifccode: bank?.ifccode || "",
             panno: bank?.panno || "",
 
-            // TRANSPORT (🚨 FIX: transportstatus)
+            // TRANSPORT
             transportstatus: transport?.transportstatus === "yes" ? "Yes" : (transport?.transportstatus === "no" ? "No" : ""),
             pickuppoint: transport?.pickuppoint || "",
             droppoint: transport?.droppoint || "",
