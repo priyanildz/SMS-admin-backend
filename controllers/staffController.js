@@ -1096,7 +1096,7 @@ exports.getStaffAttendance = async (req, res) => {
 // };
 
 // =========================================================================
-// GET STAFF BY ID (Updated for Case-Sensitivity Mapping)
+// GET STAFF BY ID (Refined for Multi-word Capitalization Mapping)
 // =========================================================================
 exports.getStaffById = async (req, res) => {
     try {
@@ -1126,7 +1126,17 @@ exports.getStaffById = async (req, res) => {
             staffDocs.findOne({ staffid: staffId }),
         ]);
 
-        // Helper to capitalize first letter to match frontend dropdowns
+        // Helper to capitalize all words (e.g., "senior teacher" -> "Senior Teacher")
+        // This ensures a 100% match with the frontend POSITIONS array
+        const formatPosition = (val) => {
+            if (!val) return "";
+            return val
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        };
+
+        // Standard Capitalization for single words (Department)
         const formatValue = (val) => {
             if (!val) return "";
             return val.charAt(0).toUpperCase() + val.slice(1);
@@ -1151,15 +1161,15 @@ exports.getStaffById = async (req, res) => {
             certificates: education?.certificates || "",
             universityname: education?.universityname || "",
 
-            // EXPERIENCE (🚨 FIX: designation capitalization)
+            // EXPERIENCE (🚨 FIX: Designation multi-word mapping)
             totalexperience: experience?.totalexperience || "",
-            designation: formatValue(experience?.designation),
+            designation: formatPosition(experience?.designation),
             previousemployer: experience?.previousemployer || "",
             subjectstaught: experience?.subjectstaught || "",
             reasonforleaving: experience?.reasonforleaving || "",
 
-            // ROLE & DEPT (🚨 FIX: position + dept capitalization)
-            position: formatValue(role?.position),
+            // ROLE & DEPT (🚨 FIX: Position Applied For multi-word mapping)
+            position: formatPosition(role?.position),
             dept: formatValue(role?.dept),
             preferredgrades: role?.preferredgrades || "",
             joiningdate: role?.joiningdate || "",
@@ -1177,7 +1187,7 @@ exports.getStaffById = async (req, res) => {
             droppoint: transport?.droppoint || "",
             modetransport: transport?.modetransport || "",
 
-            // DOCUMENT URLS
+            // DOCUMENTS
             documentsurl: docs?.documentsurl || [],
             
             staffid: staffId 
