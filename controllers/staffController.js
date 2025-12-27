@@ -1337,7 +1337,72 @@ exports.getStaffSubjects = async (req, res) => {
 //     }
 // };
 
+// =========================================================================
+// GET STAFF TIMETABLE (MODIFIED TO FETCH AND TRANSFORM REAL DATA) 🚀
+// =========================================================================
+exports.getStaffTimetable = async (req, res) => {
+    try {
+        const { staffid } = req.params;
+        
+        if (!staffid) {
+            return res.status(400).json({ message: "Staff ID is required." });
+        }
 
+        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
+        if (!staffMember) {
+            return res.status(404).json({ message: "Staff not found." });
+        }
+        
+        const staffMongoId = staffMember._id; 
+        
+        // 1. Find all timetables where this teacher has at least one period
+        const timetables = await Timetable.find({ 
+            "timetable.periods.teacher": staffMongoId 
+        }).lean();
+
+        if (!timetables || timetables.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // 2. Transform the nested database structure into the flat format the frontend expects:
+        // [{ time: "08:00 AM", Mon: "Maths (8A)", Tue: "Science (9B)", ... }]
+        const timeSlots = {};
+
+        timetables.forEach(tt => {
+            const classInfo = `${tt.standard}${tt.division}`; // e.g., "8A"
+            
+            tt.timetable.forEach(dayEntry => {
+                const dayName = dayEntry.day; // e.g., "Monday"
+                const dayKey = dayName.substring(0, 3); // "Mon"
+
+                dayEntry.periods.forEach(period => {
+                    // Only include periods assigned to this specific teacher
+                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
+                        const time = period.time;
+                        
+                        if (!timeSlots[time]) {
+                            timeSlots[time] = { time: time };
+                        }
+                        
+                        // Set the subject and class for that specific day and time
+                        timeSlots[time][dayKey] = `${period.subject} (${classInfo})`;
+                    }
+                });
+            });
+        });
+
+        // 3. Convert the map to a sorted array
+        const formattedTimetable = Object.values(timeSlots).sort((a, b) => {
+            return a.time.localeCompare(b.time);
+        });
+        
+        return res.status(200).json(formattedTimetable);
+        
+    } catch (error) {
+        console.error("Error fetching staff timetable:", error);
+        return res.status(500).json({ error: error.message, message: "Internal Server Error" });
+    }
+};
 
 // add leave request for staff
 exports.addLeave = async (req, res) => {
