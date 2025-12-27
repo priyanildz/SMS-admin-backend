@@ -1127,9 +1127,9 @@ exports.getStaffById = async (req, res) => {
             staffDocs.findOne({ staffid: staffId }),
         ]);
 
-        // ✅ CLEAN MERGE: Explicitly map fields to match the frontend 'name' attributes
+        // ✅ FIX: Explicitly map fields to match the frontend 'name' attributes
         const mergedStaffData = {
-            // MAIN STAFF FIELDS (firstname, lastname, dob, etc.)
+            // MAIN STAFF FIELDS
             ...staff.toObject(),
 
             // ADDRESS
@@ -1148,14 +1148,14 @@ exports.getStaffById = async (req, res) => {
             certificates: education?.certificates || "",
             universityname: education?.universityname || "",
 
-            // EXPERIENCE (🚨 FIXES: designation)
+            // EXPERIENCE (🚨 FIX: designation)
             totalexperience: experience?.totalexperience || "",
             designation: experience?.designation || "",
             previousemployer: experience?.previousemployer || "",
             subjectstaught: experience?.subjectstaught || "",
             reasonforleaving: experience?.reasonforleaving || "",
 
-            // ROLE & DEPT (🚨 FIXES: position + dept)
+            // ROLE & DEPT (🚨 FIX: position + dept)
             position: role?.position || "",
             dept: role?.dept || "",
             preferredgrades: role?.preferredgrades || "",
@@ -1168,8 +1168,8 @@ exports.getStaffById = async (req, res) => {
             ifccode: bank?.ifccode || "",
             panno: bank?.panno || "",
 
-            // TRANSPORT (🚨 FIXES: transportstatus)
-            transportstatus: transport?.transportstatus || "",
+            // TRANSPORT (🚨 FIX: transportstatus)
+            transportstatus: transport?.transportstatus === "yes" ? "Yes" : (transport?.transportstatus === "no" ? "No" : ""),
             pickuppoint: transport?.pickuppoint || "",
             droppoint: transport?.droppoint || "",
             modetransport: transport?.modetransport || "",
@@ -1177,11 +1177,9 @@ exports.getStaffById = async (req, res) => {
             // DOCUMENT URLS
             documentsurl: docs?.documentsurl || [],
             
-            // Explicitly set Staff ID
             staffid: staffId 
         };
         
-        // Remove MongoDB internal keys to prevent state conflicts
         delete mergedStaffData._id;
         delete mergedStaffData.__v;
 
