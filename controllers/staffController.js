@@ -1096,11 +1096,12 @@ exports.getStaffAttendance = async (req, res) => {
 // };
 
 // =========================================================================
-// GET STAFF BY ID (Modified for Clean, Explicit Merging)
+// GET STAFF BY ID (Clean, Explicit Merging for Frontend Visibility)
 // =========================================================================
 exports.getStaffById = async (req, res) => {
     try {
         const { id } = req.params;
+        // 1. Find main staff record
         const staff = await Staff.findById(id);
         if (!staff) {
             return res.status(404).json({ message: "Staff not found" });
@@ -1108,7 +1109,7 @@ exports.getStaffById = async (req, res) => {
         
         const staffId = staff.staffid;
 
-        // Fetch all related documents concurrently
+        // 2. Fetch all related documents from separate collections concurrently
         const [
             address, 
             education, 
@@ -1127,9 +1128,8 @@ exports.getStaffById = async (req, res) => {
             staffDocs.findOne({ staffid: staffId }),
         ]);
 
-        // ✅ CLEAN MERGE: Explicitly map every field to the exact keys frontend expects
+        // 3. ✅ EXPLICIT MERGE: Map values into the EXACT flat keys the frontend expects
         const mergedStaffData = {
-            // MAIN STAFF
             ...staff.toObject(),
 
             // ADDRESS
@@ -1147,13 +1147,13 @@ exports.getStaffById = async (req, res) => {
             specialization: education?.specialization || "",
             universityname: education?.universityname || "",
 
-            // EXPERIENCE (🚨 THIS FIXES designation)
+            // EXPERIENCE (🚨 FIXES: Designation)
             totalexperience: experience?.totalexperience || "",
             designation: experience?.designation || "",
             previousemployer: experience?.previousemployer || "",
             subjectstaught: experience?.subjectstaught || "",
 
-            // ROLE (🚨 THIS FIXES position + dept)
+            // ROLE (🚨 FIXES: Position Applied For + Department)
             position: role?.position || "",
             dept: role?.dept || "",
             preferredgrades: role?.preferredgrades || "",
@@ -1161,22 +1161,22 @@ exports.getStaffById = async (req, res) => {
 
             // BANK
             bankname: bank?.bankname || "",
-            branchname: bank?.branchname || "" ,
+            branchname: bank?.branchname || "",
             accno: bank?.accno || "",
             ifccode: bank?.ifccode || "",
             panno: bank?.panno || "",
 
-            // TRANSPORT (🚨 THIS FIXES transportstatus)
+            // TRANSPORT (🚨 FIXES: Transport Required?)
             transportstatus: transport?.transportstatus || "",
             pickuppoint: transport?.pickuppoint || "",
             droppoint: transport?.droppoint || "",
             modetransport: transport?.modetransport || "",
 
-            // Ensure Staff ID is preserved
+            // Ensure the main identifier is correct
             staffid: staffId 
         };
         
-        // Final cleanup of internal Mongo fields to avoid frontend conflicts
+        // Final cleanup to remove conflicting MongoDB internal fields
         delete mergedStaffData._id;
         delete mergedStaffData.__v;
 
