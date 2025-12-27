@@ -576,21 +576,21 @@ const Staff = require("../models/staffModel");
 
 // Fixed Period Schedule based on user requirements (Mon-Sat structure)
 const FIXED_PERIOD_STRUCTURE = [
-  { num: 1, time: "07:00-07:55", type: "Period", duration: 55 },
-  { num: null, time: "07:55-08:00", type: "Break", duration: 5 },
-  { num: 2, time: "08:00-08:40", type: "Period", duration: 40 },
-  { num: null, time: "08:40-08:45", type: "Break", duration: 5 },
-  { num: 3, time: "08:45-09:25", type: "Period", duration: 40 },
-  { num: null, time: "09:25-09:30", type: "Break", duration: 5 },
-  { num: 4, time: "09:30-10:10", type: "Period", duration: 40 },
-  { num: null, time: "10:10-10:40", type: "Lunch", duration: 30 }, 
-  { num: 5, time: "10:40-11:20", type: "Period", duration: 40 }, 
-  { num: null, time: "11:20-11:25", type: "Break", duration: 5 }, 
-  { num: 6, time: "11:25-12:05", type: "Period", duration: 40 }, 
-  { num: null, time: "12:05-12:10", type: "Break", duration: 5 }, 
-  { num: 7, time: "12:10-01:00", type: "Period", duration: 50 }, 
-//   { num: null, time: "12:1-12:19", type: "Break", duration: 5 }, 
-//   { num: 8, time: "12:19-12:55", type: "Period", duration: 40 }, 
+  { num: 1, time: "07:00-07:37z", type: "Period", duration: 37 },
+  { num: null, time: "07:37-07:42", type: "Break", duration: 5 },
+  { num: 2, time: "07:42-08:19", type: "Period", duration: 37 },
+  { num: null, time: "08:19-08:24", type: "Break", duration: 5 },
+  { num: 3, time: "08:24-09:01", type: "Period", duration: 37 },
+  { num: null, time: "09:01-09:06", type: "Break", duration: 5 },
+  { num: 4, time: "09:06-09:43", type: "Period", duration: 37 },
+  { num: null, time: "09:43-10:13", type: "Lunch", duration: 30 }, 
+  { num: 5, time: "10:13-10:50", type: "Period", duration: 37 }, 
+  { num: null, time: "10:50-10:55", type: "Break", duration: 5 }, 
+  { num: 6, time: "10:55-11:32", type: "Period", duration: 37 }, 
+  { num: null, time: "11:32-11:37", type: "Break", duration: 5 }, 
+  { num: 7, time: "11:37-12:14", type: "Period", duration: 37 }, 
+  { num: null, time: "12:14-12:19", type: "Break", duration: 5 }, 
+  { num: 8, time: "12:19-12:55", type: "Period", duration: 36 }, 
 ];
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
