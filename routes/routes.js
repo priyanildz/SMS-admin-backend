@@ -104,6 +104,8 @@ router.post("/addleave", staffController.addLeave);
 // get all applied requests
 router.get("/getrequests", staffController.getRequests);
 
+router.get('/:staffId/timetable', timetableController.getStaffTimetable);
+
 // adding an event
 router.post("/addevent", eventController.addEvent);
 

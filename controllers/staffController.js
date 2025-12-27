@@ -1291,6 +1291,55 @@ exports.getStaffSubjects = async (req, res) => {
 // =========================================================================
 // GET STAFF TIMETABLE (MODIFIED TO FETCH REAL DATA) 🚀
 // =========================================================================
+// exports.getStaffTimetable = async (req, res) => {
+//     try {
+//         const { staffid } = req.params;
+        
+//         if (!staffid) {
+//             return res.status(400).json({ message: "Staff ID is required." });
+//         }
+
+//         // --- 1. Find the Staff's MongoDB ID ---
+//         // We assume the Timetable model uses the staff's MongoDB _id as a reference.
+//         const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
+
+//         if (!staffMember) {
+//             console.log(`DEBUG: Timetable - Staff ID ${staffid} not found.`);
+//             return res.status(404).json({ message: "Staff not found." });
+//         }
+        
+//         const staffMongoId = staffMember._id; 
+        
+//         // --- 2. Query the Timetable Database ---
+//         // This is the CRITICAL change: Replace the mock array with a Mongoose query.
+        
+//         const staffTimetable = await Timetable.find({ 
+//             // Assuming your Timetable model links to staff using a field like 'teacherId' or 'staffMongoId'
+//             staffMongoId: staffMongoId 
+//             // OR if it's indexed by the string staffid: staffid 
+//         })
+//         .sort({ periodStartTime: 1 }) // Crucial for correct ordering in the table
+//         .lean(); // Use .lean() for faster query results
+
+//         console.log(`DEBUG: Timetable - Fetched ${staffTimetable.length} records for Mongo ID: ${staffMongoId}`);
+
+//         if (!staffTimetable || staffTimetable.length === 0) {
+//             return res.status(200).json([]);
+//         }
+        
+//         // --- 3. Return the fetched data (must be in the format the frontend expects) ---
+//         // Frontend expects: [{ time: "...", Mon: "...", Tue: "...", ... }, ...]
+//         return res.status(200).json(staffTimetable);
+        
+//     } catch (error) {
+//         console.error("Error fetching staff timetable:", error);
+//         return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
+//     }
+// };
+
+// =========================================================================
+// GET STAFF TIMETABLE (MODIFIED TO FETCH AND TRANSFORM REAL DATA) 🚀
+// =========================================================================
 exports.getStaffTimetable = async (req, res) => {
     try {
         const { staffid } = req.params;
@@ -1299,41 +1348,59 @@ exports.getStaffTimetable = async (req, res) => {
             return res.status(400).json({ message: "Staff ID is required." });
         }
 
-        // --- 1. Find the Staff's MongoDB ID ---
-        // We assume the Timetable model uses the staff's MongoDB _id as a reference.
         const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
-
         if (!staffMember) {
-            console.log(`DEBUG: Timetable - Staff ID ${staffid} not found.`);
             return res.status(404).json({ message: "Staff not found." });
         }
         
         const staffMongoId = staffMember._id; 
         
-        // --- 2. Query the Timetable Database ---
-        // This is the CRITICAL change: Replace the mock array with a Mongoose query.
-        
-        const staffTimetable = await Timetable.find({ 
-            // Assuming your Timetable model links to staff using a field like 'teacherId' or 'staffMongoId'
-            staffMongoId: staffMongoId 
-            // OR if it's indexed by the string staffid: staffid 
-        })
-        .sort({ periodStartTime: 1 }) // Crucial for correct ordering in the table
-        .lean(); // Use .lean() for faster query results
+        // 1. Find all timetables where this teacher has at least one period
+        const timetables = await Timetable.find({ 
+            "timetable.periods.teacher": staffMongoId 
+        }).lean();
 
-        console.log(`DEBUG: Timetable - Fetched ${staffTimetable.length} records for Mongo ID: ${staffMongoId}`);
-
-        if (!staffTimetable || staffTimetable.length === 0) {
+        if (!timetables || timetables.length === 0) {
             return res.status(200).json([]);
         }
+
+        // 2. Transform the nested database structure into the flat format the frontend expects:
+        // [{ time: "08:00 AM", Mon: "Maths (8A)", Tue: "Science (9B)", ... }]
+        const timeSlots = {};
+
+        timetables.forEach(tt => {
+            const classInfo = `${tt.standard}${tt.division}`; // e.g., "8A"
+            
+            tt.timetable.forEach(dayEntry => {
+                const dayName = dayEntry.day; // e.g., "Monday"
+                const dayKey = dayName.substring(0, 3); // "Mon"
+
+                dayEntry.periods.forEach(period => {
+                    // Only include periods assigned to this specific teacher
+                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
+                        const time = period.time;
+                        
+                        if (!timeSlots[time]) {
+                            timeSlots[time] = { time: time };
+                        }
+                        
+                        // Set the subject and class for that specific day and time
+                        timeSlots[time][dayKey] = `${period.subject} (${classInfo})`;
+                    }
+                });
+            });
+        });
+
+        // 3. Convert the map to a sorted array
+        const formattedTimetable = Object.values(timeSlots).sort((a, b) => {
+            return a.time.localeCompare(b.time);
+        });
         
-        // --- 3. Return the fetched data (must be in the format the frontend expects) ---
-        // Frontend expects: [{ time: "...", Mon: "...", Tue: "...", ... }, ...]
-        return res.status(200).json(staffTimetable);
+        return res.status(200).json(formattedTimetable);
         
     } catch (error) {
         console.error("Error fetching staff timetable:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during timetable fetch." });
+        return res.status(500).json({ error: error.message, message: "Internal Server Error" });
     }
 };
 
