@@ -1127,8 +1127,9 @@ exports.getStaffById = async (req, res) => {
             staffDocs.findOne({ staffid: staffId }),
         ]);
 
-        // ✅ CLEAN MERGE: Explicitly map fields to match the frontend state
+        // ✅ FIX: Explicitly map fields to match the frontend 'name' attributes
         const mergedStaffData = {
+            // MAIN STAFF FIELDS
             ...staff.toObject(),
 
             // ADDRESS
@@ -1147,14 +1148,14 @@ exports.getStaffById = async (req, res) => {
             certificates: education?.certificates || "",
             universityname: education?.universityname || "",
 
-            // EXPERIENCE (🚨 DESIGNATION mapping)
+            // EXPERIENCE (🚨 FIX: designation)
             totalexperience: experience?.totalexperience || "",
             designation: experience?.designation || "",
             previousemployer: experience?.previousemployer || "",
             subjectstaught: experience?.subjectstaught || "",
             reasonforleaving: experience?.reasonforleaving || "",
 
-            // ROLE & DEPT (🚨 POSITION + DEPT mapping)
+            // ROLE & DEPT (🚨 FIX: position + dept)
             position: role?.position || "",
             dept: role?.dept || "",
             preferredgrades: role?.preferredgrades || "",
@@ -1167,13 +1168,13 @@ exports.getStaffById = async (req, res) => {
             ifccode: bank?.ifccode || "",
             panno: bank?.panno || "",
 
-            // TRANSPORT
-            transportstatus: transport?.transportstatus || "",
+            // TRANSPORT (🚨 FIX: transportstatus)
+            transportstatus: transport?.transportstatus === "yes" ? "Yes" : (transport?.transportstatus === "no" ? "No" : ""),
             pickuppoint: transport?.pickuppoint || "",
             droppoint: transport?.droppoint || "",
             modetransport: transport?.modetransport || "",
 
-            // DOCUMENTS
+            // DOCUMENT URLS
             documentsurl: docs?.documentsurl || [],
             
             staffid: staffId 
