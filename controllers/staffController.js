@@ -1043,58 +1043,149 @@ exports.getStaffAttendance = async (req, res) => {
 // =========================================================================
 // GET STAFF BY ID (Modified to fetch all related documents)
 // =========================================================================
+// exports.getStaffById = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const staff = await Staff.findById(id);
+//         if (!staff) {
+//             return res.status(404).json({ message: "Staff not found" });
+//         }
+//         
+//         const staffId = staff.staffid;
+
+//         // Fetch all related documents concurrently
+//         const [
+//             address, 
+//             education, 
+//             experience, 
+//             role, 
+//             bank, 
+//             transport, 
+//             docs
+//         ] = await Promise.all([
+//             staffAddress.findOne({ staffid: staffId }),
+//             staffEductaion.findOne({ staffid: staffId }),
+//             staffExperience.findOne({ staffid: staffId }),
+//             staffRole.findOne({ staffid: staffId }),
+//             staffBank.findOne({ staffid: staffId }),
+//             staffTransport.findOne({ staffid: staffId }),
+//             staffDocs.findOne({ staffid: staffId }),
+//         ]);
+
+//         // Merge all documents into a single flat object for the frontend
+//         const mergedStaffData = {
+//             ...staff._doc,
+//             ...(address ? address._doc : {}),
+//             ...(education ? education._doc : {}),
+//             ...(experience ? experience._doc : {}),
+//             ...(role ? role._doc : {}),
+//             ...(bank ? bank._doc : {}),
+//             ...(transport ? transport._doc : {}),
+//             ...(docs ? docs._doc : {}),
+//             staffid: staffId 
+//         };
+//         
+//         delete mergedStaffData._id;
+//         delete mergedStaffData.__v;
+
+//         return res.status(200).json(mergedStaffData);
+//     } catch (error) {
+//         console.error("Error fetching staff by ID:", error);
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
+
+// =========================================================================
+// GET STAFF BY ID (Modified for Clean, Explicit Merging)
+// =========================================================================
 exports.getStaffById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const staff = await Staff.findById(id);
-        if (!staff) {
-            return res.status(404).json({ message: "Staff not found" });
-        }
-        
-        const staffId = staff.staffid;
+    try {
+        const { id } = req.params;
+        const staff = await Staff.findById(id);
+        if (!staff) {
+            return res.status(404).json({ message: "Staff not found" });
+        }
+        
+        const staffId = staff.staffid;
 
-        // Fetch all related documents concurrently
-        const [
-            address, 
-            education, 
-            experience, 
-            role, 
-            bank, 
-            transport, 
-            docs
-        ] = await Promise.all([
-            staffAddress.findOne({ staffid: staffId }),
-            staffEductaion.findOne({ staffid: staffId }),
-            staffExperience.findOne({ staffid: staffId }),
-            staffRole.findOne({ staffid: staffId }),
-            staffBank.findOne({ staffid: staffId }),
-            staffTransport.findOne({ staffid: staffId }),
-            staffDocs.findOne({ staffid: staffId }),
-        ]);
+        // Fetch all related documents concurrently
+        const [
+            address, 
+            education, 
+            experience, 
+            role, 
+            bank, 
+            transport, 
+            docs
+        ] = await Promise.all([
+            staffAddress.findOne({ staffid: staffId }),
+            staffEductaion.findOne({ staffid: staffId }),
+            staffExperience.findOne({ staffid: staffId }),
+            staffRole.findOne({ staffid: staffId }),
+            staffBank.findOne({ staffid: staffId }),
+            staffTransport.findOne({ staffid: staffId }),
+            staffDocs.findOne({ staffid: staffId }),
+        ]);
 
-        // Merge all documents into a single flat object for the frontend
-        const mergedStaffData = {
-            ...staff._doc,
-            ...(address ? address._doc : {}),
-            ...(education ? education._doc : {}),
-            ...(experience ? experience._doc : {}),
-            ...(role ? role._doc : {}),
-            ...(bank ? bank._doc : {}),
-            ...(transport ? transport._doc : {}),
-            ...(docs ? docs._doc : {}),
-            staffid: staffId 
-        };
-        
-        delete mergedStaffData._id;
-        delete mergedStaffData.__v;
+        // ✅ CLEAN MERGE: Explicitly map every field to the exact keys frontend expects
+        const mergedStaffData = {
+            // MAIN STAFF
+            ...staff.toObject(),
 
-        return res.status(200).json(mergedStaffData);
-    } catch (error) {
-        console.error("Error fetching staff by ID:", error);
-        return res.status(500).json({ error: error.message });
-    }
+            // ADDRESS
+            addressline1: address?.addressline1 || "",
+            addressline2: address?.addressline2 || "",
+            city: address?.city || "",
+            postalcode: address?.postalcode || "",
+            district: address?.district || "",
+            state: address?.state || "",
+            country: address?.country || "",
+
+            // EDUCATION
+            highestqualification: education?.highestqualification || "",
+            yearofpassing: education?.yearofpassing || "",
+            specialization: education?.specialization || "",
+            universityname: education?.universityname || "",
+
+            // EXPERIENCE (🚨 THIS FIXES designation)
+            totalexperience: experience?.totalexperience || "",
+            designation: experience?.designation || "",
+            previousemployer: experience?.previousemployer || "",
+            subjectstaught: experience?.subjectstaught || "",
+
+            // ROLE (🚨 THIS FIXES position + dept)
+            position: role?.position || "",
+            dept: role?.dept || "",
+            preferredgrades: role?.preferredgrades || "",
+            joiningdate: role?.joiningdate || "",
+
+            // BANK
+            bankname: bank?.bankname || "",
+            branchname: bank?.branchname || "" ,
+            accno: bank?.accno || "",
+            ifccode: bank?.ifccode || "",
+            panno: bank?.panno || "",
+
+            // TRANSPORT (🚨 THIS FIXES transportstatus)
+            transportstatus: transport?.transportstatus || "",
+            pickuppoint: transport?.pickuppoint || "",
+            droppoint: transport?.droppoint || "",
+            modetransport: transport?.modetransport || "",
+
+            // Ensure Staff ID is preserved
+            staffid: staffId 
+        };
+        
+        // Final cleanup of internal Mongo fields to avoid frontend conflicts
+        delete mergedStaffData._id;
+        delete mergedStaffData.__v;
+
+        return res.status(200).json(mergedStaffData);
+    } catch (error) {
+        console.error("Error fetching staff by ID:", error);
+        return res.status(500).json({ error: error.message });
+    }
 };
-
 
 // =========================================================================
 // UNMODIFIED FUNCTIONS (Rest of the controller functions)
