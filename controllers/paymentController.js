@@ -1397,3 +1397,63 @@ exports.sendReminder = async (req, res) => {
         return res.status(500).json({ error: error.message || "Failed to process reminder request (Server Error)." });
     }
 };
+// --- Updated sendReminder Logic ---
+exports.sendReminder = async (req, res) => {
+    try {
+        const today = new Date();
+        const students = await Student.find({ status: true }).lean();
+        const payments = await PaymentEntry.find().lean();
+        
+        let notifications = [];
+
+        for (const student of students) {
+            const payment = payments.find(p => p.name === `${student.firstname} ${student.lastname}`);
+            if (!payment || payment.status === "Paid") continue;
+
+            const plan = payment.installmentPlan;
+            const lastInstallment = payment.installments.length > 0 
+                ? new Date(payment.installments[payment.installments.length - 1].date) 
+                : new Date(student.admission.admissiondate);
+
+            let dueDate = new Date(lastInstallment);
+            let intervalMonths = 0;
+
+            if (plan === "Monthly") intervalMonths = 1;
+            else if (plan === "Quarterly") intervalMonths = 3;
+            else if (plan === "Half Yearly") intervalMonths = 6;
+
+            if (intervalMonths > 0) {
+                dueDate.setMonth(dueDate.getMonth() + intervalMonths);
+                
+                // Calculate notification window (5 days before due date)
+                const notificationDate = new Date(dueDate);
+                notificationDate.setDate(notificationDate.getDate() - 5);
+
+                // 1. Check for Late Fee (If today is past the due date)
+                if (today > dueDate) {
+                    const fineAmount = 500; // Define your late fee amount
+                    await PaymentEntry.findByIdAndUpdate(payment._id, { 
+                        $inc: { lateFees: fineAmount },
+                        status: "Unpaid"
+                    });
+                    
+                    notifications.push({
+                        name: payment.name,
+                        message: `🚨 Late Fee Added: A fine of ₹${fineAmount} has been added for ${payment.name} due to overdue payment.`
+                    });
+                } 
+                // 2. Check for upcoming reminder (5 days before)
+                else if (today >= notificationDate) {
+                    notifications.push({
+                        name: payment.name,
+                        message: `🔔 Fee Reminder: Payment for ${payment.name} is due on ${dueDate.toDateString()}. Please pay within 5 days to avoid late fees.`
+                    });
+                }
+            }
+        }
+
+        res.status(200).json({ message: "Reminders processed", notifications });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
