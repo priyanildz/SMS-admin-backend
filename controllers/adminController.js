@@ -73,3 +73,38 @@ exports.getAdminProfile = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+exports.addAdminLeave = async (req, res) => {
+    try {
+        const { subject, body, date, username } = req.body;
+
+        if (!username || !subject || !body || !date) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Logic to save leave. 
+        // If you are saving it inside the Admin document or a separate Leave collection:
+        const admin = await Admin.findOne({ username });
+        if (!admin) return res.status(404).json({ error: "Admin not found" });
+
+        // Example: Saving to a generic collection but tagging it with the admin username
+        // const newLeave = new Leave({ username, subject, body, date, status: "Pending", type: "admin" });
+        // await newLeave.save();
+
+        return res.status(200).json({ message: "Admin leave applied successfully" });
+    } catch (error) {
+        console.error("Admin Leave Error:", error);
+        return res.status(500).json({ error: "Server crashed while saving admin leave" });
+    }
+};
+
+exports.getAdminLeaves = async (req, res) => {
+    try {
+        const { username } = req.query;
+        // Fetch only leaves belonging to this specific admin username
+        // const leaves = await Leave.find({ username, type: "admin" });
+        // res.status(200).json(leaves);
+        res.status(200).json([]); // Placeholder until your model is ready
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching admin leaves" });
+    }
+};
