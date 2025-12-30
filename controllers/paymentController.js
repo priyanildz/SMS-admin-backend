@@ -1136,64 +1136,122 @@ exports.getPaymentEntries = async (req, res) => {
   }
 };
 
+// exports.addPaymentEntry = async (req, res) => {
+//   const { name, std, div, date, amount, mode } = req.body; 
+
+//   try {
+//     const initialStatus = "Paid"; 
+
+//     const newEntry = new PaymentEntry({
+//       name, 
+//       std,
+//       div,
+//       totalFees: amount, // The 'amount' in the body sets the total fee due for this entry
+//       status: initialStatus, 
+//       installments: [{ date, amount, mode }], 
+//     });
+//     
+//     const savedEntry = await newEntry.save();
+//     res.status(201).json(savedEntry);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+
 exports.addPaymentEntry = async (req, res) => {
-  const { name, std, div, date, amount, mode } = req.body; 
+  // Destructure installmentPlan from the request body sent by Frontend
+  const { name, std, div, date, amount, mode, installmentPlan } = req.body; 
 
-  try {
-    const initialStatus = "Paid"; 
+  try {
+    const initialStatus = "Paid"; 
 
-    const newEntry = new PaymentEntry({
-      name, 
-      std,
-      div,
-      totalFees: amount, // The 'amount' in the body sets the total fee due for this entry
-      status: initialStatus, 
-      installments: [{ date, amount, mode }], 
-    });
-    
-    const savedEntry = await newEntry.save();
-    res.status(201).json(savedEntry);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+    const newEntry = new PaymentEntry({
+      name, 
+      std,
+      div,
+      installmentPlan: installmentPlan || "Custom", // Save the plan selected in UI
+      totalFees: amount, 
+      status: initialStatus, 
+      installments: [{ date, amount, mode }], 
+    });
+    
+    const savedEntry = await newEntry.save();
+    res.status(201).json(savedEntry);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
 
-exports.updatePaymentEntry = async (req, res) => {
-  const { id } = req.params;
-  const { date, amount, mode } = req.body;
+// exports.updatePaymentEntry = async (req, res) => {
+//   const { id } = req.params;
+//   const { date, amount, mode } = req.body;
 
-  try {
-    const paymentEntry = await PaymentEntry.findById(id);
-    if (!paymentEntry) {
-      return res.status(404).json({ message: "Payment entry not found" });
-    }
+//   try {
+//     const paymentEntry = await PaymentEntry.findById(id);
+//     if (!paymentEntry) {
+//       return res.status(404).json({ message: "Payment entry not found" });
+//     }
 
-    // Add new installment
-    paymentEntry.installments.push({ date, amount, mode });
+//     // Add new installment
+//     paymentEntry.installments.push({ date, amount, mode });
 
-    // Recalculate total paid amount
-    const totalPaid = paymentEntry.installments.reduce(
-      (sum, inst) => sum + (inst.amount || 0),
-      0
-    );
-    const totalFees = paymentEntry.totalFees;
+//     // Recalculate total paid amount
+//     const totalPaid = paymentEntry.installments.reduce(
+//       (sum, inst) => sum + (inst.amount || 0),
+//       0
+//     );
+//     const totalFees = paymentEntry.totalFees;
 
-    // FIX 2: Update status dynamically based on amount paid vs total fees
-    let newStatus = "Unpaid";
-    if (totalPaid >= totalFees) {
-        newStatus = "Paid";
-    }
-    
-    paymentEntry.status = newStatus;
+//     // FIX 2: Update status dynamically based on amount paid vs total fees
+//     let newStatus = "Unpaid";
+//     if (totalPaid >= totalFees) {
+//         newStatus = "Paid";
+//     }
+//     
+//     paymentEntry.status = newStatus;
 
-    const updatedEntry = await paymentEntry.save();
-    res.status(200).json(updatedEntry);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
+//     const updatedEntry = await paymentEntry.save();
+//     res.status(200).json(updatedEntry);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
 
 // FIX: Corrected filterTransactions to handle Category filters and enrich data
+exports.updatePaymentEntry = async (req, res) => {
+  const { id } = req.params;
+  // Destructure installmentPlan here as well
+  const { date, amount, mode, installmentPlan } = req.body;
+
+  try {
+    const paymentEntry = await PaymentEntry.findById(id);
+    if (!paymentEntry) {
+      return res.status(404).json({ message: "Payment entry not found" });
+    }
+
+    // Update the plan if a new one is provided in the request
+    if (installmentPlan) {
+        paymentEntry.installmentPlan = installmentPlan;
+    }
+
+    paymentEntry.installments.push({ date, amount, mode });
+
+    const totalPaid = paymentEntry.installments.reduce(
+      (sum, inst) => sum + (inst.amount || 0),
+      0
+    );
+    const totalFees = paymentEntry.totalFees;
+
+    let newStatus = totalPaid >= totalFees ? "Paid" : "Partial";
+    paymentEntry.status = newStatus;
+
+    const updatedEntry = await paymentEntry.save();
+    res.status(200).json(updatedEntry);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 exports.filterTransactions = async (req, res) => {
   try {
     const { std, div, search, category, mode } = req.query; 
