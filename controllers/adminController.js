@@ -73,3 +73,24 @@ exports.getAdminProfile = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+exports.addAdminLeave = async (req, res) => {
+    try {
+        const { subject, body, date, username } = req.body;
+
+        // You can create a new 'AdminLeave' model or add a 'role' field to a shared Leave model
+        const newLeave = new AdminLeave({
+            username, // Link it to the admin who is logged in
+            subject,
+            body,
+            date,
+            status: "Pending"
+        });
+
+        await newLeave.save();
+        return res.status(200).json({ message: "Admin leave applied successfully" });
+    } catch (error) {
+        console.error("Admin Leave Error:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
