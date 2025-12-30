@@ -11,6 +11,10 @@ const loginSchema = mongoose.Schema({
     required: true,
     type: String,
   },
+  name: { type: String, default: "" },
+  dob: { type: String, default: "" },
+  email: { type: String, default: "" },
+  contactNo: { type: String, default: "" }
 });
 // hash password before saving
 loginSchema.pre('save', async function (next) {
