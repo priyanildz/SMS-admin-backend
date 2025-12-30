@@ -1,5 +1,6 @@
 const Admin = require('../models/loginModel')
 const AdminLeave = require('../models/adminLeaveModel');
+const AdminAttendance = require('../models/adminAttendanceModel');
 const bcrypt = require('bcryptjs');
 // exports.Login = async (req, res) =>
 // {
@@ -95,5 +96,23 @@ exports.getAdminLeaves = async (req, res) => {
         res.status(200).json(leaves);
     } catch (error) {
         res.status(500).json({ error: "Error fetching admin leaves" });
+    }
+};
+
+exports.getAdminAttendance = async (req, res) => {
+    try {
+        const { username, year, month } = req.query;
+        let query = { username };
+
+        if (year && month) {
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+            query.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const attendance = await AdminAttendance.find(query);
+        res.status(200).json(attendance);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching attendance" });
     }
 };

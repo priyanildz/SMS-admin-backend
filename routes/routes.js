@@ -85,6 +85,8 @@ router.get("/get-profile", adminController.getAdminProfile);
 router.post("/admin-addleave", adminController.addAdminLeave);
 router.get("/admin-getleaves", adminController.getAdminLeaves);
 
+router.get("/admin-attendance", adminController.getAdminAttendance);
+
 // adding student api
 router.post("/addstudent", studentController.createUser);
 
