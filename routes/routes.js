@@ -80,6 +80,8 @@ router.post("/loginadmin", adminController.Login);
 //signup endpoint not in ui
 router.post("/registeradmin", adminController.Register);
 
+router.get("/get-profile", adminController.getAdminProfile);
+
 // adding student api
 router.post("/addstudent", studentController.createUser);
 
