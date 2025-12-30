@@ -350,19 +350,72 @@ exports.updateAllocation = async (req, res) => {
 };
 
 // --- 4. DELETE SINGLE ALLOCATION (DELETE /allotments/:id) ---
+// exports.deleteAllocation = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+        
+//         const response = await subjectAllocation.findByIdAndDelete(id);
+
+//         if (!response) {
+//             return res.status(404).json({ message: "Subject allotment not found." });
+//         }
+
+//         return res
+//             .status(200)
+//             .json({ message: "Subject allotment deleted successfully", data: response });
+//     } catch (error) {
+//         console.error("Error deleting subject allotment:", error);
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
+
 exports.deleteAllocation = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const response = await subjectAllocation.findByIdAndDelete(id);
+        // 1. Find the record first so we know what subject and standard it was for
+        const allocationToDelete = await subjectAllocation.findById(id);
 
-        if (!response) {
+        if (!allocationToDelete) {
             return res.status(404).json({ message: "Subject allotment not found." });
         }
 
-        return res
-            .status(200)
-            .json({ message: "Subject allotment deleted successfully", data: response });
+        const targetSubject = allocationToDelete.subjects[0]; // Assuming atomic storage
+        const targetStandard = allocationToDelete.standards[0];
+
+        // 2. Delete the record
+        await subjectAllocation.findByIdAndDelete(id);
+
+        // 3. --- SYNC WITH MASTER SUBJECT LIST ---
+        // Check if any OTHER allocations still exist for this subject in this standard
+        const otherAllocations = await subjectAllocation.findOne({
+            subjects: targetSubject,
+            standards: targetStandard
+        });
+
+        // If no one else is teaching this subject for this standard, remove it from the master list
+        if (!otherAllocations) {
+            const masterSubjectList = await Subject.findOne({ standard: targetStandard.toString() });
+            
+            if (masterSubjectList) {
+                masterSubjectList.subjectname = masterSubjectList.subjectname.filter(
+                    sub => sub !== targetSubject
+                );
+
+                // If no subjects left for this standard, you might want to delete the standard record entirely
+                if (masterSubjectList.subjectname.length === 0) {
+                    await Subject.findByIdAndDelete(masterSubjectList._id);
+                } else {
+                    await masterSubjectList.save();
+                }
+            }
+        }
+
+        return res.status(200).json({ 
+            message: "Subject allotment deleted and master list synced successfully.", 
+            data: allocationToDelete 
+        });
+
     } catch (error) {
         console.error("Error deleting subject allotment:", error);
         return res.status(500).json({ error: error.message });
