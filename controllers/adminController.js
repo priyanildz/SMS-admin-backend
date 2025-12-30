@@ -1,4 +1,5 @@
 const Admin = require('../models/loginModel')
+const AdminLeave = require('../models/adminLeaveModel');
 const bcrypt = require('bcryptjs');
 // exports.Login = async (req, res) =>
 // {
@@ -73,11 +74,13 @@ exports.getAdminProfile = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+
 exports.addAdminLeave = async (req, res) => {
     try {
         const { username, subject, body, date } = req.body;
-        // Logic to save to your 'admins' collection or a new 'admin_leaves' collection
-        console.log(`Leave requested by ${username}`); 
+        const newLeave = new AdminLeave({ username, subject, body, date });
+        await newLeave.save(); // Save to MongoDB
         return res.status(200).json({ message: "Admin leave saved successfully" });
     } catch (error) {
         return res.status(500).json({ error: "Database save failed" });
@@ -87,10 +90,9 @@ exports.addAdminLeave = async (req, res) => {
 exports.getAdminLeaves = async (req, res) => {
     try {
         const { username } = req.query;
-        // Fetch only leaves belonging to this specific admin username
-        // const leaves = await Leave.find({ username, type: "admin" });
-        // res.status(200).json(leaves);
-        res.status(200).json([]); // Placeholder until your model is ready
+        // Fetch real data from MongoDB for this specific admin
+        const leaves = await AdminLeave.find({ username }); 
+        res.status(200).json(leaves);
     } catch (error) {
         res.status(500).json({ error: "Error fetching admin leaves" });
     }
