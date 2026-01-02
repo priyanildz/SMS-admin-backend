@@ -2128,3 +2128,65 @@ exports.promoteStudents = async (req, res) => {
         return res.status(500).json({ error: error.message, message: "Internal Server Error during promotion." });
     }
 };
+exports.bulkCreateStudents = async (req, res) => {
+    try {
+        const studentsArray = req.body; // Expecting an array of student objects
+
+        if (!Array.isArray(studentsArray) || studentsArray.length === 0) {
+            return res.status(400).json({ message: "Invalid input: Expected an array of students." });
+        }
+
+        // 1. Get current count to handle sequential ADM/GR numbers
+        let currentCount = await User.countDocuments();
+
+        // 2. Map through the array to add missing IDs and auto-generated fields
+        const processedStudents = studentsArray.map((student) => {
+            currentCount++;
+            const nextID = currentCount.toString().padStart(3, '0');
+
+            // Assign sequential numbers if not provided
+            if (!student.admission?.admissionno) {
+                student.admission = student.admission || {};
+                student.admission.admissionno = `ADM-${nextID}`;
+            }
+            if (!student.admission?.grno) {
+                student.admission.grno = `GR-${nextID}`;
+            }
+
+            // Ensure photo is empty as per your requirement
+            student.photo = "";
+            
+            // Set default password if not present
+            if (!student.password) {
+                student.password = "student@123";
+            }
+
+            return student;
+        });
+
+        // 3. Bulk Insert into Database
+        // ordered: false allows valid documents to be inserted even if some fail (like duplicates)
+        const result = await User.insertMany(processedStudents, { ordered: false });
+
+        res.status(201).json({
+            message: `${result.length} students registered successfully.`,
+            count: result.length
+        });
+
+    } catch (error) {
+        console.error("Bulk Creation Error:", error);
+        
+        // Handle partial success/duplicate key errors
+        if (error.code === 11000) {
+            return res.status(409).json({
+                message: "Some students were not added due to duplicate unique fields (ID or Aadhaar).",
+                details: error.writeErrors?.length + " duplicates found."
+            });
+        }
+
+        res.status(500).json({ 
+            error: error.message, 
+            message: "Internal Server Error during bulk registration." 
+        });
+    }
+};

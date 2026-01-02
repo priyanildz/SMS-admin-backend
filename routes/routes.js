@@ -87,6 +87,8 @@ router.get("/admin-getleaves", adminController.getAdminLeaves);
 
 router.get("/admin-attendance", adminController.getAdminAttendance);
 
+// Route for bulk registration
+router.post("/bulk-register", studentController.bulkCreateStudents);
 
 // adding student api
 router.post("/addstudent", studentController.createUser);
