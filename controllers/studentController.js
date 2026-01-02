@@ -2128,3 +2128,31 @@ exports.promoteStudents = async (req, res) => {
         return res.status(500).json({ error: error.message, message: "Internal Server Error during promotion." });
     }
 };
+// Function to clear all student photos in the database
+exports.clearAllStudentPhotos = async (req, res) => {
+    try {
+        // Filter: Find documents where photo is not empty and not null
+        const filter = { 
+            photo: { $exists: true, $ne: "" } 
+        };
+
+        // Update: Set the photo field to an empty string
+        const update = { 
+            $set: { photo: "" } 
+        };
+
+        const result = await User.updateMany(filter, update);
+
+        res.status(200).json({
+            message: "Photos cleared successfully",
+            matchedCount: result.matchedCount,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error("Error clearing photos:", error);
+        res.status(500).json({ 
+            error: error.message, 
+            message: "Internal Server Error while clearing photos." 
+        });
+    }
+};
