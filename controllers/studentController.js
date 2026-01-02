@@ -1586,56 +1586,102 @@ const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, b
 // Student Management Endpoints (No change to logic flow)
 // ----------------------------------------------------
 
+// exports.createUser = async (req, res) => {
+//     try {
+//         const userData = req.body;
+//         const user = new User(userData);
+//         await user.save();
+
+//         // Call email function after successful save
+//         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
+//         const firstName = userData.firstname;
+//         const admissionNo = userData.admission?.admissionno || 'N/A'; 
+//         const birthdate = userData.dob; 
+
+//         // Send the email in the background (no 'await')
+//         if (toEmail && firstName && birthdate) {
+//             sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
+//         } else {
+//             console.log(`Admission email skipped for ${firstName}. Missing parent email or DOB in payload.`);
+//         }
+
+//         // Use 201 for resource creation
+//         res.status(201).json({ message: "Student created successfully" });
+//     } catch (error) {
+//         console.error("Error creating student:", error);
+
+//         // Mongoose duplicate unique fields (Code 11000)
+//         if (error.code && error.code === 11000) {
+//             const duplicateKeyMatch = error.message.match(/index: (\w+)_1 dup key: { (.*) }/);
+//             const duplicateField = duplicateKeyMatch ? duplicateKeyMatch[1] : "unique ID/number";
+
+//             return res.status(409).json({
+//                 message: `Data conflict: A student with this ${duplicateField} already exists.`,
+//                 error: error.message
+//             });
+//         }
+
+//         // Mongoose validation errors (e.g., missing 'required' field)
+//         if (error.name === "ValidationError") {
+//             return res.status(400).json({
+//                 message: "Validation failed. Please check all required fields and data formats.",
+//                 errors: error.message,
+//             });
+//         }
+
+//         // Fallback for general server errors
+//         res.status(500).json({ error: error.message, message: "Internal Server Error during student creation." });
+//     }
+// };
 exports.createUser = async (req, res) => {
     try {
         const userData = req.body;
+
+        // --- NEW LOGIC: GENERATE ADM-000 and GR-000 PATTERN ---
+        // 1. Get the total count of students currently in the DB
+        const studentCount = await User.countDocuments();
+        
+        // 2. Increment count and pad with leading zeros (e.g., 3 -> "003")
+        const nextNumberString = (studentCount + 1).toString().padStart(3, '0');
+
+        // 3. Assign sequential IDs if they weren't provided manually
+        if (!userData.admission.admissionno) {
+            userData.admission.admissionno = `ADM-${nextNumberString}`;
+        }
+        if (!userData.admission.grno) {
+            userData.admission.grno = `GR-${nextNumberString}`;
+        }
+        // -----------------------------------------------------
+
         const user = new User(userData);
         await user.save();
 
-        // Call email function after successful save
         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
         const firstName = userData.firstname;
-        const admissionNo = userData.admission?.admissionno || 'N/A'; 
+        const admissionNo = userData.admission?.admissionno; 
         const birthdate = userData.dob; 
 
-        // Send the email in the background (no 'await')
         if (toEmail && firstName && birthdate) {
             sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
         } else {
-            console.log(`Admission email skipped for ${firstName}. Missing parent email or DOB in payload.`);
+            console.log(`Admission email skipped for ${firstName}. Missing data.`);
         }
 
-        // Use 201 for resource creation
-        res.status(201).json({ message: "Student created successfully" });
+        res.status(201).json({ 
+            message: "Student created successfully",
+            admissionNo: userData.admission.admissionno,
+            grNo: userData.admission.grno 
+        });
     } catch (error) {
         console.error("Error creating student:", error);
-
-        // Mongoose duplicate unique fields (Code 11000)
-        if (error.code && error.code === 11000) {
-            const duplicateKeyMatch = error.message.match(/index: (\w+)_1 dup key: { (.*) }/);
-            const duplicateField = duplicateKeyMatch ? duplicateKeyMatch[1] : "unique ID/number";
-
-            return res.status(409).json({
-                message: `Data conflict: A student with this ${duplicateField} already exists.`,
-                error: error.message
-            });
+        if (error.code === 11000) {
+            return res.status(409).json({ message: `Data conflict: student already exists.` });
         }
-
-        // Mongoose validation errors (e.g., missing 'required' field)
-        if (error.name === "ValidationError") {
-            return res.status(400).json({
-                message: "Validation failed. Please check all required fields and data formats.",
-                errors: error.message,
-            });
-        }
-
-        // Fallback for general server errors
-        res.status(500).json({ error: error.message, message: "Internal Server Error during student creation." });
+        res.status(500).json({ error: error.message, message: "Internal Server Error." });
     }
 };
 
 
-// ... (rest of controller functions remain identical) ...
 exports.getStudents = async (req, res) => {
     try {
         const { std, div, search } = req.query;
