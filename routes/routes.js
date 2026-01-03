@@ -90,6 +90,8 @@ router.get("/admin-attendance", adminController.getAdminAttendance);
 // Route for bulk registration
 router.post("/bulk-register", studentController.bulkCreateStudents);
 
+router.delete("/delete-junior-kg", studentController.deleteJuniorKGStudents);
+
 // adding student api
 router.post("/addstudent", studentController.createUser);
 
