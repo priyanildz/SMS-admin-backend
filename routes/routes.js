@@ -319,6 +319,10 @@ router.get("/academic-blocks", blockController.getBlocks);
 
 router.post("/add-academicblock", blockController.addBlock);
 
+router.get("/subjects/:id", subjectManagement.getSubjectById); // For View/Edit load
+router.put("/subjects/:id", subjectManagement.updateSubject); // For Save Edit
+router.delete("/subjects/:id", subjectManagement.deleteSubject); // For Delete
+
 router.post("/add-capacity", capacityController.addCapacity);
 
 router.get("/capacity", capacityController.getCapacity);

@@ -146,3 +146,33 @@ exports.getAllSubjects = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+// Get Single Subject Configuration
+exports.getSubjectById = async (req, res) => {
+  try {
+    const subject = await subjectModel.findById(req.params.id);
+    if (!subject) return res.status(404).json({ message: "Not found" });
+    res.status(200).json(subject);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update Subject Configuration
+exports.updateSubject = async (req, res) => {
+  try {
+    const updated = await subjectModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.status(200).json({ message: "Updated successfully", subject: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete Subject Configuration
+exports.deleteSubject = async (req, res) => {
+  try {
+    await subjectModel.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
