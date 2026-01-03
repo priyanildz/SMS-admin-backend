@@ -150,20 +150,34 @@ exports.getAllSubjects = async (req, res) => {
 exports.getSubjectById = async (req, res) => {
   try {
     const subject = await subjectModel.findById(req.params.id);
-    if (!subject) return res.status(404).json({ message: "Not found" });
+    if (!subject) {
+      return res.status(404).json({ message: "Subject configuration not found" });
+    }
+    // Returns the full object including standard and subjects array
     res.status(200).json(subject);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 // Update Subject Configuration
 exports.updateSubject = async (req, res) => {
   try {
-    const updated = await subjectModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { standard, subjects } = req.body;
+    
+    const updated = await subjectModel.findByIdAndUpdate(
+      req.params.id, 
+      { standard, subjects }, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Subject configuration not found" });
+    }
+    
     res.status(200).json({ message: "Updated successfully", subject: updated });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
