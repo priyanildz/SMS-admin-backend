@@ -2190,32 +2190,3 @@ exports.bulkCreateStudents = async (req, res) => {
         });
     }
 };
-// Function to delete all students with admissionstd: "junior kg"
-exports.deleteJuniorKGStudents = async (req, res) => {
-    try {
-        // Filter: Find all students where admissionstd is "junior kg"
-        // Note: I used a case-insensitive regex in case of variations (e.g., Junior KG, junior kg)
-        const filter = { 
-            "admission.admissionstd": { $regex: /^Junior KG$/i } 
-        };
-
-        const result = await User.deleteMany(filter);
-
-        if (result.deletedCount === 0) {
-            return res.status(404).json({
-                message: "No students found with standard 'Junior KG' to delete."
-            });
-        }
-
-        res.status(200).json({
-            message: "Junior KG student records deleted successfully",
-            deletedCount: result.deletedCount
-        });
-    } catch (error) {
-        console.error("Error deleting Junior KG students:", error);
-        res.status(500).json({ 
-            error: error.message, 
-            message: "Internal Server Error while deleting records." 
-        });
-    }
-};
