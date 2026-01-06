@@ -307,11 +307,13 @@ exports.addSubjectAllot = async (req, res) => {
     try {
         const { teacher, teacherName, subjects, standards, divisions, staffid } = req.body;
 
+        // Basic validation: weeklyLectures is no longer required
         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
             return res.status(400).json({ message: "Missing required fields." });
         }
 
         // --- 🛡️ CATEGORY VALIDATION LOGIC ---
+        // Ensuring the teacher is qualified for the selected grade category
         const roleData = await staffRole.findOne({ staffid: staffid });
         if (roleData) {
             const preferred = roleData.preferredgrades; 
@@ -323,8 +325,11 @@ exports.addSubjectAllot = async (req, res) => {
 
             for (const std of standards) {
                 let isAllowed = false;
+                const normalizedStd = std.toString().toLowerCase();
+                
                 preferred.forEach(cat => {
-                    if (gradeMapping[cat.toLowerCase()]?.includes(std.toString().toLowerCase())) {
+                    const normalizedCat = cat.toLowerCase();
+                    if (gradeMapping[normalizedCat] && gradeMapping[normalizedCat].includes(normalizedStd)) {
                         isAllowed = true;
                     }
                 });
@@ -337,7 +342,8 @@ exports.addSubjectAllot = async (req, res) => {
             }
         }
 
-        // Decompose the request into ATOMIC database entries
+        // --- 🚀 ATOMIC DATA DECOMPOSITION ---
+        // Loop through and create individual entries for Std + Sub + Teacher
         const recordsToSave = [];
         for (const sub of subjects) {
             for (const std of standards) {
@@ -347,18 +353,20 @@ exports.addSubjectAllot = async (req, res) => {
                         teacherName,
                         subjects: [sub],
                         standards: [std],
-                        divisions: [div],
-                        weeklyLectures: 1, 
+                        divisions: [div]
+                        // weeklyLectures removed as per request
                     });
                 }
             }
         }
 
+        // Using insertMany for performance and atomic storage
         await subjectAllocation.insertMany(recordsToSave);
 
         return res.status(200).json({ message: "Subject allotment completed successfully." });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        console.error("Backend Error:", error); 
+        return res.status(500).json({ message: error.message });
     }
 };
 
