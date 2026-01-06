@@ -305,45 +305,23 @@ const staffRole = require("../models/staffRole");
 // };
 exports.addSubjectAllot = async (req, res) => {
     try {
-        const { teacher, teacherName, subjects, standards, divisions, staffid } = req.body;
+        const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
-        // Basic validation: weeklyLectures is no longer required
         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
             return res.status(400).json({ message: "Missing required fields." });
         }
 
-        // --- 🛡️ CATEGORY VALIDATION LOGIC ---
-        // Ensuring the teacher is qualified for the selected grade category
-        const roleData = await staffRole.findOne({ staffid: staffid });
-        if (roleData) {
-            const preferred = roleData.preferredgrades; 
-            const gradeMapping = {
-                "pre-primary": ["nursery", "junior", "senior"],
-                "primary": ["1", "2", "3", "4", "5"],
-                "secondary": ["6", "7", "8", "9", "10"]
-            };
-
-            for (const std of standards) {
-                let isAllowed = false;
-                const normalizedStd = std.toString().toLowerCase();
-                
-                preferred.forEach(cat => {
-                    const normalizedCat = cat.toLowerCase();
-                    if (gradeMapping[normalizedCat] && gradeMapping[normalizedCat].includes(normalizedStd)) {
-                        isAllowed = true;
-                    }
+        // --- 🛡️ VALIDATION: ENSURE SUBJECT CONFIGURATION EXISTS ---
+        for (const std of standards) {
+            const existingConfig = await Subject.findOne({ standard: std.toString() });
+            if (!existingConfig) {
+                return res.status(400).json({ 
+                    message: `Please create subject configuration for Standard ${std} first.` 
                 });
-
-                if (!isAllowed) {
-                    return res.status(403).json({ 
-                        message: `Validation Failed: ${teacherName} is registered for ${preferred.join(", ")} and cannot be allotted to Standard ${std}.` 
-                    });
-                }
             }
         }
 
-        // --- 🚀 ATOMIC DATA DECOMPOSITION ---
-        // Loop through and create individual entries for Std + Sub + Teacher
+        // --- 🚀 ATOMIC STORAGE ---
         const recordsToSave = [];
         for (const sub of subjects) {
             for (const std of standards) {
@@ -354,18 +332,14 @@ exports.addSubjectAllot = async (req, res) => {
                         subjects: [sub],
                         standards: [std],
                         divisions: [div]
-                        // weeklyLectures removed as per request
                     });
                 }
             }
         }
 
-        // Using insertMany for performance and atomic storage
         await subjectAllocation.insertMany(recordsToSave);
-
         return res.status(200).json({ message: "Subject allotment completed successfully." });
     } catch (error) {
-        console.error("Backend Error:", error); 
         return res.status(500).json({ message: error.message });
     }
 };
