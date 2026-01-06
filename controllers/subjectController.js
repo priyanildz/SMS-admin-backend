@@ -305,9 +305,9 @@ const staffRole = require("../models/staffRole");
 // };
 exports.addSubjectAllot = async (req, res) => {
     try {
+        // 🚀 REMOVED weeklyLectures from destructuring
         const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
-        // Clean validation: no weeklyLectures required
         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
             return res.status(400).json({ message: "Missing required fields." });
         }
@@ -315,14 +315,13 @@ exports.addSubjectAllot = async (req, res) => {
         const recordsToSave = [];
         for (const sub of subjects) {
             for (const std of standards) {
-                // Save ONE record per Sub/Std with the array of divisions
                 recordsToSave.push({
                     teacher, 
                     teacherName,
                     subjects: [sub],
                     standards: [std],
                     divisions: divisions, 
-                    weeklyLectures: 0 // Provide 0 to satisfy schema without UI input
+                    // 🚀 REMOVED weeklyLectures from payload
                 });
             }
         }
@@ -348,7 +347,7 @@ exports.getAllocations = async (req, res) => {
 exports.updateAllocation = async (req, res) => {
     try {
         const { id } = req.params;
-        const { teacher, teacherName, subjects, standards, divisions, weeklyLectures } = req.body;
+        const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
         const updatedFields = {
             teacher: teacher, 
@@ -356,7 +355,7 @@ exports.updateAllocation = async (req, res) => {
             subjects: subjects,
             standards: standards,
             divisions: divisions,
-            weeklyLectures: weeklyLectures,
+            // weeklyLectures: weeklyLectures,
         };
 
         const response = await subjectAllocation.findByIdAndUpdate(

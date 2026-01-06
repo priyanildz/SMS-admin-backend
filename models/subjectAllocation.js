@@ -20,7 +20,6 @@ const SubjectAllocationSchema = new mongoose.Schema({
   },
   weeklyLectures: {
     type: Number, 
-    required: true,
   },
   teacherName :{
     type: String,
