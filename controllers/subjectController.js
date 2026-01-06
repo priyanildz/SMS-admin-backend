@@ -307,6 +307,7 @@ exports.addSubjectAllot = async (req, res) => {
     try {
         const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
+        // Clean validation: no weeklyLectures required
         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
             return res.status(400).json({ message: "Missing required fields." });
         }
@@ -314,15 +315,14 @@ exports.addSubjectAllot = async (req, res) => {
         const recordsToSave = [];
         for (const sub of subjects) {
             for (const std of standards) {
-                // 🚀 FIX: Removed the 'for (const div of divisions)' loop.
-                // We save ONE record containing the entire divisions array.
+                // Save ONE record per Sub/Std with the array of divisions
                 recordsToSave.push({
                     teacher, 
                     teacherName,
                     subjects: [sub],
                     standards: [std],
-                    divisions: divisions, // Save the whole array [A, B, C, D, E] once
-                    weeklyLectures: 1
+                    divisions: divisions, 
+                    weeklyLectures: 0 // Provide 0 to satisfy schema without UI input
                 });
             }
         }
