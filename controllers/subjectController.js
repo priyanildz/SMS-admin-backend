@@ -323,19 +323,20 @@ exports.addSubjectAllot = async (req, res) => {
 
         // --- 🚀 ATOMIC STORAGE ---
         const recordsToSave = [];
-        for (const sub of subjects) {
-            for (const std of standards) {
-                for (const div of divisions) {
-                    recordsToSave.push({
-                        teacher, 
-                        teacherName,
-                        subjects: [sub],
-                        standards: [std],
-                        divisions: [div]
-                    });
-                }
-            }
+for (const sub of subjects) {
+    for (const std of standards) {
+        for (const div of divisions) {
+            recordsToSave.push({
+                teacher, 
+                teacherName,
+                subjects: [sub],
+                standards: [std],
+                divisions: [div],
+                weeklyLectures: 1 // FIX: Provide a default value to satisfy the schema
+            });
         }
+    }
+}
 
         await subjectAllocation.insertMany(recordsToSave);
         return res.status(200).json({ message: "Subject allotment completed successfully." });
