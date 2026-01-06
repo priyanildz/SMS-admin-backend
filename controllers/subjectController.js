@@ -311,32 +311,21 @@ exports.addSubjectAllot = async (req, res) => {
             return res.status(400).json({ message: "Missing required fields." });
         }
 
-        // --- 🛡️ VALIDATION: ENSURE SUBJECT CONFIGURATION EXISTS ---
-        for (const std of standards) {
-            const existingConfig = await Subject.findOne({ standard: std.toString() });
-            if (!existingConfig) {
-                return res.status(400).json({ 
-                    message: `Please create subject configuration for Standard ${std} first.` 
+        const recordsToSave = [];
+        for (const sub of subjects) {
+            for (const std of standards) {
+                // 🚀 FIX: Removed the 'for (const div of divisions)' loop.
+                // We save ONE record containing the entire divisions array.
+                recordsToSave.push({
+                    teacher, 
+                    teacherName,
+                    subjects: [sub],
+                    standards: [std],
+                    divisions: divisions, // Save the whole array [A, B, C, D, E] once
+                    weeklyLectures: 1
                 });
             }
         }
-
-        // --- 🚀 ATOMIC STORAGE ---
-        const recordsToSave = [];
-for (const sub of subjects) {
-    for (const std of standards) {
-        for (const div of divisions) {
-            recordsToSave.push({
-                teacher, 
-                teacherName,
-                subjects: [sub],
-                standards: [std],
-                divisions: [div],
-                weeklyLectures: 1 // FIX: Provide a default value to satisfy the schema
-            });
-        }
-    }
-}
 
         await subjectAllocation.insertMany(recordsToSave);
         return res.status(200).json({ message: "Subject allotment completed successfully." });
