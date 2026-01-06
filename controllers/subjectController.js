@@ -344,38 +344,38 @@ exports.getAllocations = async (req, res) => {
 };
 
 // --- 3. UPDATE SINGLE ALLOCATION (PUT /allotments/:id) ---
-exports.updateAllocation = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { teacher, teacherName, subjects, standards, divisions } = req.body;
+// exports.updateAllocation = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
-        const updatedFields = {
-            teacher: teacher, 
-            teacherName: teacherName,
-            subjects: subjects,
-            standards: standards,
-            divisions: divisions,
-            // weeklyLectures: weeklyLectures,
-        };
+//         const updatedFields = {
+//             teacher: teacher, 
+//             teacherName: teacherName,
+//             subjects: subjects,
+//             standards: standards,
+//             divisions: divisions,
+//             // weeklyLectures: weeklyLectures,
+//         };
 
-        const response = await subjectAllocation.findByIdAndUpdate(
-            id,
-            updatedFields,
-            { new: true, runValidators: true }
-        );
+//         const response = await subjectAllocation.findByIdAndUpdate(
+//             id,
+//             updatedFields,
+//             { new: true, runValidators: true }
+//         );
 
-        if (!response) {
-            return res.status(404).json({ message: "Subject allotment not found." });
-        }
+//         if (!response) {
+//             return res.status(404).json({ message: "Subject allotment not found." });
+//         }
 
-        return res
-            .status(200)
-            .json({ message: "Subject allotment updated successfully", data: response });
-    } catch (error) {
-        console.error("Error updating subject allotment:", error);
-        return res.status(500).json({ error: error.message });
-    }
-};
+//         return res
+//             .status(200)
+//             .json({ message: "Subject allotment updated successfully", data: response });
+//     } catch (error) {
+//         console.error("Error updating subject allotment:", error);
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
 
 // --- 4. DELETE SINGLE ALLOCATION (DELETE /allotments/:id) ---
 // exports.deleteAllocation = async (req, res) => {
@@ -397,55 +397,112 @@ exports.updateAllocation = async (req, res) => {
 //     }
 // };
 
+// exports.deleteAllocation = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+        
+//         // 1. Find the record first so we know what subject and standard it was for
+//         const allocationToDelete = await subjectAllocation.findById(id);
+
+//         if (!allocationToDelete) {
+//             return res.status(404).json({ message: "Subject allotment not found." });
+//         }
+
+//         const targetSubject = allocationToDelete.subjects[0]; // Assuming atomic storage
+//         const targetStandard = allocationToDelete.standards[0];
+
+//         // 2. Delete the record
+//         await subjectAllocation.findByIdAndDelete(id);
+
+//         // 3. --- SYNC WITH MASTER SUBJECT LIST ---
+//         // Check if any OTHER allocations still exist for this subject in this standard
+//         const otherAllocations = await subjectAllocation.findOne({
+//             subjects: targetSubject,
+//             standards: targetStandard
+//         });
+
+//         // If no one else is teaching this subject for this standard, remove it from the master list
+//         if (!otherAllocations) {
+//             const masterSubjectList = await Subject.findOne({ standard: targetStandard.toString() });
+            
+//             if (masterSubjectList) {
+//                 masterSubjectList.subjectname = masterSubjectList.subjectname.filter(
+//                     sub => sub !== targetSubject
+//                 );
+
+//                 // If no subjects left for this standard, you might want to delete the standard record entirely
+//                 if (masterSubjectList.subjectname.length === 0) {
+//                     await Subject.findByIdAndDelete(masterSubjectList._id);
+//                 } else {
+//                     await masterSubjectList.save();
+//                 }
+//             }
+//         }
+
+//         return res.status(200).json({ 
+//             message: "Subject allotment deleted and master list synced successfully.", 
+//             data: allocationToDelete 
+//         });
+
+//     } catch (error) {
+//         console.error("Error deleting subject allotment:", error);
+//         return res.status(500).json({ error: error.message });
+//     }
+// }; 
+
+exports.updateAllocation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { teacher, teacherName, subjects, standards, divisions } = req.body;
+
+        // Ensure weeklyLectures is NOT in this updatedFields object
+        const updatedFields = {
+            teacher: teacher, 
+            teacherName: teacherName,
+            subjects: subjects,
+            standards: standards,
+            divisions: divisions
+        };
+
+        const response = await subjectAllocation.findByIdAndUpdate(
+            id,
+            updatedFields,
+            { new: true, runValidators: true }
+        );
+
+        if (!response) {
+            return res.status(404).json({ message: "Subject allotment not found." });
+        }
+
+        return res.status(200).json({ message: "Subject allotment updated successfully", data: response });
+    } catch (error) {
+        console.error("Backend Error (Update):", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// --- 4. DELETE SINGLE ALLOCATION (DELETE /allotments/:id) ---
 exports.deleteAllocation = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // 1. Find the record first so we know what subject and standard it was for
+        // 1. Find the record first to know what standard it was for (for optional master list sync)
         const allocationToDelete = await subjectAllocation.findById(id);
 
         if (!allocationToDelete) {
             return res.status(404).json({ message: "Subject allotment not found." });
         }
 
-        const targetSubject = allocationToDelete.subjects[0]; // Assuming atomic storage
-        const targetStandard = allocationToDelete.standards[0];
-
-        // 2. Delete the record
+        // 2. Perform the delete
         await subjectAllocation.findByIdAndDelete(id);
 
-        // 3. --- SYNC WITH MASTER SUBJECT LIST ---
-        // Check if any OTHER allocations still exist for this subject in this standard
-        const otherAllocations = await subjectAllocation.findOne({
-            subjects: targetSubject,
-            standards: targetStandard
-        });
-
-        // If no one else is teaching this subject for this standard, remove it from the master list
-        if (!otherAllocations) {
-            const masterSubjectList = await Subject.findOne({ standard: targetStandard.toString() });
-            
-            if (masterSubjectList) {
-                masterSubjectList.subjectname = masterSubjectList.subjectname.filter(
-                    sub => sub !== targetSubject
-                );
-
-                // If no subjects left for this standard, you might want to delete the standard record entirely
-                if (masterSubjectList.subjectname.length === 0) {
-                    await Subject.findByIdAndDelete(masterSubjectList._id);
-                } else {
-                    await masterSubjectList.save();
-                }
-            }
-        }
-
         return res.status(200).json({ 
-            message: "Subject allotment deleted and master list synced successfully.", 
+            message: "Subject allotment deleted successfully.", 
             data: allocationToDelete 
         });
 
     } catch (error) {
-        console.error("Error deleting subject allotment:", error);
+        console.error("Backend Error (Delete):", error);
         return res.status(500).json({ error: error.message });
     }
 };
