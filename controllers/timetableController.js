@@ -955,14 +955,22 @@ exports.generateTimetable = async (req, res) => {
       if (!allocations.length || !classroomInfo) continue;
 
       let requirements = allocations.map(alloc => {
-        const config = subjectConfigs?.subjects?.find(s => s.name === alloc.subjects[0]);
+        const subjectName = alloc.subjects[0];
+        
+        // 🚀 CHANGE: Look for config in main subjects OR inside subSubjects arrays
+        const config = subjectConfigs?.subjects?.find(s => 
+          s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
+        );
+
+        // 🚀 CHANGE: Sub-subjects are counted as one subject; only Type "Optional" gets 3 lecs
         let count = 5; 
         if (config?.type === 'Optional') count = 3;
         if (config?.nature?.includes('Activity')) count = 2;
+
         return {
           teacherId: alloc.teacher.toString(),
           teacherName: alloc.teacherName,
-          subject: alloc.subjects[0],
+          subject: subjectName,
           isOptional: config?.type === 'Optional',
           remaining: count
         };
