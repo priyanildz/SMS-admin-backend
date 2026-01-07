@@ -1182,17 +1182,28 @@ exports.arrangeTimetable = async (req, res) => {
   }
 };
 
+// exports.getTimetable = async (req, res) => {
+//   try {
+//     const timetables = await Timetable.find()
+//     if (timetables.length === 0) {
+//       return res.status(404).json({ error: "No timetables found" });
+//     }
+//     res.json(timetables);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 exports.getTimetable = async (req, res) => {
-  try {
-    const timetables = await Timetable.find()
-    if (timetables.length === 0) {
-      return res.status(404).json({ error: "No timetables found" });
-    }
-    res.json(timetables);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  try {
+    const timetables = await Timetable.find();
+    res.json(timetables || []); // Returns empty array instead of 404
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
+
+
 
 // Export the functions
 module.exports = {
