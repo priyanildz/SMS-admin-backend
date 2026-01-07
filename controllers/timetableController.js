@@ -612,19 +612,17 @@ const Classroom = require("../models/classroomModel"); // To find Class Teacher
 // ];
 
 const FIXED_PERIOD_STRUCTURE = [
-  { num: 1, time: "07:00-08:05", type: "Period", duration: 65 }, 
-  { num: null, time: "08:05-08:10", type: "Break", duration: 5 },
-  { num: 2, time: "08:10-08:50", type: "Period", duration: 40 },
-  { num: null, time: "08:50-08:55", type: "Break", duration: 5 },
-  { num: 3, time: "08:55-09:35", type: "Period", duration: 40 },
-  { num: null, time: "09:35-09:40", type: "Break", duration: 5 },
-  { num: 4, time: "09:40-10:20", type: "Period", duration: 40 },
-  { num: null, time: "10:20-10:40", type: "Lunch", duration: 20 }, 
-  { num: 5, time: "10:40-11:20", type: "Period", duration: 40 },
-  { num: null, time: "11:20-11:25", type: "Break", duration: 5 },
-  { num: 6, time: "11:25-12:05", type: "Period", duration: 40 },
-  { num: null, time: "12:05-12:10", type: "Break", duration: 5 },
-  { num: 7, time: "12:10-12:55", type: "Period", duration: 45 }, 
+  { num: 1, time: "07:00-08:00", type: "Period", isBreak: false }, 
+  { num: null, time: "08:00-08:05", type: "Break", isBreak: true },
+  { num: 2, time: "08:05-08:55", type: "Period", isBreak: false },
+  { num: null, time: "08:55-09:00", type: "Break", isBreak: true },
+  { num: 3, time: "09:00-09:50", type: "Period", isBreak: false },
+  { num: null, time: "09:50-10:10", type: "Lunch / Recess", isBreak: true },
+  { num: 4, time: "10:10-11:00", type: "Period", isBreak: false },
+  { num: null, time: "11:00-11:05", type: "Break", isBreak: true }, 
+  { num: 6, time: "11:05-11:55", type: "Period", isBreak: false },
+  { num: null, time: "11:55-12:00", type: "Break", isBreak: true }, 
+  { num: 7, time: "12:00-01:00", type: "Period", isBreak: false }, 
 ];
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
