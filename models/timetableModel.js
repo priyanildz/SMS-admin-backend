@@ -141,7 +141,7 @@ const timetableSchema = new mongoose.Schema(
     standard: {
       type: String,
       required: true,
-      enum: ["Nursey", "Junior", "Senior", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      enum: ["Nursery", "Junior", "Senior", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
     division: { // Division field is REQUIRED for granular storage
       type: String,
