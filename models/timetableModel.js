@@ -141,12 +141,12 @@ const timetableSchema = new mongoose.Schema(
     standard: {
       type: String,
       required: true,
-      enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      enum: ["Nursey", "Junior", "Senior", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
     division: { // Division field is REQUIRED for granular storage
       type: String,
       required: true, 
-      enum: ["A", "B", "C", "D", "E", "F"], // Stays as F, though only A-E are used in the controller
+      enum: ["A", "B", "C", "D", "E"], // Stays as F, though only A-E are used in the controller
     },
     classteacher: {
       type: mongoose.Schema.Types.ObjectId,
