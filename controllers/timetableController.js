@@ -573,6 +573,8 @@
 const Timetable = require("../models/timetableModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Staff = require("../models/staffModel"); 
+const Subject = require("../models/subjectsModel"); // To check subject type (Optional/Activity)
+const Classroom = require("../models/classroomModel"); // To find Class Teacher
 
 // Fixed Period Schedule based on user requirements (Mon-Sat structure)
 // const FIXED_PERIOD_STRUCTURE = [
@@ -593,22 +595,37 @@ const Staff = require("../models/staffModel");
 //   { num: 8, time: "12:19-12:55", type: "Period", duration: 36 }, 
 // ];
 
-const FIXED_PERIOD_STRUCTURE = [
-  { num: 1, time: "07:00-07:55", type: "Period", duration: 55 },
-  { num: null, time: "07:55-08:00", type: "Break", duration: 5 },
-  { num: 2, time: "08:00-08:40", type: "Period", duration: 40 },
-  { num: null, time: "08:40-08:45", type: "Break", duration: 5 },
-  { num: 3, time: "08:45-09:25", type: "Period", duration: 40 },
-  { num: null, time: "09:25-09:30", type: "Break", duration: 5 },
-  { num: 4, time: "09:30-10:10", type: "Period", duration: 40 },
-  { num: null, time: "10:10-10:40", type: "Lunch", duration: 30 }, 
-  { num: 5, time: "10:40-11:20", type: "Period", duration: 40 }, 
-  { num: null, time: "11:20-11:25", type: "Break", duration: 5 }, 
-  { num: 6, time: "11:25-12:05", type: "Period", duration: 40 }, 
-  { num: null, time: "12:05-12:10", type: "Break", duration: 5 }, 
-  { num: 7, time: "12:10-01:00", type: "Period", duration: 50 }, 
-];
+// const FIXED_PERIOD_STRUCTURE = [
+//   { num: 1, time: "07:00-07:55", type: "Period", duration: 55 },
+//   { num: null, time: "07:55-08:00", type: "Break", duration: 5 },
+//   { num: 2, time: "08:00-08:40", type: "Period", duration: 40 },
+//   { num: null, time: "08:40-08:45", type: "Break", duration: 5 },
+//   { num: 3, time: "08:45-09:25", type: "Period", duration: 40 },
+//   { num: null, time: "09:25-09:30", type: "Break", duration: 5 },
+//   { num: 4, time: "09:30-10:10", type: "Period", duration: 40 },
+//   { num: null, time: "10:10-10:40", type: "Lunch", duration: 30 }, 
+//   { num: 5, time: "10:40-11:20", type: "Period", duration: 40 }, 
+//   { num: null, time: "11:20-11:25", type: "Break", duration: 5 }, 
+//   { num: 6, time: "11:25-12:05", type: "Period", duration: 40 }, 
+//   { num: null, time: "12:05-12:10", type: "Break", duration: 5 }, 
+//   { num: 7, time: "12:10-01:00", type: "Period", duration: 50 }, 
+// ];
 
+const FIXED_PERIOD_STRUCTURE = [
+  { num: 1, time: "07:00-08:05", type: "Period", duration: 65 }, 
+  { num: null, time: "08:05-08:10", type: "Break", duration: 5 },
+  { num: 2, time: "08:10-08:50", type: "Period", duration: 40 },
+  { num: null, time: "08:50-08:55", type: "Break", duration: 5 },
+  { num: 3, time: "08:55-09:35", type: "Period", duration: 40 },
+  { num: null, time: "09:35-09:40", type: "Break", duration: 5 },
+  { num: 4, time: "09:40-10:20", type: "Period", duration: 40 },
+  { num: null, time: "10:20-10:40", type: "Lunch", duration: 20 }, 
+  { num: 5, time: "10:40-11:20", type: "Period", duration: 40 },
+  { num: null, time: "11:20-11:25", type: "Break", duration: 5 },
+  { num: 6, time: "11:25-12:05", type: "Period", duration: 40 },
+  { num: null, time: "12:05-12:10", type: "Break", duration: 5 },
+  { num: 7, time: "12:10-12:55", type: "Period", duration: 45 }, 
+];
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 // Divisions A-E as per previous request
@@ -916,99 +933,116 @@ exports.generateTimetable = async (req, res) => {
   const year = new Date().getFullYear();
 
   try {
+    // 1. Fetch Existing Schedules for Clash Prevention
     const allExistingTimetables = await Timetable.find({});
     let globalTeacherSchedule = {};
-    
-    // Build existing schedules to prevent teacher clashes
-    for (const tt of allExistingTimetables) {
-      for (const dayBlock of tt.timetable) {
-        for (const period of dayBlock.periods) {
-          if (period.teacher) {
-            const slot = `${dayBlock.day}-${period.time}`;
-            if (!globalTeacherSchedule[period.teacher]) globalTeacherSchedule[period.teacher] = new Set();
-            globalTeacherSchedule[period.teacher].add(slot);
+    allExistingTimetables.forEach(tt => {
+      tt.timetable.forEach(dayBlock => {
+        dayBlock.periods.forEach(p => {
+          if (p.teacher) {
+            const key = `${dayBlock.day}-${p.time}`;
+            if (!globalTeacherSchedule[p.teacher]) globalTeacherSchedule[p.teacher] = new Set();
+            globalTeacherSchedule[p.teacher].add(key);
           }
-        }
-      }
-    }
+        });
+      });
+    });
 
     let generatedTimetables = [];
 
     for (const division of ALL_DIVISIONS) {
-      const allocations = await SubjectAllocation.find({
-        standards: { $in: [standard] },
-        divisions: { $in: [division] }
+      // 2. Get Allotments and Subject Master Info
+      const allocations = await SubjectAllocation.find({ standards: standard, divisions: division });
+      const subjectConfigs = await Subject.findOne({ standard });
+      const classroomInfo = await Classroom.findOne({ standard, division });
+
+      if (!allocations.length || !classroomInfo) continue;
+
+      // 3. Prepare Requirements with logic for Optional/Activity
+      let requirements = allocations.map(alloc => {
+        const config = subjectConfigs.subjects.find(s => s.name === alloc.subjects[0]);
+        let count = 5; // Default Core
+        if (config?.type === 'Optional') count = 3;
+        if (config?.nature.includes('Activity')) count = 2;
+
+        return {
+            teacherId: alloc.teacher.toString(),
+            teacherName: alloc.teacherName,
+            subject: alloc.subjects[0],
+            isOptional: config?.type === 'Optional',
+            remaining: count,
+            assignedDays: new Set()
+        };
       });
 
-      if (allocations.length === 0) continue;
-
-      // Find Class Teacher for the first mandatory lecture
-      // Logic: Search allocations or classroom records for assigned class teacher
-      const classTeacherAlloc = allocations[0]; // Simplified: selecting first found for logic demo
-
+      // 4. Initialize Structure
       let newTimetableData = WEEKDAYS.map(day => ({
         day,
         periods: FIXED_PERIOD_STRUCTURE.map(p => ({
           periodNumber: p.num,
           subject: p.type === 'Period' ? 'Empty' : p.type,
-          teacher: null,
-          teacherName: null,
-          time: p.time,
+          teacher: null, teacherName: null, time: p.time,
         }))
       }));
 
-      // MANDATORY: Assign Class Teacher to 1st Lecture every day
+      // 5. MANDATORY: Class Teacher 1st Lecture
+      const classTrAlloc = allocations.find(a => a.teacher.toString() === classroomInfo.staffid.toString());
       newTimetableData.forEach(dayBlock => {
         const firstLec = dayBlock.periods[0];
-        firstLec.subject = "Class Teacher Period";
-        firstLec.teacher = classTeacherAlloc.teacher;
-        firstLec.teacherName = classTeacherAlloc.teacherName;
-        globalTeacherSchedule[classTeacherAlloc.teacher]?.add(`${dayBlock.day}-${firstLec.time}`);
+        firstLec.subject = classTrAlloc ? classTrAlloc.subjects[0] : "Class Teacher Period";
+        firstLec.teacher = classroomInfo.staffid;
+        firstLec.teacherName = classTrAlloc?.teacherName || "Class Teacher";
+        globalTeacherSchedule[classroomInfo.staffid]?.add(`${dayBlock.day}-${firstLec.time}`);
       });
 
-      // Prepare Subject Requirements
-      let requirements = allocations.map(alloc => ({
-        teacherId: alloc.teacher.toString(),
-        teacherName: alloc.teacherName,
-        subject: alloc.subjects[0],
-        remainingLectures: 5, // Default for core
-        isOptional: false, // You can add logic to flag optional/activity from your model
-      }));
+      // 6. Assignment Loop with Constraints
+      for (let day of WEEKDAYS) {
+        let dayBlock = newTimetableData.find(d => d.day === day);
+        
+        for (let i = 1; i < dayBlock.periods.length; i++) { // Start from index 1 (2nd period)
+          let period = dayBlock.periods[i];
+          if (period.subject !== 'Empty') continue;
 
-      // Distribution Logic
-      for (const req of requirements) {
-        let assignedCount = 0;
-        for (const day of WEEKDAYS) {
-          if (req.remainingLectures <= 0) break;
+          // Find best subject candidate
+          const candidate = requirements
+            .filter(r => r.remaining > 0)
+            .sort((a, b) => b.remaining - a.remaining) // Priority to those with more left
+            .find(r => {
+                const slotKey = `${day}-${period.time}`;
+                const isClashing = globalTeacherSchedule[r.teacherId]?.has(slotKey);
+                
+                // Optional Rule: 3 lecs per week, max 2 on same day (2+1 split)
+                const dayCount = Array.from(dayBlock.periods).filter(p => p.subject === r.subject).length;
+                const optionalConstraint = r.isOptional && dayCount >= 2;
+                
+                // Double Lecture Rule: Repeat max 2 times together
+                const prevPeriodSub = dayBlock.periods[i-2]?.subject; // skipping break index
+                const doubleLecConstraint = (dayCount >= 2) || (dayCount === 1 && prevPeriodSub !== r.subject);
 
-          const dayBlock = newTimetableData.find(d => d.day === day);
-          // Find empty period (skipping the 1st which is mandatory class tr)
-          const availablePeriod = dayBlock.periods.find((p, index) => index > 0 && p.subject === 'Empty');
+                return !isClashing && !optionalConstraint && !doubleLecConstraint;
+            });
 
-          if (availablePeriod) {
-            const slot = `${day}-${availablePeriod.time}`;
-            if (!globalTeacherSchedule[req.teacherId]?.has(slot)) {
-              availablePeriod.subject = req.subject;
-              availablePeriod.teacher = req.teacherId;
-              availablePeriod.teacherName = req.teacherName;
-              req.remainingLectures--;
-              
-              if (!globalTeacherSchedule[req.teacherId]) globalTeacherSchedule[req.teacherId] = new Set();
-              globalTeacherSchedule[req.teacherId].add(slot);
-            }
+          if (candidate) {
+            period.subject = candidate.subject;
+            period.teacher = candidate.teacherId;
+            period.teacherName = candidate.teacherName;
+            candidate.remaining--;
+            if (!globalTeacherSchedule[candidate.teacherId]) globalTeacherSchedule[candidate.teacherId] = new Set();
+            globalTeacherSchedule[candidate.teacherId].add(`${day}-${period.time}`);
           }
         }
       }
 
+      // 7. Save
       const newTT = new Timetable({
         standard, division, year, from, to, submittedby,
-        timetable: newTimetableData, timing
+        timing, timetable: newTimetableData
       });
       await newTT.save();
       generatedTimetables.push(newTT);
     }
 
-    res.status(201).json({ message: "Timetables generated successfully.", timetables: generatedTimetables });
+    res.status(201).json({ message: "Generated successfully", timetables: generatedTimetables });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
