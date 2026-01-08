@@ -183,8 +183,6 @@ router.get("/classrooms", classroomController.getAllClassrooms);
 
 router.delete("/classrooms/:id", classroomController.deleteClassroom);
 
-router.get("/eligible-teachers/:standard", classroomController.getEligibleClassTeachers);
-
 router.put("/classrooms/:id", classroomController.editClassroom);
 
 router.get("/class-teacher/:standard/:division", classroomController.getClassTeacherByClass);
