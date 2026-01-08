@@ -1,6 +1,8 @@
 const classroom = require("../models/classroomModel");
 const Student = require("../models/studentModel");
 const Staff = require("../models/staffModel");
+const subjectAllocation = require("../models/subjectAllocation");
+const Subject = require("../models/subjectsModel");
 exports.addClassroom = async (req, res) => {
   try {
     const response = new classroom(req.body);
@@ -9,6 +11,46 @@ exports.addClassroom = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
+};
+
+exports.getEligibleClassTeachers = async (req, res) => {
+    try {
+        const { standard } = req.params;
+
+        // 1. Get all subject allotments for this standard
+        const allotments = await subjectAllocation.find({ standards: standard });
+        
+        // 2. Get subject master to identify "Compulsory" subjects
+        const subjectMaster = await Subject.findOne({ standard });
+        if (!subjectMaster) return res.status(404).json({ message: "Subjects not configured for this standard." });
+
+        const compulsorySubjectNames = subjectMaster.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
+
+        // 3. Filter allotments to find teachers teaching compulsory subjects in this standard
+        const coreTeacherIds = allotments
+            .filter(allot => allot.subjects.some(sub => compulsorySubjectNames.includes(sub)))
+            .map(allot => allot.teacher.toString());
+
+        // 4. Find teachers already assigned as Class Teachers (to any standard/division)
+        const assignedClassroomTeachers = await classroom.find({}, 'staffid').lean();
+        const alreadyAssignedIds = assignedClassroomTeachers.map(c => c.staffid.toString());
+
+        // 5. Fetch full staff details for those core teachers who are NOT already Class Teachers
+        // Note: If in 'Edit' mode, the current teacher of that class should be included (handled in frontend)
+        const eligibleStaff = await Staff.find({
+            _id: { $in: coreTeacherIds },
+            // Filter out those already assigned elsewhere
+        }).select('firstname lastname middlename staffid').lean();
+
+        // Return only those not in the 'alreadyAssignedIds' list
+        const filteredEligible = eligibleStaff.filter(s => !alreadyAssignedIds.includes(s._id.toString()));
+
+        return res.status(200).json(filteredEligible);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 };
 
 exports.getAllClassrooms = async (req, res) => {
