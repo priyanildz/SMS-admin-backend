@@ -1563,72 +1563,97 @@ exports.bulkCreateTeachers = async (req, res) => {
             { name: "Secondary", count: 30, code: "SC" }
         ];
 
+        // Sample Data Pools for Realistic Filling
+        const firstNames = ["Suresh", "Meena", "Rahul", "Anjali", "Vikram", "Priya", "Amit", "Sneha", "Kiran", "Deepak"];
+        const middleNames = ["Kumar", "Lata", "Chandra", "Devi", "Prasad", "Shanti", "Nath", "Anand"];
+        const lastNames = ["Sharma", "Patil", "Mehta", "Deshmukh", "Joshi", "Kulkarni", "Singh", "Pandey"];
+        const areas = ["Manor Road", "Mahim Road", "Devkalyan", "Nityanand Nagar", "Kacheri Road"];
+
         let createdCount = 0;
-        const timestamp = Date.now().toString().slice(-4); // Use last 4 digits of timestamp
+        const timestamp = Date.now().toString().slice(-4);
 
         for (const cat of categories) {
             for (let i = 1; i <= cat.count; i++) {
-                // IMPROVED UNIQUE ID: Category Code + Index + Timestamp
-                // Example: STFPP1-5074, STFPR1-5074, etc.
                 const staffId = `STF${cat.code}${i}-${timestamp}`;
                 
+                // Rotate through name pools based on index
+                const fn = firstNames[i % firstNames.length];
+                const mn = middleNames[i % middleNames.length];
+                const ln = lastNames[i % lastNames.length];
+
                 const data = {
                     staffid: staffId,
-                    firstname: `${cat.name}Teacher`,
-                    lastname: `Nr${i}`,
-                    dob: new Date("1995-05-20"),
-                    gender: i % 2 === 0 ? "Female" : "Male",
-                    maritalstatus: "Single",
-                    bloodgroup: "B+",
+                    firstname: fn,
+                    middlename: mn,
+                    lastname: ln,
+                    dob: new Date("1990-06-15"),
+                    maritalstatus: i % 2 === 0 ? "Married" : "Single",
+                    bloodgroup: "O+",
+                    gender: i % 5 === 0 ? "Male" : "Female",
                     category: "General",
                     nationality: "Indian",
-                    aadharno: `8000${Math.floor(10000000 + Math.random() * 90000000)}`, // Unique 12-digit
-                    phoneno: `9000${Math.floor(100000 + Math.random() * 900000)}`,
-                    emailaddress: `${staffId.toLowerCase()}@school.com`,
+                    aadharno: `7${Math.floor(10000000000 + Math.random() * 90000000000)}`,
+                    phoneno: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
+                    alternatephoneno: `8${Math.floor(100000000 + Math.random() * 900000000)}`,
+                    emailaddress: `${fn.toLowerCase()}.${staffId.toLowerCase()}@school.com`,
                     password: "teacher@123",
                     status: true,
-                    photo: "", 
-                    documentsurl: [],
-                    addressline1: "123 School Lane",
+                    // Address - Filling all lines
+                    addressline1: `${Math.floor(Math.random() * 100 + 1)}, Sai Ashish Apartment`,
+                    addressline2: areas[i % areas.length],
                     city: "Palghar",
                     postalcode: "401404",
+                    district: "Palghar",
                     state: "Maharashtra",
                     country: "India",
+                    // Education - Mandatory fields
                     highestqualification: "M.A. B.Ed",
-                    yearofpassing: "2018",
+                    yearofpassing: "2016",
+                    specialization: "Social Studies",
                     universityname: "Mumbai University",
+                    certificates: "CTET Qualified",
+                    // Experience
+                    totalexperience: "5 Years",
+                    designation: "Teacher",
+                    previousemployer: "National Public School",
+                    subjectstaught: ["English", "History"],
+                    reasonforleaving: "Career Growth",
+                    // Role
                     position: "Teacher",
                     dept: "Teaching",
                     preferredgrades: [cat.name],
                     joiningdate: new Date(),
-                    // FIXED: Manually ensuring bankid is unique to avoid the previous error
-                    bankid: `BK-${staffId}-${Date.now()}`, 
-                    bankname: "HDFC Bank",
-                    branchname: "Main Branch",
-                    accno: `5000${Date.now()}${createdCount}`,
-                    ifccode: "HDFC0001234",
-                    panno: `PQRSR${Math.floor(1000 + Math.random() * 9000)}Z`,
-                    transportstatus: "no"
+                    // Bank - Mandatory & Unique
+                    bankid: `BK-${staffId}-${i}`,
+                    bankname: "State Bank of India",
+                    branchname: "Palghar East",
+                    accno: `3000${Date.now()}${createdCount}`,
+                    ifccode: "SBIN0000123",
+                    panno: `ABCDE${Math.floor(1000 + Math.random() * 9000)}F`,
+                    // Transport - Fully filled
+                    transportstatus: "yes",
+                    pickuppoint: "Palghar Station",
+                    droppoint: "School Main Gate",
+                    modetransport: "School Bus"
                 };
 
                 const staff = new Staff(data);
                 await staff.save();
 
-                // Save sub-docs using your existing helper
+                // Save all sub-documents using the standard field mapping
                 await Promise.all([
-                    upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "city", "postalcode", "state", "country"]),
-                    upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "universityname"]),
+                    upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "addressline2", "city", "postalcode", "district", "state", "country"]),
+                    upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "specialization", "universityname", "certificates"]),
+                    upsertStaffSubDoc(staffExperience, staffId, data, ["totalexperience", "designation", "previousemployer", "subjectstaught", "reasonforleaving"]),
                     upsertStaffSubDoc(staffRole, staffId, data, ["position", "dept", "preferredgrades", "joiningdate"]),
                     upsertStaffSubDoc(staffBank, staffId, data, ["bankname", "branchname", "accno", "ifccode", "panno", "bankid"]),
-                    upsertStaffSubDoc(staffTransport, staffId, data, ["transportstatus"])
+                    upsertStaffSubDoc(staffTransport, staffId, data, ["transportstatus", "pickuppoint", "droppoint", "modetransport"])
                 ]);
                 createdCount++;
             }
         }
-        res.status(201).json({ message: `${createdCount} teachers created successfully.` });
+        res.status(201).json({ message: `Successfully created ${createdCount} staff members with full details.` });
     } catch (error) {
-        // Detailed log to see which ID caused the failure
-        console.error("Creation failed at count:", createdCount, error);
         res.status(500).json({ error: error.message });
     }
 };
