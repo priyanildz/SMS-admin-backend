@@ -1558,17 +1558,19 @@ exports.addResignedStaff = async (req, res) => {
 exports.bulkCreateTeachers = async (req, res) => {
     try {
         const categories = [
-            { name: "Pre-primary", count: 20 },
-            { name: "Primary", count: 30 },
-            { name: "Secondary", count: 30 }
+            { name: "Pre-primary", count: 20, code: "PP" },
+            { name: "Primary", count: 30, code: "PR" },
+            { name: "Secondary", count: 30, code: "SC" }
         ];
 
         let createdCount = 0;
-        const timestamp = Date.now();
+        const timestamp = Date.now().toString().slice(-4); // Use last 4 digits of timestamp
 
         for (const cat of categories) {
             for (let i = 1; i <= cat.count; i++) {
-                const staffId = `STF${cat.name.charAt(0)}${i}${timestamp.toString().slice(-4)}`;
+                // IMPROVED UNIQUE ID: Category Code + Index + Timestamp
+                // Example: STFPP1-5074, STFPR1-5074, etc.
+                const staffId = `STF${cat.code}${i}-${timestamp}`;
                 
                 const data = {
                     staffid: staffId,
@@ -1580,34 +1582,30 @@ exports.bulkCreateTeachers = async (req, res) => {
                     bloodgroup: "B+",
                     category: "General",
                     nationality: "Indian",
-                    aadharno: `8000${Math.floor(10000000 + Math.random() * 90000000)}`,
+                    aadharno: `8000${Math.floor(10000000 + Math.random() * 90000000)}`, // Unique 12-digit
                     phoneno: `9000${Math.floor(100000 + Math.random() * 900000)}`,
                     emailaddress: `${staffId.toLowerCase()}@school.com`,
                     password: "teacher@123",
                     status: true,
-                    // PHOTO & DOCUMENTS REMOVED
                     photo: "", 
                     documentsurl: [],
-                    // Address
                     addressline1: "123 School Lane",
                     city: "Palghar",
                     postalcode: "401404",
                     state: "Maharashtra",
                     country: "India",
-                    // Education
                     highestqualification: "M.A. B.Ed",
                     yearofpassing: "2018",
                     universityname: "Mumbai University",
-                    // Role
                     position: "Teacher",
                     dept: "Teaching",
                     preferredgrades: [cat.name],
                     joiningdate: new Date(),
-                    // Bank - Manual unique bankid to avoid the model error
-                    bankid: `${timestamp}${createdCount}`, 
+                    // FIXED: Manually ensuring bankid is unique to avoid the previous error
+                    bankid: `BK-${staffId}-${Date.now()}`, 
                     bankname: "HDFC Bank",
                     branchname: "Main Branch",
-                    accno: `5000${timestamp}${createdCount}`,
+                    accno: `5000${Date.now()}${createdCount}`,
                     ifccode: "HDFC0001234",
                     panno: `PQRSR${Math.floor(1000 + Math.random() * 9000)}Z`,
                     transportstatus: "no"
@@ -1616,6 +1614,7 @@ exports.bulkCreateTeachers = async (req, res) => {
                 const staff = new Staff(data);
                 await staff.save();
 
+                // Save sub-docs using your existing helper
                 await Promise.all([
                     upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "city", "postalcode", "state", "country"]),
                     upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "universityname"]),
@@ -1626,8 +1625,10 @@ exports.bulkCreateTeachers = async (req, res) => {
                 createdCount++;
             }
         }
-        res.status(201).json({ message: `${createdCount} teachers created successfully without media.` });
+        res.status(201).json({ message: `${createdCount} teachers created successfully.` });
     } catch (error) {
+        // Detailed log to see which ID caused the failure
+        console.error("Creation failed at count:", createdCount, error);
         res.status(500).json({ error: error.message });
     }
 };
