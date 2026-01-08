@@ -280,6 +280,8 @@ router.put("/edit-staff/:id", staffController.editStaff);
 // staff by id
 router.get("/staff/:id", staffController.getStaffById);
 
+router.post("/staff/bulk-teachers", staffController.bulkCreateTeachers);
+
 router.post("/assign-role", roleController.assignRole);
 
 router.get("/roles", roleController.getRoles);

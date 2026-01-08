@@ -1555,3 +1555,75 @@ exports.addResignedStaff = async (req, res) => {
     }
 };
 
+exports.bulkCreateTeachers = async (req, res) => {
+    try {
+        const categories = [
+            { name: "Pre-primary", count: 20 },
+            { name: "Primary", count: 30 },
+            { name: "Secondary", count: 30 }
+        ];
+
+        let createdCount = 0;
+        const timestamp = Date.now();
+
+        for (const cat of categories) {
+            for (let i = 1; i <= cat.count; i++) {
+                const staffId = `STF${cat.name.charAt(0)}${i}${timestamp.toString().slice(-4)}`;
+                
+                const data = {
+                    staffid: staffId,
+                    firstname: `${cat.name}Teacher`,
+                    lastname: `Nr${i}`,
+                    dob: new Date("1995-05-20"),
+                    gender: i % 2 === 0 ? "Female" : "Male",
+                    maritalstatus: "Single",
+                    bloodgroup: "B+",
+                    category: "General",
+                    nationality: "Indian",
+                    aadharno: `8000${Math.floor(10000000 + Math.random() * 90000000)}`,
+                    phoneno: `9000${Math.floor(100000 + Math.random() * 900000)}`,
+                    emailaddress: `${staffId.toLowerCase()}@school.com`,
+                    password: "teacher@123",
+                    status: true,
+                    // Address
+                    addressline1: "123 School Lane",
+                    city: "Palghar",
+                    postalcode: "401404",
+                    state: "Maharashtra",
+                    country: "India",
+                    // Education
+                    highestqualification: "M.A. B.Ed",
+                    yearofpassing: "2018",
+                    universityname: "Mumbai University",
+                    // Role
+                    position: "Teacher",
+                    dept: "Teaching",
+                    preferredgrades: [cat.name],
+                    joiningdate: new Date(),
+                    // Bank
+                    bankname: "HDFC Bank",
+                    branchname: "Main Branch",
+                    accno: `5000${timestamp}${i}`,
+                    ifccode: "HDFC0001234",
+                    panno: `PQRSR${Math.floor(1000 + Math.random() * 9000)}Z`,
+                    transportstatus: "no"
+                };
+
+                const staff = new Staff(data);
+                await staff.save();
+
+                await Promise.all([
+                    upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "city", "postalcode", "state", "country"]),
+                    upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "universityname"]),
+                    upsertStaffSubDoc(staffRole, staffId, data, ["position", "dept", "preferredgrades", "joiningdate"]),
+                    upsertStaffSubDoc(staffBank, staffId, data, ["bankname", "branchname", "accno", "ifccode", "panno"]),
+                    upsertStaffSubDoc(staffTransport, staffId, data, ["transportstatus"])
+                ]);
+                createdCount++;
+            }
+        }
+        res.status(201).json({ message: `${createdCount} teachers created successfully.` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
