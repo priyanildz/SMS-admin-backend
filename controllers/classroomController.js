@@ -1,14 +1,69 @@
 const classroom = require("../models/classroomModel");
 const Student = require("../models/studentModel");
 const Staff = require("../models/staffModel");
+// exports.addClassroom = async (req, res) => {
+//   try {
+//     const response = new classroom(req.body);
+//     await response.save();
+//     return res.status(200).json({ message: "added classroom successfully" });
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 exports.addClassroom = async (req, res) => {
-  try {
-    const response = new classroom(req.body);
-    await response.save();
-    return res.status(200).json({ message: "added classroom successfully" });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    try {
+        const { standard, division, staffid } = req.body;
+
+        // Check if this specific class already exists
+        const exists = await classroom.findOne({ standard, division });
+        if (exists) return res.status(409).json({ message: "Classroom already exists" });
+
+        const newClass = new classroom({
+            standard,
+            division,
+            staffid,
+            studentcount: 0, // Initial
+            student_ids: {}  // Initial
+        });
+
+        await newClass.save();
+        return res.status(200).json({ message: "Classroom assigned successfully" });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// --- NEW: Helper to find teachers eligible to be Class Teachers ---
+exports.getEligibleTeachers = async (req, res) => {
+    try {
+        const { standard } = req.params;
+
+        // 1. Get the master subject list for this standard to identify "Compulsory" subjects
+        const subjectConfig = await Subject.findOne({ standard });
+        if (!subjectConfig) return res.status(200).json([]);
+
+        const coreSubjectNames = subjectConfig.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
+
+        // 2. Find all teachers allotted to these core subjects for this standard
+        const allocations = await SubjectAllocation.find({
+            standards: standard,
+            subjects: { $in: coreSubjectNames }
+        }).distinct('teacher');
+
+        // 3. Find teachers from that list who are NOT already assigned as a Class Teacher elsewhere
+        const alreadyAssignedTeachers = await classroom.find().distinct('staffid');
+
+        const eligibleStaff = await Staff.find({
+            _id: { $in: allocations, $nin: alreadyAssignedTeachers },
+            status: true
+        }).select('firstname lastname staffid');
+
+        return res.status(200).json(eligibleStaff);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 };
 
 exports.getAllClassrooms = async (req, res) => {

@@ -271,6 +271,9 @@ router.post("/add-subject", subjectManagement.addSubject);
 
 router.get("/subjects", subjectManagement.getAllSubjects);
 
+// Add this near your other classroom routes
+router.get("/eligible-teachers/:standard", classroomController.getEligibleTeachers);
+
 // get subjects by standard
 router.get("/subjects/:standard", subjectManagement.getSubjectsByStandard);
 
