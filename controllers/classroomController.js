@@ -3,11 +3,66 @@ const Student = require("../models/studentModel");
 const Staff = require("../models/staffModel");
 const subjectAllocation = require("../models/subjectAllocation");
 const Subject = require("../models/subjectsModel");
+// exports.addClassroom = async (req, res) => {
+//   try {
+//     const response = new classroom(req.body);
+//     await response.save();
+//     return res.status(200).json({ message: "added classroom successfully" });
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 exports.addClassroom = async (req, res) => {
   try {
-    const response = new classroom(req.body);
-    await response.save();
-    return res.status(200).json({ message: "added classroom successfully" });
+    const { standard, submittedBy } = req.body;
+    const DIVISIONS = ["A", "B", "C", "D", "E"];
+    
+    // 1. Find all teachers alloted to this standard
+    const allotments = await SubjectAllocation.find({ standards: standard });
+    const subjectMaster = await Subject.findOne({ standard });
+
+    if (!allotments.length || !subjectMaster) {
+      return res.status(400).json({ message: "No subject allotments found for this standard to assign teachers." });
+    }
+
+    // 2. Identify Core (Compulsory) Subject Teachers
+    const coreSubjectNames = subjectMaster.subjects
+      .filter(s => s.type === "Compulsory")
+      .map(s => s.name);
+
+    const eligibleTeachers = allotments.filter(a => 
+      a.subjects.some(sub => coreSubjectNames.includes(sub))
+    );
+
+    // 3. Create classrooms for each division
+    const createdClassrooms = [];
+    let availableTeachers = [...eligibleTeachers];
+
+    for (const div of DIVISIONS) {
+      // Check if already exists
+      const existing = await classroom.findOne({ standard, division: div });
+      if (existing) continue;
+
+      if (availableTeachers.length === 0) break;
+
+      // Randomly pick an eligible teacher
+      const randomIndex = Math.floor(Math.random() * availableTeachers.length);
+      const chosenTeacher = availableTeachers.splice(randomIndex, 1)[0];
+
+      const newClass = new classroom({
+        standard,
+        division: div,
+        staffid: chosenTeacher.teacher,
+        studentcount: 0,
+        student_ids: {},
+        submittedBy
+      });
+
+      await newClass.save();
+      createdClassrooms.push(newClass);
+    }
+
+    return res.status(200).json({ message: `Successfully created ${createdClassrooms.length} classrooms.` });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
