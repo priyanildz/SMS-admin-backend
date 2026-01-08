@@ -1657,21 +1657,3 @@ exports.bulkCreateTeachers = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-exports.deleteAllStaff = async (req, res) => {
-    try {
-        await Promise.all([
-            Staff.deleteMany({}),
-            staffAddress.deleteMany({}),
-            staffEductaion.deleteMany({}),
-            staffExperience.deleteMany({}),
-            staffRole.deleteMany({}),
-            staffBank.deleteMany({}),
-            staffTransport.deleteMany({}),
-            staffDocs.deleteMany({}),
-            StaffAttendance.deleteMany({})
-        ]);
-        res.status(200).json({ message: "All staff records and related data deleted successfully." });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};

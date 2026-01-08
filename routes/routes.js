@@ -282,9 +282,6 @@ router.get("/staff/:id", staffController.getStaffById);
 
 router.post("/staff/bulk-teachers", staffController.bulkCreateTeachers);
 
-// Route to delete all staff and related data
-router.delete("/staff/all", staffController.deleteAllStaff);
-
 router.post("/assign-role", roleController.assignRole);
 
 router.get("/roles", roleController.getRoles);
