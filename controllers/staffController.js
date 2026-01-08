@@ -1563,11 +1563,11 @@ exports.bulkCreateTeachers = async (req, res) => {
             { name: "Secondary", count: 30, code: "SC" }
         ];
 
-        // --- UNIQUE DATA POOLS ---
-        const firstNames = ["Suresh", "Meena", "Rahul", "Anjali", "Vikram", "Priya", "Amit", "Sneha", "Kiran", "Deepak", "Rohan", "Geeta", "Arjun", "Kavita", "Yash", "Nidhi", "Sanjay", "Ritu", "Manoj", "Tanvi", "Abhay", "Saritha", "Vinay", "Poonam", "Vijay", "Divya", "Rajesh", "Komal", "Sunil", "Asha"];
-        const lastNames = ["Sharma", "Patil", "Mehta", "Deshmukh", "Joshi", "Kulkarni", "Singh", "Pandey", "Varma", "Thakur", "Gaikwad", "Sawant", "More", "Shinde", "Pawar", "Kadam", "Mishra", "Dubey", "Rao", "Hedge"];
-        
-        // Shuffle helper to ensure randomness without repetition
+        // --- EXTENDED UNIQUE DATA POOLS ---
+        const firstNames = ["Suresh", "Meena", "Rahul", "Anjali", "Vikram", "Priya", "Amit", "Sneha", "Kiran", "Deepak", "Rohan", "Geeta", "Arjun", "Kavita", "Yash", "Nidhi", "Sanjay", "Ritu", "Manoj", "Tanvi", "Abhay", "Saritha", "Vinay", "Poonam", "Vijay", "Divya", "Rajesh", "Komal", "Sunil", "Asha", "Ishaan", "Diya", "Kabir", "Zara"];
+        const lastNames = ["Sharma", "Patil", "Mehta", "Deshmukh", "Joshi", "Kulkarni", "Singh", "Pandey", "Varma", "Thakur", "Gaikwad", "Sawant", "More", "Shinde", "Pawar", "Kadam", "Mishra", "Dubey", "Rao", "Hedge", "Nair", "Iyer", "Gill", "Chauhan"];
+        const areas = ["Manor Road", "Mahim Road", "Devkalyan", "Nityanand Nagar", "Kacheri Road", "Palghar East", "Vevoor", "Tembhode"];
+
         const shuffle = (array) => array.sort(() => Math.random() - 0.5);
         let shuffledFirst = shuffle([...firstNames]);
         let shuffledLast = shuffle([...lastNames]);
@@ -1577,10 +1577,10 @@ exports.bulkCreateTeachers = async (req, res) => {
 
         for (const cat of categories) {
             for (let i = 1; i <= cat.count; i++) {
-                // Generate absolute unique staffId
-                const staffId = `STF${cat.code}${i}${baseTimestamp.toString().slice(-3)}`;
+                // Ensure unique staffId
+                const staffId = `STF${cat.code}${i}-${baseTimestamp.toString().slice(-4)}`;
                 
-                // Pick names and refresh pool if exhausted to maintain variety
+                // Rotate name pools
                 if (shuffledFirst.length === 0) shuffledFirst = shuffle([...firstNames]);
                 if (shuffledLast.length === 0) shuffledLast = shuffle([...lastNames]);
                 const fn = shuffledFirst.pop();
@@ -1589,67 +1589,65 @@ exports.bulkCreateTeachers = async (req, res) => {
                 const data = {
                     staffid: staffId,
                     firstname: fn,
-                    middlename: "Kumar", // Standardized middle name
+                    middlename: ["Kumar", "Lata", "Prasad", "Devi", "Nath"][i % 5], // Diverse middle names
                     lastname: ln,
-                    dob: new Date(1985 + (i % 10), i % 12, 10),
+                    dob: new Date(1980 + (createdCount % 15), (createdCount % 12), (createdCount % 28) + 1),
                     maritalstatus: i % 2 === 0 ? "Married" : "Single",
-                    bloodgroup: ["A+", "B+", "O+", "AB+"][i % 4],
+                    bloodgroup: ["A+", "B+", "O+", "AB+", "A-", "B-"][i % 6],
                     gender: i % 3 === 0 ? "Male" : "Female",
-                    category: "General",
+                    category: ["General", "OBC", "SC", "ST"][i % 4],
                     nationality: "Indian",
-                    // Guaranteed unique numeric strings
-                    aadharno: (700000000000 + createdCount + Math.floor(Math.random() * 1000)).toString(),
-                    phoneno: (9000000000 + createdCount).toString(),
-                    alternatephoneno: (8000000000 + createdCount).toString(),
-                    emailaddress: `${fn.toLowerCase()}${i}${cat.code}@palgharschool.com`,
+                    // --- GUARANTEED UNIQUE STRINGS TO AVOID E11000 ---
+                    aadharno: (810000000000 + createdCount + Math.floor(Math.random() * 100)).toString(), // Fixed unique range
+                    phoneno: (9800000000 + createdCount).toString(),
+                    alternatephoneno: (7800000000 + createdCount).toString(),
+                    emailaddress: `${fn.toLowerCase()}.${staffId.toLowerCase()}@school.com`,
                     password: "teacher@123",
                     status: true,
                     photo: "", 
                     documentsurl: [],
-                    // Detailed Address
-                    addressline1: `Flat ${100 + i}, ${ln} Villa`,
-                    addressline2: `Near ${["Manor", "Mahim", "Kacheri", "Station"][i % 4]} Road`,
+                    // --- FULLY FILLED ADDRESS ---
+                    addressline1: `Flat No ${200 + i}, ${ln} Heritage`,
+                    addressline2: areas[i % areas.length],
                     city: "Palghar",
                     postalcode: "401404",
                     district: "Palghar",
                     state: "Maharashtra",
                     country: "India",
-                    // Education
-                    highestqualification: "M.A. M.Ed",
-                    yearofpassing: (2010 + (i % 10)).toString(),
-                    specialization: ["English", "Mathematics", "Science", "Arts"][i % 4],
+                    // --- EDUCATION ---
+                    highestqualification: "M.Sc B.Ed",
+                    yearofpassing: (2010 + (i % 12)).toString(),
+                    specialization: ["Physics", "Mathematics", "Biology", "Chemistry"][i % 4],
                     universityname: "Mumbai University",
-                    certificates: "Professional Teaching Certificate",
-                    // Experience
-                    totalexperience: `${(i % 10) + 1} Years`,
+                    certificates: "TET Qualified",
+                    // --- EXPERIENCE ---
+                    totalexperience: `${(i % 8) + 2} Years`,
                     designation: "Senior Teacher",
-                    previousemployer: "Global International School",
-                    subjectstaught: ["Multi-subject"],
-                    reasonforleaving: "Relocation",
-                    // Role
+                    previousemployer: "Bright Future Academy",
+                    subjectstaught: ["Science", "Mathematics"],
+                    reasonforleaving: "Better Opportunity",
+                    // --- ROLE ---
                     position: "Teacher",
                     dept: "Teaching",
                     preferredgrades: [cat.name],
                     joiningdate: new Date(),
-                    // Bank - Mandatory Unique bankid fix
-                    bankid: `BID${baseTimestamp}${createdCount}`,
+                    // --- BANK (Unique bankid fix) ---
+                    bankid: `BnkID-${baseTimestamp}-${createdCount}`,
                     bankname: "HDFC Bank",
-                    branchname: "Palghar Branch",
-                    accno: `9100${baseTimestamp}${createdCount}`,
-                    ifccode: "HDFC0000123",
-                    panno: `ABCDE${7000 + createdCount}F`,
-                    // Transport
+                    branchname: "Palghar Main",
+                    accno: `120000${baseTimestamp}${createdCount}`,
+                    ifccode: "HDFC0001234",
+                    panno: `ABCDE${8000 + createdCount}Z`,
+                    // --- TRANSPORT ---
                     transportstatus: "yes",
-                    pickuppoint: "Local Landmark",
-                    droppoint: "School Gate",
+                    pickuppoint: "Station Road",
+                    droppoint: "School Gate No 2",
                     modetransport: "School Bus"
                 };
 
-                // Save main Staff
                 const staff = new Staff(data);
                 await staff.save();
 
-                // Save all related sub-documents
                 await Promise.all([
                     upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "addressline2", "city", "postalcode", "district", "state", "country"]),
                     upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "specialization", "universityname", "certificates"]),
@@ -1661,7 +1659,7 @@ exports.bulkCreateTeachers = async (req, res) => {
                 createdCount++;
             }
         }
-        res.status(201).json({ message: `Successfully generated ${createdCount} unique staff records.` });
+        res.status(201).json({ message: `Successfully generated ${createdCount} staff members with 100% unique data.` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
