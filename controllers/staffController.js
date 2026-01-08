@@ -1564,11 +1564,12 @@ exports.bulkCreateTeachers = async (req, res) => {
         ];
 
         let createdCount = 0;
-        const timestamp = Date.now();
+        const baseTimestamp = Date.now();
 
         for (const cat of categories) {
             for (let i = 1; i <= cat.count; i++) {
-                const staffId = `STF${cat.name.charAt(0)}${i}${timestamp.toString().slice(-4)}`;
+                // Generate unique staff ID based on category and index
+                const staffId = `STF${cat.name.charAt(0)}${i}${baseTimestamp.toString().slice(-4)}${i}`;
                 
                 const data = {
                     staffid: staffId,
@@ -1580,11 +1581,12 @@ exports.bulkCreateTeachers = async (req, res) => {
                     bloodgroup: "B+",
                     category: "General",
                     nationality: "Indian",
-                    aadharno: `8000${Math.floor(10000000 + Math.random() * 90000000)}`,
-                    phoneno: `9000${Math.floor(100000 + Math.random() * 900000)}`,
+                    aadharno: `8000${Math.floor(100000000 + Math.random() * 900000000)}`.slice(0, 12),
+                    phoneno: `9000${Math.floor(1000000 + Math.random() * 9000000)}`.slice(0, 10),
                     emailaddress: `${staffId.toLowerCase()}@school.com`,
                     password: "teacher@123",
                     status: true,
+                    // Photo is skipped here
                     // Address
                     addressline1: "123 School Lane",
                     city: "Palghar",
@@ -1603,15 +1605,16 @@ exports.bulkCreateTeachers = async (req, res) => {
                     // Bank
                     bankname: "HDFC Bank",
                     branchname: "Main Branch",
-                    accno: `5000${timestamp}${i}`,
+                    accno: `5000${baseTimestamp}${i}`,
                     ifccode: "HDFC0001234",
-                    panno: `PQRSR${Math.floor(1000 + Math.random() * 9000)}Z`,
+                    panno: `ABCDE${Math.floor(1000 + Math.random() * 9000)}Z`,
                     transportstatus: "no"
                 };
 
                 const staff = new Staff(data);
                 await staff.save();
 
+                // Run sub-document updates in parallel, excluding documentsurl
                 await Promise.all([
                     upsertStaffSubDoc(staffAddress, staffId, data, ["addressline1", "city", "postalcode", "state", "country"]),
                     upsertStaffSubDoc(staffEductaion, staffId, data, ["highestqualification", "yearofpassing", "universityname"]),
@@ -1622,8 +1625,9 @@ exports.bulkCreateTeachers = async (req, res) => {
                 createdCount++;
             }
         }
-        res.status(201).json({ message: `${createdCount} teachers created successfully.` });
+        res.status(201).json({ message: `${createdCount} teachers created successfully without photos/docs.` });
     } catch (error) {
+        console.error("Bulk Creation Error:", error);
         res.status(500).json({ error: error.message });
     }
 };
