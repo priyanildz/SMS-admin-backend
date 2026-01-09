@@ -1641,14 +1641,6 @@ exports.createUser = async (req, res) => {
         // 1. Get the total count of students currently in the DB
         const studentCount = await User.countDocuments();
         
-        const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
-        
-        let nextNumber = 1;
-        if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
-            // Extract the numeric part from "ADM-005" -> 5
-            const lastNoPart = lastStudent.admission.admissionno.split('-')[1];
-            nextNumber = parseInt(lastNoPart) + 1;
-        }
         // 2. Increment count and pad with leading zeros (e.g., 3 -> "003")
         const nextNumberString = (studentCount + 1).toString().padStart(3, '0');
 
