@@ -1,44 +1,80 @@
 const classroom = require("../models/classroomModel");
 const Student = require("../models/studentModel");
 const Staff = require("../models/staffModel");
-// exports.addClassroom = async (req, res) => {
-//   try {
-//     const response = new classroom(req.body);
-//     await response.save();
-//     return res.status(200).json({ message: "added classroom successfully" });
-//   } catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
-exports.addClassroom = async (req, res) => {
+const SubjectAllocation = require("../models/subjectAllocation");
+const Subject = require("../models/subjectsModel");
+
+
+// --- NEW: Core logic to auto-generate class teachers based on subject allotments ---
+exports.autoGenerateClassTeachers = async (req, res) => {
     try {
-        const { standard, division, staffid } = req.body;
+        const { standard } = req.body;
+        const DIVISIONS = ["A", "B", "C", "D", "E"];
 
-        // Check if this specific class already exists
-        const exists = await classroom.findOne({ standard, division });
-        if (exists) return res.status(409).json({ message: "Classroom already exists" });
+        // 1. Find Compulsory subjects for this standard
+        const subjectConfig = await Subject.findOne({ standard });
+        if (!subjectConfig) return res.status(404).json({ message: "No subject configuration found for this standard." });
 
-        const newClass = new classroom({
-            standard,
-            division,
-            staffid,
-            studentcount: 0, // Initial
-            student_ids: {}  // Initial
-        });
+        const coreSubjectNames = subjectConfig.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
 
-        await newClass.save();
-        return res.status(200).json({ message: "Classroom assigned successfully" });
+        // 2. Find all teachers teaching these core subjects in this standard
+        const coreAllocations = await SubjectAllocation.find({
+            standards: standard,
+            subjects: { $in: coreSubjectNames }
+        }).distinct('teacher');
+
+        if (coreAllocations.length === 0) {
+            return res.status(400).json({ message: "No core subject teachers allotted yet for this standard." });
+        }
+
+        // 3. Find teachers already assigned as class teachers (to avoid double duty)
+        const busyTeachers = await classroom.find().distinct('staffid');
+        let availableTeachers = coreAllocations.filter(id => !busyTeachers.some(busyId => busyId.equals(id)));
+
+        const results = [];
+
+        // 4. Iterate through divisions A-E
+        for (const div of DIVISIONS) {
+            const existingClass = await classroom.findOne({ standard, division: div });
+
+            if (!existingClass) {
+                if (availableTeachers.length === 0) break; // Stop if we run out of unique teachers
+
+                // Pick a random available core teacher
+                const randomIndex = Math.floor(Math.random() * availableTeachers.length);
+                const assignedTeacherId = availableTeachers[randomIndex];
+
+                const newClass = new classroom({
+                    standard,
+                    division: div,
+                    staffid: assignedTeacherId,
+                    studentcount: 0,
+                    student_ids: {}
+                });
+
+                await newClass.save();
+                results.push({ div, status: "Assigned", teacherId: assignedTeacherId });
+
+                // Remove assigned teacher from the available pool for the next division
+                availableTeachers.splice(randomIndex, 1);
+            } else {
+                results.push({ div, status: "Already Exists" });
+            }
+        }
+
+        return res.status(200).json({ message: "Automation check complete", results });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
-// --- NEW: Helper to find teachers eligible to be Class Teachers ---
+// --- NEW: Fetch only eligible core teachers for the Edit Modal dropdown ---
 exports.getEligibleTeachers = async (req, res) => {
     try {
         const { standard } = req.params;
-
-        // 1. Get the master subject list for this standard to identify "Compulsory" subjects
+        
         const subjectConfig = await Subject.findOne({ standard });
         if (!subjectConfig) return res.status(200).json([]);
 
@@ -46,17 +82,16 @@ exports.getEligibleTeachers = async (req, res) => {
             .filter(s => s.type === "Compulsory")
             .map(s => s.name);
 
-        // 2. Find all teachers allotted to these core subjects for this standard
         const allocations = await SubjectAllocation.find({
             standards: standard,
             subjects: { $in: coreSubjectNames }
         }).distinct('teacher');
 
-        // 3. Find teachers from that list who are NOT already assigned as a Class Teacher elsewhere
-        const alreadyAssignedTeachers = await classroom.find().distinct('staffid');
+        // Teachers who are NOT currently class teachers (excluding the one being edited, handled on frontend)
+        const alreadyAssigned = await classroom.find().distinct('staffid');
 
         const eligibleStaff = await Staff.find({
-            _id: { $in: allocations, $nin: alreadyAssignedTeachers },
+            _id: { $in: allocations, $nin: alreadyAssigned },
             status: true
         }).select('firstname lastname staffid');
 
@@ -64,6 +99,16 @@ exports.getEligibleTeachers = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
+};
+
+exports.addClassroom = async (req, res) => {
+  try {
+    const response = new classroom(req.body);
+    await response.save();
+    return res.status(200).json({ message: "added classroom successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getAllClassrooms = async (req, res) => {
