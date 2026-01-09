@@ -143,6 +143,7 @@
 const subjectAllocation = require("../models/subjectAllocation");
 const Subject = require("../models/subjectsModel"); // Ensure this model path is correct for your project
 const staffRole = require("../models/staffRole");
+const classroomController = require("./classroomController");
 
 // --- 1. ADD/DECOMPOSE ALLOCATION (POST /allot-subject) ---
 // exports.addSubjectAllot = async (req, res) => {
@@ -305,7 +306,6 @@ const staffRole = require("../models/staffRole");
 // };
 exports.addSubjectAllot = async (req, res) => {
     try {
-        // 🚀 REMOVED weeklyLectures from destructuring
         const { teacher, teacherName, subjects, standards, divisions } = req.body;
 
         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
@@ -327,6 +327,9 @@ exports.addSubjectAllot = async (req, res) => {
         }
 
         await subjectAllocation.insertMany(recordsToSave);
+        for (const std of standards) {
+            await classroomController.internalAutoGenerate(std);
+        }
         return res.status(200).json({ message: "Subject allotment completed successfully." });
     } catch (error) {
         return res.status(500).json({ message: error.message });
