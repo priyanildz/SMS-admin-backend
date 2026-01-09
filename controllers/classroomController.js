@@ -313,46 +313,61 @@ exports.editClassroom = async (req, res) => {
 // };
 // classroomController.js
 
+// classroomController.js
+
 exports.internalAutoGenerate = async (standard) => {
     try {
         const DIVISIONS = ["A", "B", "C", "D", "E"];
+        
+        // 1. Fetch Subject Configuration to find "Compulsory" subjects
         const subjectConfig = await Subject.findOne({ standard: standard.toString() });
         if (!subjectConfig) return;
 
-        // 1. Identify Compulsory subjects AND their Sub-Subjects
-        let coreTargetNames = [];
-        subjectConfig.subjects.forEach(s => {
-            if (s.type === "Compulsory") {
-                coreTargetNames.push(s.name); // Add "Mathematics"
-                if (s.subSubjects && s.subSubjects.length > 0) {
-                    coreTargetNames.push(...s.subSubjects); // Add "Numbers", "Algebra", etc.
-                }
-            }
-        });
+        const coreSubjectNames = subjectConfig.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
 
-        // 2. Find teachers allotted to ANY of these names (Parent or Sub)
+        // 2. Find all teachers allotted to these Compulsory subjects for this standard
         const coreAllocations = await SubjectAllocation.find({
             standards: standard.toString(),
-            subjects: { $in: coreTargetNames } // This will now find "Numbers" teachers
+            subjects: { $in: coreSubjectNames }
         }).distinct('teacher');
 
         if (coreAllocations.length === 0) return;
 
-        // 3. Assignment logic remains the same
-        for (let i = 0; i < DIVISIONS.length; i++) {
-            const div = DIVISIONS[i];
-            const existingClass = await classroom.findOne({ standard: standard.toString(), division: div });
+        // 3. Automated Assignment for Divisions A through E
+        for (const div of DIVISIONS) {
+            // Check if this specific classroom already has an assignment
+            const existingClass = await classroom.findOne({ 
+                standard: standard.toString(), 
+                division: div 
+            });
 
             if (!existingClass) {
-                const assignedTeacherId = coreAllocations[i % coreAllocations.length];
-                const newClass = new classroom({
-                    standard: standard.toString(),
-                    division: div,
-                    staffid: assignedTeacherId,
-                    studentcount: 20,
-                    student_ids: {}
-                });
-                await newClass.save();
+                // 🔥 UNIQUE ASSIGNMENT LOGIC:
+                // Find teachers from our core list who are NOT already assigned as a class teacher 
+                // in ANY standard or division.
+                const busyTeachers = await classroom.find().distinct('staffid');
+                
+                const availableTeachers = coreAllocations.filter(teacherId => 
+                    !busyTeachers.some(busyId => busyId.toString() === teacherId.toString())
+                );
+
+                if (availableTeachers.length > 0) {
+                    // Assign the first available unique core teacher
+                    const assignedTeacherId = availableTeachers[0];
+
+                    const newClass = new classroom({
+                        standard: standard.toString(),
+                        division: div,
+                        staffid: assignedTeacherId,
+                        studentcount: 20,
+                        student_ids: {}
+                    });
+                    await newClass.save();
+                } else {
+                    console.log(`No unique core teachers left for ${standard}-${div}. Manual assignment required.`);
+                }
             }
         }
     } catch (error) {
