@@ -1675,7 +1675,9 @@ exports.createUser = async (req, res) => {
     } catch (error) {
         console.error("Error creating student:", error);
         if (error.code === 11000) {
-            return res.status(409).json({ message: `Data conflict: student already exists.` });
+            const field = Object.keys(error.keyPattern)[0];
+            return res.status(409).json({message: `Data conflict: A student with this ${field} already exists.`,
+            duplicateField: field});
         }
         res.status(500).json({ error: error.message, message: "Internal Server Error." });
     }
