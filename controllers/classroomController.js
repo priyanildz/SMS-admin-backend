@@ -258,55 +258,53 @@ exports.editClassroom = async (req, res) => {
         
 //         // 1. Fetch Subject Configuration for this standard
 //         const subjectConfig = await Subject.findOne({ standard: standard.toString() });
-//         if (!subjectConfig) {
-//             console.log(`No subject configuration found for Standard ${standard}`);
-//             return;
-//         }
+//         if (!subjectConfig) return;
 
 //         // 2. Filter only "Compulsory" subjects
 //         const coreSubjectNames = subjectConfig.subjects
 //             .filter(s => s.type === "Compulsory")
 //             .map(s => s.name);
 
-//         if (coreSubjectNames.length === 0) {
-//             console.log(`No compulsory subjects defined for Standard ${standard}`);
-//             return;
-//         }
-
-//         // 3. Find teachers allotted to these Compulsory subjects
+//         // 3. Find all teachers allotted to these Compulsory subjects for this standard
 //         const coreAllocations = await SubjectAllocation.find({
 //             standards: standard.toString(),
 //             subjects: { $in: coreSubjectNames }
 //         }).distinct('teacher');
 
-//         if (coreAllocations.length === 0) {
-//             console.log(`No teachers allotted to compulsory subjects for Standard ${standard}`);
-//             return;
-//         }
+//         if (coreAllocations.length === 0) return;
 
-//         // 4. Assign teachers to Divisions A through E
-//         for (let i = 0; i < DIVISIONS.length; i++) {
-//             const div = DIVISIONS[i];
-            
-//             // Check if a classroom record already exists to avoid duplicates
+//         // 4. Assign teachers to Divisions A through E uniquely
+//         for (const div of DIVISIONS) {
+//             // Check if this specific class already has a teacher
 //             const existingClass = await classroom.findOne({ 
 //                 standard: standard.toString(), 
 //                 division: div 
 //             });
 
 //             if (!existingClass) {
-//                 // Pick teacher from the core list (modulo ensures we fill all 5 divs)
-//                 const assignedTeacherId = coreAllocations[i % coreAllocations.length];
+//                 // Find teachers from our core list who are NOT already assigned as a class teacher ANYWHERE
+//                 const busyTeachers = await classroom.find().distinct('staffid');
+                
+//                 // Filter the core teachers list to find someone truly free
+//                 const trulyFreeTeachers = coreAllocations.filter(teacherId => 
+//                     !busyTeachers.some(busyId => busyId.equals(teacherId))
+//                 );
 
-//                 const newClass = new classroom({
-//                     standard: standard.toString(),
-//                     division: div,
-//                     staffid: assignedTeacherId,
-//                     studentcount: 20, // Default count
-//                     student_ids: {}
-//                 });
-//                 await newClass.save();
-//                 console.log(`Automatically assigned Class Teacher for ${standard}-${div}`);
+//                 if (trulyFreeTeachers.length > 0) {
+//                     // Assign the first available free teacher
+//                     const assignedTeacherId = trulyFreeTeachers[0];
+
+//                     const newClass = new classroom({
+//                         standard: standard.toString(),
+//                         division: div,
+//                         staffid: assignedTeacherId,
+//                         studentcount: 20,
+//                         student_ids: {}
+//                     });
+//                     await newClass.save();
+//                 } else {
+//                     console.log(`No unique core teachers available for ${standard}-${div}`);
+//                 }
 //             }
 //         }
 //     } catch (error) {
@@ -318,59 +316,46 @@ exports.editClassroom = async (req, res) => {
 exports.internalAutoGenerate = async (standard) => {
     try {
         const DIVISIONS = ["A", "B", "C", "D", "E"];
-        
-        // 1. Fetch Subject Configuration for this standard
         const subjectConfig = await Subject.findOne({ standard: standard.toString() });
         if (!subjectConfig) return;
 
-        // 2. Filter only "Compulsory" subjects
-        const coreSubjectNames = subjectConfig.subjects
-            .filter(s => s.type === "Compulsory")
-            .map(s => s.name);
+        // 1. Identify Compulsory subjects AND their Sub-Subjects
+        let coreTargetNames = [];
+        subjectConfig.subjects.forEach(s => {
+            if (s.type === "Compulsory") {
+                coreTargetNames.push(s.name); // Add "Mathematics"
+                if (s.subSubjects && s.subSubjects.length > 0) {
+                    coreTargetNames.push(...s.subSubjects); // Add "Numbers", "Algebra", etc.
+                }
+            }
+        });
 
-        // 3. Find all teachers allotted to these Compulsory subjects for this standard
+        // 2. Find teachers allotted to ANY of these names (Parent or Sub)
         const coreAllocations = await SubjectAllocation.find({
             standards: standard.toString(),
-            subjects: { $in: coreSubjectNames }
+            subjects: { $in: coreTargetNames } // This will now find "Numbers" teachers
         }).distinct('teacher');
 
         if (coreAllocations.length === 0) return;
 
-        // 4. Assign teachers to Divisions A through E uniquely
-        for (const div of DIVISIONS) {
-            // Check if this specific class already has a teacher
-            const existingClass = await classroom.findOne({ 
-                standard: standard.toString(), 
-                division: div 
-            });
+        // 3. Assignment logic remains the same
+        for (let i = 0; i < DIVISIONS.length; i++) {
+            const div = DIVISIONS[i];
+            const existingClass = await classroom.findOne({ standard: standard.toString(), division: div });
 
             if (!existingClass) {
-                // Find teachers from our core list who are NOT already assigned as a class teacher ANYWHERE
-                const busyTeachers = await classroom.find().distinct('staffid');
-                
-                // Filter the core teachers list to find someone truly free
-                const trulyFreeTeachers = coreAllocations.filter(teacherId => 
-                    !busyTeachers.some(busyId => busyId.equals(teacherId))
-                );
-
-                if (trulyFreeTeachers.length > 0) {
-                    // Assign the first available free teacher
-                    const assignedTeacherId = trulyFreeTeachers[0];
-
-                    const newClass = new classroom({
-                        standard: standard.toString(),
-                        division: div,
-                        staffid: assignedTeacherId,
-                        studentcount: 20,
-                        student_ids: {}
-                    });
-                    await newClass.save();
-                } else {
-                    console.log(`No unique core teachers available for ${standard}-${div}`);
-                }
+                const assignedTeacherId = coreAllocations[i % coreAllocations.length];
+                const newClass = new classroom({
+                    standard: standard.toString(),
+                    division: div,
+                    staffid: assignedTeacherId,
+                    studentcount: 20,
+                    student_ids: {}
+                });
+                await newClass.save();
             }
         }
     } catch (error) {
-        console.error("Auto-Assignment Internal Error:", error.message);
+        console.error("Auto-Assignment Error:", error.message);
     }
 };
