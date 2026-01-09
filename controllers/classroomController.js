@@ -319,15 +319,23 @@ exports.internalAutoGenerate = async (standard) => {
     try {
         const DIVISIONS = ["A", "B", "C", "D", "E"];
         
-        // 1. Fetch Subject Configuration to find "Compulsory" subjects
+        // 1. Get Subject Configuration
         const subjectConfig = await Subject.findOne({ standard: standard.toString() });
         if (!subjectConfig) return;
 
-        const coreSubjectNames = subjectConfig.subjects
-            .filter(s => s.type === "Compulsory")
-            .map(s => s.name);
+        // 2. Identify ALL Compulsory Subjects (including Sub-Subjects)
+        const coreSubjectNames = [];
+        subjectConfig.subjects.forEach(s => {
+            if (s.type === "Compulsory") {
+                coreSubjectNames.push(s.name);
+                // Treatment: If main subject is compulsory, all sub-subjects are too
+                if (s.subSubjects && s.subSubjects.length > 0) {
+                    coreSubjectNames.push(...s.subSubjects);
+                }
+            }
+        });
 
-        // 2. Find all teachers allotted to these Compulsory subjects for this standard
+        // 3. Find unique teachers allotted to any of these compulsory names
         const coreAllocations = await SubjectAllocation.find({
             standards: standard.toString(),
             subjects: { $in: coreSubjectNames }
@@ -335,27 +343,25 @@ exports.internalAutoGenerate = async (standard) => {
 
         if (coreAllocations.length === 0) return;
 
-        // 3. Automated Assignment for Divisions A through E
+        // 4. Get list of teachers already assigned as Class Teachers anywhere in the school
+        const busyTeachers = await classroom.find().distinct('staffid');
+
+        // 5. Filter for teachers who are "Free"
+        let availableTeachers = coreAllocations.filter(
+            id => !busyTeachers.some(busyId => busyId.toString() === id.toString())
+        );
+
+        // 6. Assign uniquely to Divisions A-E
         for (const div of DIVISIONS) {
-            // Check if this specific classroom already has an assignment
             const existingClass = await classroom.findOne({ 
                 standard: standard.toString(), 
                 division: div 
             });
 
             if (!existingClass) {
-                // 🔥 UNIQUE ASSIGNMENT LOGIC:
-                // Find teachers from our core list who are NOT already assigned as a class teacher 
-                // in ANY standard or division.
-                const busyTeachers = await classroom.find().distinct('staffid');
-                
-                const availableTeachers = coreAllocations.filter(teacherId => 
-                    !busyTeachers.some(busyId => busyId.toString() === teacherId.toString())
-                );
-
+                // Only proceed if we have a unique teacher left
                 if (availableTeachers.length > 0) {
-                    // Assign the first available unique core teacher
-                    const assignedTeacherId = availableTeachers[0];
+                    const assignedTeacherId = availableTeachers.shift(); // Take the first free teacher and remove from pool
 
                     const newClass = new classroom({
                         standard: standard.toString(),
@@ -365,12 +371,15 @@ exports.internalAutoGenerate = async (standard) => {
                         student_ids: {}
                     });
                     await newClass.save();
+                    
+                    // Add this teacher to busy pool so they aren't picked for the next div
+                    busyTeachers.push(assignedTeacherId); 
                 } else {
-                    console.log(`No unique core teachers left for ${standard}-${div}. Manual assignment required.`);
+                    console.log(`No more unique free core teachers available for Standard ${standard} Div ${div}`);
                 }
             }
         }
     } catch (error) {
-        console.error("Auto-Assignment Error:", error.message);
+        console.error("Automation Error:", error.message);
     }
 };
