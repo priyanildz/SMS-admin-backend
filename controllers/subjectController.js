@@ -357,11 +357,8 @@ exports.addSubjectAllot = async (req, res) => {
         await subjectAllocation.insertMany(recordsToSave);
 
         // Run automation in background for each standard
-        // Using Promise.all handles multiple standards without crashing the main response
-        try {
-            await Promise.all(standards.map(std => classroomController.internalAutoGenerate(std)));
-        } catch (autoErr) {
-            console.error("Background Automation Failed:", autoErr.message);
+        for (const std of standards) {
+            await classroomController.internalAutoGenerate(std);
         }
 
         return res.status(200).json({ message: "Subject allotted and Class Teachers updated." });
