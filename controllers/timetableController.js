@@ -926,9 +926,132 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 // ------------------------------------------------------------------
 
 
+// exports.generateTimetable = async (req, res) => {
+//   const { standard, from, to, submittedby, timing } = req.body;
+//   const year = new Date().getFullYear();
+
+//   try {
+//     const allExistingTimetables = await Timetable.find({});
+//     let globalTeacherSchedule = {};
+//     allExistingTimetables.forEach(tt => {
+//       tt.timetable.forEach(dayBlock => {
+//         dayBlock.periods.forEach(p => {
+//           if (p.teacher) {
+//             const key = `${dayBlock.day}-${p.time}`;
+//             if (!globalTeacherSchedule[p.teacher]) globalTeacherSchedule[p.teacher] = new Set();
+//             globalTeacherSchedule[p.teacher].add(key);
+//           }
+//         });
+//       });
+//     });
+
+//     let generatedTimetables = [];
+
+//     for (const division of ALL_DIVISIONS) {
+//       const allocations = await SubjectAllocation.find({ standards: standard, divisions: division });
+//       const classroomInfo = await Classroom.findOne({ standard, division });
+//       const subjectConfigs = await Subject.findOne({ standard });
+
+//       if (!allocations.length || !classroomInfo) continue;
+
+//       let requirements = allocations.map(alloc => {
+//         const subjectName = alloc.subjects[0];
+        
+//         // 🚀 CHANGE: Look for config in main subjects OR inside subSubjects arrays
+//         const config = subjectConfigs?.subjects?.find(s => 
+//           s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
+//         );
+
+//         // 🚀 CHANGE: Sub-subjects are counted as one subject; only Type "Optional" gets 3 lecs
+//         let count = 5; 
+//         if (config?.type === 'Optional') count = 3;
+//         if (config?.nature?.includes('Activity')) count = 2;
+
+//         return {
+//           teacherId: alloc.teacher.toString(),
+//           teacherName: alloc.teacherName,
+//           subject: subjectName,
+//           isOptional: config?.type === 'Optional',
+//           remaining: count
+//         };
+//       });
+
+//       let newTimetableData = WEEKDAYS.map(day => ({
+//         day,
+//         periods: FIXED_PERIOD_STRUCTURE.map(p => ({
+//           periodNumber: p.num, subject: p.type === 'Period' ? 'Empty' : p.type,
+//           teacher: null, teacherName: null, time: p.time,
+//         }))
+//       }));
+
+//       // MANDATORY: Class Teacher 1st Period
+//       newTimetableData.forEach(dayBlock => {
+//         const firstLec = dayBlock.periods[0];
+//         const classTrId = classroomInfo.staffid.toString();
+//         const classTrAlloc = allocations.find(a => a.teacher.toString() === classTrId);
+        
+//         firstLec.subject = classTrAlloc ? classTrAlloc.subjects[0] : "Class Teacher Period";
+//         firstLec.teacher = classroomInfo.staffid;
+//         firstLec.teacherName = classTrAlloc?.teacherName || "Class Teacher";
+        
+//         if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
+//         globalTeacherSchedule[classTrId].add(`${dayBlock.day}-${firstLec.time}`);
+//       });
+
+//       // CORE SCHEDULING
+//       for (let day of WEEKDAYS) {
+//         let dayBlock = newTimetableData.find(d => d.day === day);
+//         for (let i = 1; i < dayBlock.periods.length; i++) {
+//           let period = dayBlock.periods[i];
+//           if (period.subject !== 'Empty') continue;
+
+//           const candidate = requirements
+//             .filter(r => r.remaining > 0)
+//             .sort((a, b) => b.remaining - a.remaining)
+//             .find(r => {
+//               const slotKey = `${day}-${period.time}`;
+//               const dayCount = dayBlock.periods.filter(p => p.subject === r.subject).length;
+//               const lastPeriod = dayBlock.periods[i-2]; 
+
+//               // Max 2 together rule & Optional split rule
+//               const repetitionRule = dayCount < 2 && (dayCount === 0 || (lastPeriod && lastPeriod.subject === r.subject));
+//               const optionalRule = r.isOptional ? dayCount < 2 : true;
+
+//               return !globalTeacherSchedule[r.teacherId]?.has(slotKey) && repetitionRule && optionalRule;
+//             });
+
+//           if (candidate) {
+//             period.subject = candidate.subject;
+//             period.teacher = candidate.teacherId;
+//             period.teacherName = candidate.teacherName;
+//             candidate.remaining--;
+//             if (!globalTeacherSchedule[candidate.teacherId]) globalTeacherSchedule[candidate.teacherId] = new Set();
+//             globalTeacherSchedule[candidate.teacherId].add(`${day}-${period.time}`);
+//           }
+//         }
+//       }
+
+//       const newTT = new Timetable({
+//         standard, division, year, from, to, submittedby, timing, 
+//         timetable: newTimetableData, classteacher: classroomInfo.staffid
+//       });
+//       await newTT.save();
+//       generatedTimetables.push(newTT);
+//     }
+//     res.status(201).json({ message: "Timetables generated successfully.", timetables: generatedTimetables });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
 exports.generateTimetable = async (req, res) => {
-  const { standard, from, to, submittedby, timing } = req.body;
+  // 🚀 CHANGE: Removed from and to from destructuring
+  const { standard, submittedby, timing } = req.body;
   const year = new Date().getFullYear();
+
+  // 🚀 CHANGE: Calculate Academic Year Range (e.g., 2025-2026)
+  const from = `${year}-04-01`; // Standard Academic Start
+  const to = `${year + 1}-03-31`; // Standard Academic End
 
   try {
     const allExistingTimetables = await Timetable.find({});
@@ -956,13 +1079,10 @@ exports.generateTimetable = async (req, res) => {
 
       let requirements = allocations.map(alloc => {
         const subjectName = alloc.subjects[0];
-        
-        // 🚀 CHANGE: Look for config in main subjects OR inside subSubjects arrays
         const config = subjectConfigs?.subjects?.find(s => 
           s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
         );
 
-        // 🚀 CHANGE: Sub-subjects are counted as one subject; only Type "Optional" gets 3 lecs
         let count = 5; 
         if (config?.type === 'Optional') count = 3;
         if (config?.nature?.includes('Activity')) count = 2;
@@ -984,7 +1104,6 @@ exports.generateTimetable = async (req, res) => {
         }))
       }));
 
-      // MANDATORY: Class Teacher 1st Period
       newTimetableData.forEach(dayBlock => {
         const firstLec = dayBlock.periods[0];
         const classTrId = classroomInfo.staffid.toString();
@@ -998,7 +1117,6 @@ exports.generateTimetable = async (req, res) => {
         globalTeacherSchedule[classTrId].add(`${dayBlock.day}-${firstLec.time}`);
       });
 
-      // CORE SCHEDULING
       for (let day of WEEKDAYS) {
         let dayBlock = newTimetableData.find(d => d.day === day);
         for (let i = 1; i < dayBlock.periods.length; i++) {
@@ -1013,7 +1131,6 @@ exports.generateTimetable = async (req, res) => {
               const dayCount = dayBlock.periods.filter(p => p.subject === r.subject).length;
               const lastPeriod = dayBlock.periods[i-2]; 
 
-              // Max 2 together rule & Optional split rule
               const repetitionRule = dayCount < 2 && (dayCount === 0 || (lastPeriod && lastPeriod.subject === r.subject));
               const optionalRule = r.isOptional ? dayCount < 2 : true;
 
@@ -1038,7 +1155,7 @@ exports.generateTimetable = async (req, res) => {
       await newTT.save();
       generatedTimetables.push(newTT);
     }
-    res.status(201).json({ message: "Timetables generated successfully.", timetables: generatedTimetables });
+    res.status(201).json({ message: "Timetables generated for the entire academic year successfully.", timetables: generatedTimetables });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
