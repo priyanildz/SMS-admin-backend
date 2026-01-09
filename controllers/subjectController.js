@@ -304,6 +304,35 @@ const classroomController = require("./classroomController");
 //         return res.status(500).json({ error: error.message });
 //     }
 // };
+// exports.addSubjectAllot = async (req, res) => {
+//     try {
+//         // 🚀 REMOVED weeklyLectures from destructuring
+//         const { teacher, teacherName, subjects, standards, divisions } = req.body;
+
+//         if (!teacher || !teacherName || !subjects || !standards || !divisions) {
+//             return res.status(400).json({ message: "Missing required fields." });
+//         }
+
+//         const recordsToSave = [];
+//         for (const sub of subjects) {
+//             for (const std of standards) {
+//                 recordsToSave.push({
+//                     teacher, 
+//                     teacherName,
+//                     subjects: [sub],
+//                     standards: [std],
+//                     divisions: divisions, 
+//                     // 🚀 REMOVED weeklyLectures from payload
+//                 });
+//             }
+//         }
+
+//         await subjectAllocation.insertMany(recordsToSave);
+//         return res.status(200).json({ message: "Subject allotment completed successfully." });
+//     } catch (error) {
+//         return res.status(500).json({ message: error.message });
+//     }
+// };
 exports.addSubjectAllot = async (req, res) => {
     try {
         const { teacher, teacherName, subjects, standards, divisions } = req.body;
@@ -321,16 +350,21 @@ exports.addSubjectAllot = async (req, res) => {
                     subjects: [sub],
                     standards: [std],
                     divisions: divisions, 
-                    // 🚀 REMOVED weeklyLectures from payload
                 });
             }
         }
 
         await subjectAllocation.insertMany(recordsToSave);
-        for (const std of standards) {
-            await classroomController.internalAutoGenerate(std);
+
+        // Run automation in background for each standard
+        // Using Promise.all handles multiple standards without crashing the main response
+        try {
+            await Promise.all(standards.map(std => classroomController.internalAutoGenerate(std)));
+        } catch (autoErr) {
+            console.error("Background Automation Failed:", autoErr.message);
         }
-        return res.status(200).json({ message: "Subject allotment completed successfully." });
+
+        return res.status(200).json({ message: "Subject allotted and Class Teachers updated." });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }

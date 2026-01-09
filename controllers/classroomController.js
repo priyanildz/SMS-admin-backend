@@ -250,46 +250,50 @@ exports.editClassroom = async (req, res) => {
     }
 };
 // Add this helper function to classroomController.js
+// classroomController.js
+
 exports.internalAutoGenerate = async (standard) => {
-    const DIVISIONS = ["A", "B", "C", "D", "E"];
-    
-    // 1. Identify Compulsory subjects for this standard from your config
-    const subjectConfig = await Subject.findOne({ standard });
-    if (!subjectConfig) return;
+    try {
+        const DIVISIONS = ["A", "B", "C", "D", "E"];
+        
+        // 1. Identify Compulsory subjects for this standard
+        const subjectConfig = await Subject.findOne({ standard });
+        if (!subjectConfig) return;
 
-    const coreSubjectNames = subjectConfig.subjects
-        .filter(s => s.type === "Compulsory")
-        .map(s => s.name);
+        const coreSubjectNames = subjectConfig.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
 
-    // 2. Find all teachers allotted to these core subjects for this standard
-    const coreAllocations = await subjectAllocation.find({
-        standards: standard,
-        subjects: { $in: coreSubjectNames }
-    }).distinct('teacher');
+        // 2. Find all teachers allotted to these core subjects for this standard
+        const coreAllocations = await subjectAllocation.find({
+            standards: standard,
+            subjects: { $in: coreSubjectNames }
+        }).distinct('teacher');
 
-    // 3. Automated Assignment for each division
-    for (const div of DIVISIONS) {
-        const existingClass = await classroom.findOne({ standard, division: div });
+        if (coreAllocations.length === 0) return;
 
-        // Only assign if the class doesn't have a teacher yet
-        if (!existingClass) {
-            // Find teachers from our core list who are NOT already class teachers
-            const busyTeachers = await classroom.find().distinct('staffid');
-            const availableTeachers = coreAllocations.filter(id => 
-                !busyTeachers.some(busyId => busyId.equals(id))
-            );
+        // 3. Automated Assignment for each division
+        for (let i = 0; i < DIVISIONS.length; i++) {
+            const div = DIVISIONS[i];
+            const existingClass = await classroom.findOne({ standard, division: div });
 
-            if (availableTeachers.length > 0) {
-                const assignedTeacherId = availableTeachers[0]; // Take the first available
+            if (!existingClass) {
+                // Pick teacher by index (looping back if fewer than 5 core teachers exist)
+                // This ensures Division E always gets a teacher even if you only have 3-4 core teachers
+                const assignedTeacherId = coreAllocations[i % coreAllocations.length];
+
                 const newClass = new classroom({
                     standard,
                     division: div,
                     staffid: assignedTeacherId,
-                    studentcount: 0,
+                    studentcount: 20, // Defaulting to your screenshot value
                     student_ids: {}
                 });
                 await newClass.save();
             }
         }
+    } catch (error) {
+        console.error("Auto-Generation Error:", error.message);
+        // We don't throw error here to prevent the 500 error on the main allotment save
     }
 };
