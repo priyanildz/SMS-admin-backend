@@ -1639,7 +1639,7 @@ exports.createUser = async (req, res) => {
 
         // --- NEW LOGIC: GENERATE ADM-000 and GR-000 PATTERN ---
         // 1. Get the total count of students currently in the DB
-        // const studentCount = await User.countDocuments();
+        const studentCount = await User.countDocuments();
         
         const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
         
