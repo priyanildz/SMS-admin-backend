@@ -710,13 +710,20 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 };
 
 exports.generateTimetable = async (req, res) => {
-  // 🚀 CHANGE: Removed from and to from destructuring
   const { standard, submittedby, timing } = req.body;
-  const year = new Date().getFullYear();
+  
+  
+  // 🚀 IMPROVED LOGIC: Detect if we are in the Jan-Mar window of the current AY
+  const today = new Date();
+  const currentMonth = today.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar
+  const currentYear = today.getFullYear();
 
-  // 🚀 CHANGE: Calculate Academic Year Range (e.g., 2025-2026)
-  const from = `${year}-04-01`; // Standard Academic Start
-  const to = `${year + 1}-03-31`; // Standard Academic End
+  // If today is Jan, Feb, or Mar, the Academic Year actually started LAST year in April
+  const academicStartYear = currentMonth <= 2 ? currentYear - 1 : currentYear;
+
+  const from = `${academicStartYear}-04-01`; 
+  const to = `${academicStartYear + 1}-03-31`;
+  const year = academicStartYear; // Sets the AY reference (e.g., 2025)
 
   try {
     const allExistingTimetables = await Timetable.find({});
