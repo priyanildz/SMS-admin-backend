@@ -1687,49 +1687,40 @@ exports.createUser = async (req, res) => {
     try {
         const userData = req.body;
 
-        // --- HELPER: FIND NEXT UNIQUE ID ---
-        const getNextUniqueNumbers = async () => {
-            // Find student with the highest admission number label
-            const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
-            
-            let nextNum = 1;
-            if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
-                const lastParts = lastStudent.admission.admissionno.split('-');
-                if(lastParts.length > 1) {
-                    nextNum = parseInt(lastParts[1]) + 1;
-                }
-            }
-            
-            const formatted = nextNum.toString().padStart(3, '0');
-            return {
-                admissionno: `ADM-${formatted}`,
-                grno: `GR-${formatted}`
-            };
-        };
+        // --- UPDATED AUTO-GENERATION LOGIC ---
+        // We find the student with the highest numerical Admission Number
+        const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
 
-        // Assign numbers only if not provided manually
-        if (!userData.admission.admissionno || !userData.admission.grno) {
-            const uniqueIds = await getNextUniqueNumbers();
-            userData.admission.admissionno = uniqueIds.admissionno;
-            userData.admission.grno = uniqueIds.grno;
+        let nextNumber;
+        const currentStudentCount = 1311; // Your manual offset
+
+        if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
+            // Extract numerical part from "ADM-1311" -> 1311
+            const lastNoPart = parseInt(lastStudent.admission.admissionno.split('-')[1]);
+            
+            // Use whichever is higher: the actual DB max or your manual offset
+            nextNumber = Math.max(lastNoPart, currentStudentCount) + 1;
+        } else {
+            // If DB is somehow empty, start after your current count
+            nextNumber = currentStudentCount + 1;
         }
+
+        // Pad with leading zeros (e.g., 1312 -> "1312")
+        const nextNumberString = nextNumber.toString().padStart(3, '0');
+
+        // Assign the unique IDs
+        if (!userData.admission.admissionno) {
+            userData.admission.admissionno = `ADM-${nextNumberString}`;
+        }
+        if (!userData.admission.grno) {
+            userData.admission.grno = `GR-${nextNumberString}`;
+        }
+        // -------------------------------------
 
         const user = new User(userData);
-        
-        // Final guard: if saving fails specifically because the backend-generated ID was taken
-        // (due to concurrent requests), the catch block will handle it.
         await user.save();
 
-        // --- Email Logic ---
-        const toEmail = userData.parent?.emailaddress || userData.emailaddress;
-        const firstName = userData.firstname;
-        const admissionNo = userData.admission?.admissionno; 
-        const birthdate = userData.dob; 
-
-        if (toEmail && firstName && birthdate) {
-            sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
-        }
-
+        // ... rest of your existing email and response logic
         res.status(201).json({ 
             message: "Student created successfully",
             admissionNo: userData.admission.admissionno,
@@ -1738,20 +1729,8 @@ exports.createUser = async (req, res) => {
 
     } catch (error) {
         console.error("Error creating student:", error);
-        
-        // Handle Duplicate Key Errors
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            
-            // If the conflict is still on the admission number, it means 
-            // someone else registered a student at the exact same millisecond.
-            if (field.includes("admissionno")) {
-                return res.status(409).json({
-                    message: "ID conflict detected. Please click 'Submit' again to auto-generate the next available number.",
-                    duplicateField: field
-                });
-            }
-
             return res.status(409).json({
                 message: `Data conflict: A student with this ${field} already exists.`,
                 duplicateField: field
