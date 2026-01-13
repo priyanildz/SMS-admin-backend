@@ -1687,56 +1687,70 @@ exports.createUser = async (req, res) => {
     try {
         const userData = req.body;
 
-        // --- UPDATED AUTO-GENERATION LOGIC ---
-        // We find the student with the highest numerical Admission Number
+        // --- IMPROVED LOGIC: GENERATE UNIQUE ADM-XXX AND GR-XXX ---
+        
+        // 1. Find the student with the absolute highest admission number
+        // We sort by admissionno in descending order to find the latest one
         const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
-
-        let nextNumber;
-        const currentStudentCount = 1311; // Your manual offset
+        
+        let nextNumber = 1312; // Start after your current 1311 students by default
 
         if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
-            // Extract numerical part from "ADM-1311" -> 1311
+            // Extract the numerical part from "ADM-1311" -> 1311
             const lastNoPart = parseInt(lastStudent.admission.admissionno.split('-')[1]);
             
-            // Use whichever is higher: the actual DB max or your manual offset
-            nextNumber = Math.max(lastNoPart, currentStudentCount) + 1;
-        } else {
-            // If DB is somehow empty, start after your current count
-            nextNumber = currentStudentCount + 1;
+            // If the database has a number higher than 1311, use that as the base
+            if (!isNaN(lastNoPart) && lastNoPart >= 1311) {
+                nextNumber = lastNoPart + 1;
+            }
         }
-
-        // Pad with leading zeros (e.g., 1312 -> "1312")
+        
+        // 2. Format the number with padding (e.g., 1312 -> "1312")
         const nextNumberString = nextNumber.toString().padStart(3, '0');
 
-        // Assign the unique IDs
+        // 3. Assign sequential IDs if they weren't provided manually
         if (!userData.admission.admissionno) {
             userData.admission.admissionno = `ADM-${nextNumberString}`;
         }
         if (!userData.admission.grno) {
             userData.admission.grno = `GR-${nextNumberString}`;
         }
-        // -------------------------------------
+        // -----------------------------------------------------
 
         const user = new User(userData);
-        await user.save();
+        await user.save(); //
 
-        // ... rest of your existing email and response logic
+        const toEmail = userData.parent?.emailaddress || userData.emailaddress; //
+        const firstName = userData.firstname; //
+        const admissionNo = userData.admission?.admissionno; //
+        const birthdate = userData.dob; //
+
+        if (toEmail && firstName && birthdate) {
+            // Sending email in the background
+            sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
+        } else {
+            console.log(`Admission email skipped for ${firstName}. Missing data.`); //
+        }
+
         res.status(201).json({ 
             message: "Student created successfully",
             admissionNo: userData.admission.admissionno,
             grNo: userData.admission.grno 
-        });
-
+        }); //
+        
     } catch (error) {
-        console.error("Error creating student:", error);
+        console.error("Error creating student:", error); //
+        
+        // Detailed conflict reporting
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
             return res.status(409).json({
                 message: `Data conflict: A student with this ${field} already exists.`,
                 duplicateField: field
-            });
+            }); //
         }
-        res.status(500).json({ error: error.message, message: "Internal Server Error." });
+        
+        res.status(500).json({ error: error.message, message: "Internal Server Error." }); //
     }
 };
 
