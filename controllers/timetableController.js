@@ -708,11 +708,12 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 };
 
 exports.generateTimetable = async (req, res) => {
-  const { standard, submittedby, timing } = req.body;
-  
-  // 1. Calculate Academic Year (April to March)
+  const { standard, submittedby } = req.body;
+  const timing = "08:00 - 12:20";
+
+  // 1. Calculate Academic Year (April 1st start)
   const today = new Date();
-  const currentMonth = today.getMonth(); 
+  const currentMonth = today.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar
   const academicStartYear = currentMonth <= 2 ? today.getFullYear() - 1 : today.getFullYear();
   const from = `${academicStartYear}-04-01`; 
   const to = `${academicStartYear + 1}-03-31`;
@@ -720,10 +721,13 @@ exports.generateTimetable = async (req, res) => {
 
   try {
     const allExistingTimetables = await Timetable.find({});
-    let globalTeacherSchedule = {};
-    let teacherWeeklyLoad = {}; // 🚀 TRACKER: Max 40 lectures per week
+    const subjectConfigs = await Subject.findOne({ standard });
+    const allAllocations = await SubjectAllocation.find({ standards: standard });
 
-    // Initialize global data from existing records
+    let globalTeacherSchedule = {};
+    let teacherWeeklyLoad = {}; // 🚀 TRACKER: Max 40 lectures cap
+
+    // Pre-populate global data
     allExistingTimetables.forEach(tt => {
       tt.timetable.forEach(dayBlock => {
         dayBlock.periods.forEach(p => {
@@ -738,25 +742,19 @@ exports.generateTimetable = async (req, res) => {
       });
     });
 
-    const subjectConfigs = await Subject.findOne({ standard });
-    const allAllocations = await SubjectAllocation.find({ standards: standard });
-
     let generatedTimetables = [];
 
     for (const division of ALL_DIVISIONS) {
       const classroomInfo = await Classroom.findOne({ standard, division });
       if (!classroomInfo) continue;
 
-      // 🚀 RULE 1: One teacher per subject in one class. 
-      // If multiple teachers are allotted for a subject (e.g. English), 
-      // we filter to ensure only one is picked for THIS division.
+      // 🚀 RULE: Randomly assign one teacher per subject for this division
       const divisionAllocations = [];
       const subjectsInAlloc = [...new Set(allAllocations.flatMap(a => a.subjects))];
 
       subjectsInAlloc.forEach(subName => {
         const eligibleTeachers = allAllocations.filter(a => a.subjects.includes(subName));
         if (eligibleTeachers.length > 0) {
-          // Randomly pick one teacher from the pool for this specific division
           const picked = eligibleTeachers[Math.floor(Math.random() * eligibleTeachers.length)];
           divisionAllocations.push(picked);
         }
@@ -768,10 +766,9 @@ exports.generateTimetable = async (req, res) => {
           s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
         );
 
-        // 🚀 RULE: Dynamic Lecture Counts
-        let count = 6; // Default for Compulsory: "As many as they can" (filling available slots)
-        if (config?.type === 'Optional') count = 3; // 3 per week
-        if (config?.nature?.includes('Activity')) count = 2; // 2 per week
+        let count = 6; // Seed for Compulsory
+        if (config?.type === 'Optional') count = 3; // 🚀 3 per week
+        if (config?.nature?.includes('Activity')) count = 2; // 🚀 2 per week
 
         return {
           teacherId: alloc.teacher.toString(),
@@ -779,7 +776,8 @@ exports.generateTimetable = async (req, res) => {
           subject: subjectName,
           type: config?.type || 'Compulsory',
           nature: config?.nature || [],
-          remaining: count
+          remaining: count,
+          placedToday: 0
         };
       });
 
@@ -801,51 +799,78 @@ exports.generateTimetable = async (req, res) => {
         firstLec.teacher = classroomInfo.staffid;
         firstLec.teacherName = classTrAlloc?.teacherName || "Class Teacher";
         
+        const slotKey = `${dayBlock.day}-${firstLec.time}`;
         if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
-        globalTeacherSchedule[classTrId].add(`${dayBlock.day}-${firstLec.time}`);
+        globalTeacherSchedule[classTrId].add(slotKey);
         teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
       });
 
-      // CORE SCHEDULING
+      // CORE SCHEDULING ALGORITHM
       for (let day of WEEKDAYS) {
         let dayBlock = newTimetableData.find(d => d.day === day);
+        requirements.forEach(r => r.placedToday = 0);
+
         for (let i = 1; i < dayBlock.periods.length; i++) {
           let period = dayBlock.periods[i];
           if (period.subject !== 'Empty') continue;
 
           const candidate = requirements
-            .filter(r => r.remaining > 0 && (teacherWeeklyLoad[r.teacherId] || 0) < 40) // 🚀 RULE: 40 Lec Cap
-            .sort((a, b) => b.remaining - a.remaining)
-            .find(r => {
-              const slotKey = `${day}-${period.time}`;
-              const dayCount = dayBlock.periods.filter(p => p.subject === r.subject).length;
-              const prevPeriod = dayBlock.periods[i-1]?.type !== 'Period' ? dayBlock.periods[i-2] : dayBlock.periods[i-1];
+            .filter(r => {
+                const slotKey = `${day}-${period.time}`;
+                if (globalTeacherSchedule[r.teacherId]?.has(slotKey)) return false;
+                if ((teacherWeeklyLoad[r.teacherId] || 0) >= 40) return false;
 
-              // 🚀 RULE: Repeats must be together (Double periods)
-              const togetherRule = dayCount === 0 || (prevPeriod && prevPeriod.subject === r.subject);
-              
-              // 🚀 RULE: Optionals (3 total: 2 together, 1 separate)
-              let optionalRule = true;
-              if (r.type === 'Optional') {
-                 optionalRule = dayCount < 2; // Max 2 per day to allow the (2+1) split
-              }
+                // 🚀 Activity: 2 per week, different days
+                if (r.nature.includes('Activity')) return r.remaining > 0 && r.placedToday === 0;
 
-              // 🚀 RULE: Activity (2 per week on different days)
-              if (r.nature.includes('Activity') && dayCount >= 1) return false;
+                // 🚀 Optional: 3 per week (2 together, 1 separate)
+                if (r.type === 'Optional') {
+                    if (r.remaining === 3 || r.remaining === 1) return r.placedToday === 0;
+                    if (r.remaining === 2) {
+                        const prev = dayBlock.periods[i-1]?.type === 'Period' ? dayBlock.periods[i-1] : dayBlock.periods[i-2];
+                        return prev && prev.subject === r.subject;
+                    }
+                }
 
-              return !globalTeacherSchedule[r.teacherId]?.has(slotKey) && togetherRule && optionalRule;
-            });
+                // 🚀 Compulsory: Together if repeated
+                if (r.type === 'Compulsory') {
+                    if (r.placedToday === 0) return true;
+                    if (r.placedToday === 1) {
+                        const prev = dayBlock.periods[i-1]?.type === 'Period' ? dayBlock.periods[i-1] : dayBlock.periods[i-2];
+                        return prev && prev.subject === r.subject;
+                    }
+                }
+                return false;
+            })
+            .sort((a, b) => b.remaining - a.remaining)[0];
 
           if (candidate) {
             period.subject = candidate.subject;
             period.teacher = candidate.teacherId;
             period.teacherName = candidate.teacherName;
             candidate.remaining--;
-            
-            const teacherId = candidate.teacherId;
-            if (!globalTeacherSchedule[teacherId]) globalTeacherSchedule[teacherId] = new Set();
-            globalTeacherSchedule[teacherId].add(`${day}-${period.time}`);
-            teacherWeeklyLoad[teacherId] = (teacherWeeklyLoad[teacherId] || 0) + 1;
+            candidate.placedToday++;
+            globalTeacherSchedule[candidate.teacherId].add(`${day}-${period.time}`);
+            teacherWeeklyLoad[candidate.teacherId]++;
+          }
+        }
+      }
+
+      // 🚀 FINAL FILLER: No subject left behind
+      for (let dayBlock of newTimetableData) {
+        for (let period of dayBlock.periods) {
+          if (period.subject === 'Empty') {
+            const filler = requirements.find(r => 
+              r.type === 'Compulsory' && (teacherWeeklyLoad[r.teacherId] || 0) < 40 &&
+              !globalTeacherSchedule[r.teacherId]?.has(`${dayBlock.day}-${period.time}`)
+            );
+            if (filler) {
+              period.subject = filler.subject;
+              period.teacher = filler.teacherId;
+              period.teacherName = filler.teacherName;
+              globalTeacherSchedule[filler.teacherId].add(`${dayBlock.day}-${period.time}`);
+              teacherWeeklyLoad[filler.teacherId]++;
+            }
           }
         }
       }
@@ -857,7 +882,7 @@ exports.generateTimetable = async (req, res) => {
       await newTT.save();
       generatedTimetables.push(newTT);
     }
-    res.status(201).json({ message: "Timetables generated successfully with new constraints.", timetables: generatedTimetables });
+    res.status(201).json({ message: "Generated successfully.", timetables: generatedTimetables });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
