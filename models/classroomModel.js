@@ -12,6 +12,7 @@ const Classroom = mongoose.Schema({
     ref: "staff",
     type: mongoose.Schema.Types.ObjectId,
     required: true,
+    Uunique: true,
   },
   studentcount: {
     required: true,
@@ -22,4 +23,6 @@ const Classroom = mongoose.Schema({
     required: true,
   },
 });
+// Ensure a teacher cannot be assigned to more than one standard/division combination
+Classroom.index({ staffid: 1 }, { unique: true });
 module.exports = mongoose.model("classroom",Classroom)

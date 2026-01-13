@@ -71,6 +71,36 @@ exports.autoGenerateClassTeachers = async (req, res) => {
 };
 
 // --- NEW: Fetch only eligible core teachers for the Edit Modal dropdown ---
+// exports.getEligibleTeachers = async (req, res) => {
+//     try {
+//         const { standard } = req.params;
+        
+//         const subjectConfig = await Subject.findOne({ standard });
+//         if (!subjectConfig) return res.status(200).json([]);
+
+//         const coreSubjectNames = subjectConfig.subjects
+//             .filter(s => s.type === "Compulsory")
+//             .map(s => s.name);
+
+//         const allocations = await SubjectAllocation.find({
+//             standards: standard,
+//             subjects: { $in: coreSubjectNames }
+//         }).distinct('teacher');
+
+//         // Teachers who are NOT currently class teachers (excluding the one being edited, handled on frontend)
+//         const alreadyAssigned = await classroom.find().distinct('staffid');
+
+//         const eligibleStaff = await Staff.find({
+//             _id: { $in: allocations, $nin: alreadyAssigned },
+//             status: true
+//         }).select('firstname lastname staffid');
+
+//         return res.status(200).json(eligibleStaff);
+//     } catch (error) {
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
+
 exports.getEligibleTeachers = async (req, res) => {
     try {
         const { standard } = req.params;
@@ -78,20 +108,27 @@ exports.getEligibleTeachers = async (req, res) => {
         const subjectConfig = await Subject.findOne({ standard });
         if (!subjectConfig) return res.status(200).json([]);
 
-        const coreSubjectNames = subjectConfig.subjects
-            .filter(s => s.type === "Compulsory")
-            .map(s => s.name);
+        const coreSubjectNames = [];
+        subjectConfig.subjects.forEach(s => {
+            if (s.type === "Compulsory") {
+                coreSubjectNames.push(s.name);
+                if (s.subSubjects) coreSubjectNames.push(...s.subSubjects);
+            }
+        });
 
         const allocations = await SubjectAllocation.find({
             standards: standard,
             subjects: { $in: coreSubjectNames }
         }).distinct('teacher');
 
-        // Teachers who are NOT currently class teachers (excluding the one being edited, handled on frontend)
+        // STRICT CHECK: Find teachers who are class teachers ANYWHERE
         const alreadyAssigned = await classroom.find().distinct('staffid');
 
         const eligibleStaff = await Staff.find({
-            _id: { $in: allocations, $nin: alreadyAssigned },
+            _id: { 
+                $in: allocations, 
+                $nin: alreadyAssigned // 🚀 Strictly exclude anyone already holding a class teacher post
+            },
             status: true
         }).select('firstname lastname staffid');
 
