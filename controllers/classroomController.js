@@ -6,6 +6,69 @@ const Subject = require("../models/subjectsModel");
 
 
 // --- NEW: Core logic to auto-generate class teachers based on subject allotments ---
+// exports.autoGenerateClassTeachers = async (req, res) => {
+//     try {
+//         const { standard } = req.body;
+//         const DIVISIONS = ["A", "B", "C", "D", "E"];
+
+//         // 1. Find Compulsory subjects for this standard
+//         const subjectConfig = await Subject.findOne({ standard });
+//         if (!subjectConfig) return res.status(404).json({ message: "No subject configuration found for this standard." });
+
+//         const coreSubjectNames = subjectConfig.subjects
+//             .filter(s => s.type === "Compulsory")
+//             .map(s => s.name);
+
+//         // 2. Find all teachers teaching these core subjects in this standard
+//         const coreAllocations = await SubjectAllocation.find({
+//             standards: standard,
+//             subjects: { $in: coreSubjectNames }
+//         }).distinct('teacher');
+
+//         if (coreAllocations.length === 0) {
+//             return res.status(400).json({ message: "No core subject teachers allotted yet for this standard." });
+//         }
+
+//         // 3. Find teachers already assigned as class teachers (to avoid double duty)
+//         const busyTeachers = await classroom.find().distinct('staffid');
+//         let availableTeachers = coreAllocations.filter(id => !busyTeachers.some(busyId => busyId.equals(id)));
+
+//         const results = [];
+
+//         // 4. Iterate through divisions A-E
+//         for (const div of DIVISIONS) {
+//             const existingClass = await classroom.findOne({ standard, division: div });
+
+//             if (!existingClass) {
+//                 if (availableTeachers.length === 0) break; // Stop if we run out of unique teachers
+
+//                 // Pick a random available core teacher
+//                 const randomIndex = Math.floor(Math.random() * availableTeachers.length);
+//                 const assignedTeacherId = availableTeachers[randomIndex];
+
+//                 const newClass = new classroom({
+//                     standard,
+//                     division: div,
+//                     staffid: assignedTeacherId,
+//                     studentcount: 0,
+//                     student_ids: {}
+//                 });
+
+//                 await newClass.save();
+//                 results.push({ div, status: "Assigned", teacherId: assignedTeacherId });
+
+//                 // Remove assigned teacher from the available pool for the next division
+//                 availableTeachers.splice(randomIndex, 1);
+//             } else {
+//                 results.push({ div, status: "Already Exists" });
+//             }
+//         }
+
+//         return res.status(200).json({ message: "Automation check complete", results });
+//     } catch (error) {
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
 exports.autoGenerateClassTeachers = async (req, res) => {
     try {
         const { standard } = req.body;
@@ -29,22 +92,29 @@ exports.autoGenerateClassTeachers = async (req, res) => {
             return res.status(400).json({ message: "No core subject teachers allotted yet for this standard." });
         }
 
-        // 3. Find teachers already assigned as class teachers (to avoid double duty)
+        // 3. Find ALL teachers already assigned as class teachers school-wide to avoid double duty
         const busyTeachers = await classroom.find().distinct('staffid');
-        let availableTeachers = coreAllocations.filter(id => !busyTeachers.some(busyId => busyId.equals(id)));
+        
+        // 4. Filter for core teachers who are not assigned to ANY class yet
+        let availableTeachers = coreAllocations.filter(id => 
+            !busyTeachers.some(busyId => busyId.toString() === id.toString())
+        );
 
         const results = [];
 
-        // 4. Iterate through divisions A-E
+        // 5. Iterate through divisions A-E
         for (const div of DIVISIONS) {
             const existingClass = await classroom.findOne({ standard, division: div });
 
             if (!existingClass) {
-                if (availableTeachers.length === 0) break; // Stop if we run out of unique teachers
+                // Stop if we run out of unique teachers for this division
+                if (availableTeachers.length === 0) {
+                    results.push({ div, status: "Failed", reason: "No unique free core teachers left" });
+                    continue; 
+                }
 
-                // Pick a random available core teacher
-                const randomIndex = Math.floor(Math.random() * availableTeachers.length);
-                const assignedTeacherId = availableTeachers[randomIndex];
+                // Pick the first available free teacher
+                const assignedTeacherId = availableTeachers.shift(); 
 
                 const newClass = new classroom({
                     standard,
@@ -56,51 +126,20 @@ exports.autoGenerateClassTeachers = async (req, res) => {
 
                 await newClass.save();
                 results.push({ div, status: "Assigned", teacherId: assignedTeacherId });
-
-                // Remove assigned teacher from the available pool for the next division
-                availableTeachers.splice(randomIndex, 1);
+                
+                // Teacher is now busy; shift() already removed them from available pool
             } else {
                 results.push({ div, status: "Already Exists" });
             }
         }
 
-        return res.status(200).json({ message: "Automation check complete", results });
+        return res.status(200).json({ message: "Automation complete", results });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
 // --- NEW: Fetch only eligible core teachers for the Edit Modal dropdown ---
-// exports.getEligibleTeachers = async (req, res) => {
-//     try {
-//         const { standard } = req.params;
-        
-//         const subjectConfig = await Subject.findOne({ standard });
-//         if (!subjectConfig) return res.status(200).json([]);
-
-//         const coreSubjectNames = subjectConfig.subjects
-//             .filter(s => s.type === "Compulsory")
-//             .map(s => s.name);
-
-//         const allocations = await SubjectAllocation.find({
-//             standards: standard,
-//             subjects: { $in: coreSubjectNames }
-//         }).distinct('teacher');
-
-//         // Teachers who are NOT currently class teachers (excluding the one being edited, handled on frontend)
-//         const alreadyAssigned = await classroom.find().distinct('staffid');
-
-//         const eligibleStaff = await Staff.find({
-//             _id: { $in: allocations, $nin: alreadyAssigned },
-//             status: true
-//         }).select('firstname lastname staffid');
-
-//         return res.status(200).json(eligibleStaff);
-//     } catch (error) {
-//         return res.status(500).json({ error: error.message });
-//     }
-// };
-
 exports.getEligibleTeachers = async (req, res) => {
     try {
         const { standard } = req.params;
@@ -108,27 +147,20 @@ exports.getEligibleTeachers = async (req, res) => {
         const subjectConfig = await Subject.findOne({ standard });
         if (!subjectConfig) return res.status(200).json([]);
 
-        const coreSubjectNames = [];
-        subjectConfig.subjects.forEach(s => {
-            if (s.type === "Compulsory") {
-                coreSubjectNames.push(s.name);
-                if (s.subSubjects) coreSubjectNames.push(...s.subSubjects);
-            }
-        });
+        const coreSubjectNames = subjectConfig.subjects
+            .filter(s => s.type === "Compulsory")
+            .map(s => s.name);
 
         const allocations = await SubjectAllocation.find({
             standards: standard,
             subjects: { $in: coreSubjectNames }
         }).distinct('teacher');
 
-        // STRICT CHECK: Find teachers who are class teachers ANYWHERE
+        // Teachers who are NOT currently class teachers (excluding the one being edited, handled on frontend)
         const alreadyAssigned = await classroom.find().distinct('staffid');
 
         const eligibleStaff = await Staff.find({
-            _id: { 
-                $in: allocations, 
-                $nin: alreadyAssigned // 🚀 Strictly exclude anyone already holding a class teacher post
-            },
+            _id: { $in: allocations, $nin: alreadyAssigned },
             status: true
         }).select('firstname lastname staffid');
 
