@@ -1633,29 +1633,94 @@ const sendAdmissionConfirmationEmail = async (toEmail, firstName, admissionNo, b
 //         res.status(500).json({ error: error.message, message: "Internal Server Error during student creation." });
 //     }
 // };
+// exports.createUser = async (req, res) => {
+//     try {
+//         const userData = req.body;
+
+//         // --- NEW LOGIC: GENERATE ADM-000 and GR-000 PATTERN ---
+//         // 1. Get the total count of students currently in the DB
+//         const studentCount = await User.countDocuments();
+        
+//         // 2. Increment count and pad with leading zeros (e.g., 3 -> "003")
+//         const nextNumberString = (studentCount + 1).toString().padStart(3, '0');
+
+//         // 3. Assign sequential IDs if they weren't provided manually
+//         if (!userData.admission.admissionno) {
+//             userData.admission.admissionno = `ADM-${nextNumberString}`;
+//         }
+//         if (!userData.admission.grno) {
+//             userData.admission.grno = `GR-${nextNumberString}`;
+//         }
+//         // -----------------------------------------------------
+
+//         const user = new User(userData);
+//         await user.save();
+
+//         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
+//         const firstName = userData.firstname;
+//         const admissionNo = userData.admission?.admissionno; 
+//         const birthdate = userData.dob; 
+
+//         if (toEmail && firstName && birthdate) {
+//             sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
+//         } else {
+//             console.log(`Admission email skipped for ${firstName}. Missing data.`);
+//         }
+
+//         res.status(201).json({ 
+//             message: "Student created successfully",
+//             admissionNo: userData.admission.admissionno,
+//             grNo: userData.admission.grno 
+//         });
+//     } catch (error) {
+//         console.error("Error creating student:", error);
+//         if (error.code === 11000) {
+//             const field = Object.keys(error.keyPattern)[0];
+//             return res.status(409).json({message: `Data conflict: A student with this ${field} already exists.`,
+//             duplicateField: field});
+//         }
+//         res.status(500).json({ error: error.message, message: "Internal Server Error." });
+//     }
+// };
+
 exports.createUser = async (req, res) => {
     try {
         const userData = req.body;
 
-        // --- NEW LOGIC: GENERATE ADM-000 and GR-000 PATTERN ---
-        // 1. Get the total count of students currently in the DB
-        const studentCount = await User.countDocuments();
-        
-        // 2. Increment count and pad with leading zeros (e.g., 3 -> "003")
-        const nextNumberString = (studentCount + 1).toString().padStart(3, '0');
+        // --- HELPER: FIND NEXT UNIQUE ID ---
+        const getNextUniqueNumbers = async () => {
+            // Find student with the highest admission number label
+            const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
+            
+            let nextNum = 1;
+            if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
+                const lastParts = lastStudent.admission.admissionno.split('-');
+                if(lastParts.length > 1) {
+                    nextNum = parseInt(lastParts[1]) + 1;
+                }
+            }
+            
+            const formatted = nextNum.toString().padStart(3, '0');
+            return {
+                admissionno: `ADM-${formatted}`,
+                grno: `GR-${formatted}`
+            };
+        };
 
-        // 3. Assign sequential IDs if they weren't provided manually
-        if (!userData.admission.admissionno) {
-            userData.admission.admissionno = `ADM-${nextNumberString}`;
+        // Assign numbers only if not provided manually
+        if (!userData.admission.admissionno || !userData.admission.grno) {
+            const uniqueIds = await getNextUniqueNumbers();
+            userData.admission.admissionno = uniqueIds.admissionno;
+            userData.admission.grno = uniqueIds.grno;
         }
-        if (!userData.admission.grno) {
-            userData.admission.grno = `GR-${nextNumberString}`;
-        }
-        // -----------------------------------------------------
 
         const user = new User(userData);
+        
+        // Final guard: if saving fails specifically because the backend-generated ID was taken
+        // (due to concurrent requests), the catch block will handle it.
         await user.save();
 
+        // --- Email Logic ---
         const toEmail = userData.parent?.emailaddress || userData.emailaddress;
         const firstName = userData.firstname;
         const admissionNo = userData.admission?.admissionno; 
@@ -1663,8 +1728,6 @@ exports.createUser = async (req, res) => {
 
         if (toEmail && firstName && birthdate) {
             sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
-        } else {
-            console.log(`Admission email skipped for ${firstName}. Missing data.`);
         }
 
         res.status(201).json({ 
@@ -1672,17 +1735,31 @@ exports.createUser = async (req, res) => {
             admissionNo: userData.admission.admissionno,
             grNo: userData.admission.grno 
         });
+
     } catch (error) {
         console.error("Error creating student:", error);
+        
+        // Handle Duplicate Key Errors
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            return res.status(409).json({message: `Data conflict: A student with this ${field} already exists.`,
-            duplicateField: field});
+            
+            // If the conflict is still on the admission number, it means 
+            // someone else registered a student at the exact same millisecond.
+            if (field.includes("admissionno")) {
+                return res.status(409).json({
+                    message: "ID conflict detected. Please click 'Submit' again to auto-generate the next available number.",
+                    duplicateField: field
+                });
+            }
+
+            return res.status(409).json({
+                message: `Data conflict: A student with this ${field} already exists.`,
+                duplicateField: field
+            });
         }
         res.status(500).json({ error: error.message, message: "Internal Server Error." });
     }
 };
-
 
 exports.getStudents = async (req, res) => {
     try {
