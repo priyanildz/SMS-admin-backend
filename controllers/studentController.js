@@ -1687,70 +1687,63 @@ exports.createUser = async (req, res) => {
     try {
         const userData = req.body;
 
-        // --- IMPROVED LOGIC: GENERATE UNIQUE ADM-XXX AND GR-XXX ---
+        // 1. Fetch all existing admission numbers to find the TRUE maximum
+        const allStudents = await User.find({}, { "admission.admissionno": 1 });
         
-        // 1. Find the student with the absolute highest admission number
-        // We sort by admissionno in descending order to find the latest one
-        const lastStudent = await User.findOne().sort({ "admission.admissionno": -1 });
-        
-        let nextNumber = 1312; // Start after your current 1311 students by default
+        let maxNumber = 1311; // Your base starting point
 
-        if (lastStudent && lastStudent.admission && lastStudent.admission.admissionno) {
-            // Extract the numerical part from "ADM-1311" -> 1311
-            const lastNoPart = parseInt(lastStudent.admission.admissionno.split('-')[1]);
-            
-            // If the database has a number higher than 1311, use that as the base
-            if (!isNaN(lastNoPart) && lastNoPart >= 1311) {
-                nextNumber = lastNoPart + 1;
+        allStudents.forEach(student => {
+            if (student.admission && student.admission.admissionno) {
+                const parts = student.admission.admissionno.split('-');
+                if (parts.length > 1) {
+                    const num = parseInt(parts[1]);
+                    if (!isNaN(num) && num > maxNumber) {
+                        maxNumber = num;
+                    }
+                }
             }
-        }
-        
-        // 2. Format the number with padding (e.g., 1312 -> "1312")
+        });
+
+        const nextNumber = maxNumber + 1;
         const nextNumberString = nextNumber.toString().padStart(3, '0');
 
-        // 3. Assign sequential IDs if they weren't provided manually
+        // 2. Assign the truly unique sequential IDs
         if (!userData.admission.admissionno) {
             userData.admission.admissionno = `ADM-${nextNumberString}`;
         }
         if (!userData.admission.grno) {
             userData.admission.grno = `GR-${nextNumberString}`;
         }
-        // -----------------------------------------------------
 
         const user = new User(userData);
-        await user.save(); //
+        await user.save();
 
-        const toEmail = userData.parent?.emailaddress || userData.emailaddress; //
-        const firstName = userData.firstname; //
-        const admissionNo = userData.admission?.admissionno; //
-        const birthdate = userData.dob; //
+        // NodeMailer and Response logic remains the same...
+        const toEmail = userData.parent?.emailaddress || userData.emailaddress;
+        const firstName = userData.firstname;
+        const admissionNo = userData.admission?.admissionno;
+        const birthdate = userData.dob;
 
         if (toEmail && firstName && birthdate) {
-            // Sending email in the background
-            sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate); 
-        } else {
-            console.log(`Admission email skipped for ${firstName}. Missing data.`); //
+            sendAdmissionConfirmationEmail(toEmail, firstName, admissionNo, birthdate);
         }
 
         res.status(201).json({ 
             message: "Student created successfully",
             admissionNo: userData.admission.admissionno,
             grNo: userData.admission.grno 
-        }); //
+        });
         
     } catch (error) {
-        console.error("Error creating student:", error); //
-        
-        // Detailed conflict reporting
+        console.error("Error creating student:", error);
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
             return res.status(409).json({
                 message: `Data conflict: A student with this ${field} already exists.`,
                 duplicateField: field
-            }); //
+            });
         }
-        
-        res.status(500).json({ error: error.message, message: "Internal Server Error." }); //
+        res.status(500).json({ error: error.message, message: "Internal Server Error." });
     }
 };
 
