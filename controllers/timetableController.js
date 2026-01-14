@@ -893,6 +893,63 @@ exports.getTimetable = async (req, res) => {
   }
 };
 
+exports.getTeacherTimetable = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+
+    // 1. Fetch all timetables across all standards and divisions
+    const allTimetables = await Timetable.find({});
+
+    // 2. Filter periods where this teacher is assigned
+    // We map through all timetables to build a "Teacher View"
+    const teacherSchedule = WEEKDAYS.map(day => {
+      return {
+        day,
+        periods: FIXED_PERIOD_STRUCTURE.map(slot => {
+          // Find if this teacher has a lecture in ANY class during this specific day and time
+          let assignedPeriod = null;
+          
+          for (const tt of allTimetables) {
+            const dayData = tt.timetable.find(d => d.day === day);
+            if (dayData) {
+              const periodData = dayData.periods.find(p => p.time === slot.time && p.teacher?.toString() === teacherId);
+              if (periodData) {
+                assignedPeriod = {
+                  ...periodData,
+                  standard: tt.standard,
+                  division: tt.division,
+                  subjectDisplay: `${periodData.subject} (${tt.standard}${tt.division})`
+                };
+                break; // Found the assignment for this slot
+              }
+            }
+          }
+
+          return assignedPeriod || { 
+            periodNumber: slot.num, 
+            time: slot.time, 
+            subject: slot.isBreak ? slot.type : "Free Lecture", 
+            isBreak: slot.isBreak 
+          };
+        })
+      };
+    });
+
+    const staffInfo = await Staff.findById(teacherId).select("firstname lastname middlename");
+
+    if (!staffInfo) {
+      return res.status(404).json({ error: "Teacher not found" });
+    }
+
+    res.json({
+      teacherName: `${staffInfo.firstname} ${staffInfo.middlename || ''} ${staffInfo.lastname}`,
+      timetable: teacherSchedule
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 exports.publishTimetable = async (req, res) => {
     try {
@@ -1039,7 +1096,8 @@ module.exports = {
     validateTimetable: exports.validateTimetable,
     arrangeTimetable: exports.arrangeTimetable,
     getTimetable: exports.getTimetable,
-    publishTimetable: exports.publishTimetable
+    publishTimetable: exports.publishTimetable,
+getTeacherTimetable: exports.getTeacherTimetable
 };
 
 
