@@ -793,30 +793,34 @@ exports.generateTimetable = async (req, res) => {
 
       // MANDATORY: Class Teacher 1st Period
       // MANDATORY: Class Teacher 1st Period
-newTimetableData.forEach(dayBlock => {
-  const firstLec = dayBlock.periods[0];
-  const classTrId = classroomInfo.staffid.toString();
-  
-  // Attempt to find the specific subject the Class Teacher is allotted for
-  const classTrAlloc = divisionAllocations.find(a => a.teacher.toString() === classTrId);
-  
-  // 🚀 FIXED: Improved fallback logic to show standard/division if specific subject isn't found
-  if (classTrAlloc) {
-    firstLec.subject = `${classTrAlloc.subjects[0]} (${standard}${division})`;
-    firstLec.teacherName = classTrAlloc.teacherName;
-  } else {
-    // If the class teacher isn't allotted a subject, we still fetch their name from classroomInfo
-    firstLec.subject = `Class Teacher Period (${standard}${division})`;
-    // Ensure the teacher name is retrieved from the classroomInfo if available
-    firstLec.teacherName = classroomInfo.staffname || "Class Teacher"; 
-  }
+      newTimetableData.forEach(dayBlock => {
+        const firstLec = dayBlock.periods[0];
+        const classTrId = classroomInfo.staffid.toString();
+        const slotKey = `${dayBlock.day}-${firstLec.time}`;
+        
+        // Find the specific subject this class teacher is supposed to teach
+        const classTrAlloc = divisionAllocations.find(a => a.teacher.toString() === classTrId);
+        
+        // 🚀 CHECK COLLISION: Only assign if teacher isn't busy in another class
+        const isTeacherBusy = globalTeacherSchedule[classTrId]?.has(slotKey);
 
-  firstLec.teacher = classroomInfo.staffid;
-  
-  if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
-  globalTeacherSchedule[classTrId].add(`${dayBlock.day}-${firstLec.time}`);
-  teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
-});
+        if (!isTeacherBusy) {
+          // If free, assign the teacher and their specific subject
+          firstLec.subject = classTrAlloc ? classTrAlloc.subjects[0] : "Class Teacher Period";
+          firstLec.teacher = classroomInfo.staffid;
+          firstLec.teacherName = classTrAlloc?.teacherName || classroomInfo.staffname; // Use actual name from classroom
+          
+          // Update schedules
+          if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
+          globalTeacherSchedule[classTrId].add(slotKey);
+          teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
+        } else {
+          // 🚀 IF BUSY: Leave as "Free Lecture" or "Empty" so it's not a collision
+          firstLec.subject = "Free Lecture";
+          firstLec.teacher = null;
+          firstLec.teacherName = null;
+        }
+      });
 
       // CORE SCHEDULING
       for (let day of WEEKDAYS) {
