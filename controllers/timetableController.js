@@ -798,24 +798,29 @@ exports.generateTimetable = async (req, res) => {
         const classTrId = classroomInfo.staffid.toString();
         const slotKey = `${dayBlock.day}-${firstLec.time}`;
         
-        // Find the specific subject this class teacher is supposed to teach
-        const classTrAlloc = divisionAllocations.find(a => a.teacher.toString() === classTrId);
-        
-        // 🚀 CHECK COLLISION: Only assign if teacher isn't busy in another class
+        // 1. First, check if the teacher is actually available
         const isTeacherBusy = globalTeacherSchedule[classTrId]?.has(slotKey);
 
         if (!isTeacherBusy) {
-          // If free, assign the teacher and their specific subject
-          firstLec.subject = classTrAlloc ? classTrAlloc.subjects[0] : "Class Teacher Period";
-          firstLec.teacher = classroomInfo.staffid;
-          firstLec.teacherName = classTrAlloc?.teacherName || classroomInfo.staffname; // Use actual name from classroom
+          // 2. Find ANY subject this teacher is allotted for in this standard
+          // We look in allAllocations instead of just divisionAllocations
+          const teacherAlloc = allAllocations.find(a => a.teacher.toString() === classTrId);
           
-          // Update schedules
+          firstLec.subject = teacherAlloc ? teacherAlloc.subjects[0] : "Class Teacher Period";
+          firstLec.teacher = classroomInfo.staffid;
+          firstLec.teacherName = teacherAlloc?.teacherName || classroomInfo.staffname;
+          
+          // 3. Update global tracking
           if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
           globalTeacherSchedule[classTrId].add(slotKey);
           teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
+          
+          // 4. Important: Decrement remaining count if this subject was in the requirements
+          const reqItem = requirements.find(r => r.subject === firstLec.subject && r.teacherId === classTrId);
+          if (reqItem) reqItem.remaining--;
+
         } else {
-          // 🚀 IF BUSY: Leave as "Free Lecture" or "Empty" so it's not a collision
+          // If the teacher is genuinely busy (e.g., they are Class Teacher for 1A and this is 1B)
           firstLec.subject = "Free Lecture";
           firstLec.teacher = null;
           firstLec.teacherName = null;
