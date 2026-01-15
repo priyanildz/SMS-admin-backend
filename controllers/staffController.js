@@ -1230,18 +1230,19 @@ exports.getStaff = async (req, res) => {
 };
 
 // =========================================================================
-// GET STAFF SUBJECTS (FETCH FROM LIVE TIMETABLES) 🚀
+// GET STAFF SUBJECTS (ACCURATE CROSS-COLLECTION FETCH) 🚀
 // =========================================================================
 exports.getStaffSubjects = async (req, res) => {
     try {
-        const { staffid } = req.params;
+        const { staffid } = req.params; // This is the string ID (e.g., STF-PR-1-8309)
 
         if (!staffid) {
             return res.status(400).json({ message: "Staff ID is required." });
         }
 
-        // 1. Find the Staff's MongoDB _id using the human-readable staffid string
-        const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
+        // 1. Find the Staff document to get its true MongoDB _id
+        // Your screenshot shows the teacher field uses the Hex ObjectId
+        const staffMember = await Staff.findOne({ staffid: staffid });
 
         if (!staffMember) {
             return res.status(404).json({ message: "Staff not found." });
@@ -1249,32 +1250,47 @@ exports.getStaffSubjects = async (req, res) => {
 
         const staffMongoId = staffMember._id;
 
-        // 2. Query ALL Timetables where this teacher has at least one period assigned
+        // 2. Query SubjectAllocation using the ObjectId
+        const allocations = await SubjectAllocation.find({ 
+            teacher: staffMongoId 
+        }).lean();
+
+        // 3. Query Timetables as a fallback (Ensures subject teachers also show up)
         const timetables = await Timetable.find({ 
             "timetable.periods.teacher": staffMongoId 
         }).lean();
 
-        if (!timetables || timetables.length === 0) {
-            return res.status(200).json([]);
-        }
+        // 4. Consolidate results into a single unique list
+        const resultsMap = new Map();
 
-        // 3. Extract unique Subject-Standard-Division combinations
-        const uniqueAssignments = new Map();
+        // Process SubjectAllocations
+        allocations.forEach(record => {
+            const subjects = record.subjects || [];
+            const standards = record.standards || [];
+            const divisions = record.divisions || [];
 
+            subjects.forEach(sub => {
+                standards.forEach(std => {
+                    divisions.forEach(div => {
+                        const key = `${sub}-${std}-${div}`;
+                        resultsMap.set(key, { subject: sub, standard: std, division: div });
+                    });
+                });
+            });
+        });
+
+        // Process Timetables to catch anything missed
         timetables.forEach(tt => {
-            tt.timetable.forEach(dayEntry => {
-                dayEntry.periods.forEach(period => {
-                    // Check if this specific period belongs to our teacher
-                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
-                        // Exclude non-academic placeholders
-                        if (period.subject !== "Empty" && period.subject !== "Class Teacher Period") {
-                            const key = `${period.subject}-${tt.standard}-${tt.division}`;
-                            
-                            if (!uniqueAssignments.has(key)) {
-                                uniqueAssignments.set(key, {
-                                    subject: period.subject,
-                                    standard: tt.standard,
-                                    division: tt.division
+            tt.timetable.forEach(day => {
+                day.periods.forEach(p => {
+                    if (p.teacher && p.teacher.toString() === staffMongoId.toString()) {
+                        if (p.subject !== "Empty" && p.subject !== "Class Teacher Period") {
+                            const key = `${p.subject}-${tt.standard}-${tt.division}`;
+                            if (!resultsMap.has(key)) {
+                                resultsMap.set(key, { 
+                                    subject: p.subject, 
+                                    standard: tt.standard, 
+                                    division: tt.division 
                                 });
                             }
                         }
@@ -1283,13 +1299,14 @@ exports.getStaffSubjects = async (req, res) => {
             });
         });
 
-        // 4. Return the formatted list as an array
-        const result = Array.from(uniqueAssignments.values());
-        return res.status(200).json(result);
+        const finalResult = Array.from(resultsMap.values());
+        console.log(`DEBUG: Found ${finalResult.length} subjects for ${staffid}`);
+
+        return res.status(200).json(finalResult);
 
     } catch (error) {
-        console.error("Error fetching staff subjects:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error" });
+        console.error("Error in getStaffSubjects:", error);
+        return res.status(500).json({ error: error.message });
     }
 };
 
