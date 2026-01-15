@@ -1230,61 +1230,68 @@ exports.getStaff = async (req, res) => {
 };
 
 // =========================================================================
-// GET STAFF SUBJECTS (MODIFIED TO FETCH REAL DATA) 🚀
+// GET STAFF SUBJECTS (FETCH FROM TIMETABLES TO ENSURE ACCURACY) 🚀
 // =========================================================================
 exports.getStaffSubjects = async (req, res) => {
     try {
         const { staffid } = req.params;
 
-        // 1. Find the Staff document by staffid to get its MongoDB _id
-        // NOTE: The Staff model's primary key is likely the MongoDB _id,
-        // which is what the SubjectAllocation model's 'teacher' field references.
+        if (!staffid) {
+            return res.status(400).json({ message: "Staff ID is required." });
+        }
+
+        // 1. Find the Staff's MongoDB _id using the readable staffid string
         const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
 
         if (!staffMember) {
-            console.log(`DEBUG: StaffSubjects - Staff ID ${staffid} not found.`);
             return res.status(404).json({ message: "Staff not found." });
         }
 
         const staffMongoId = staffMember._id;
-        console.log(`DEBUG: Staff ID ${staffid} corresponds to Mongo ID: ${staffMongoId}`);
 
-        // 2. Query the SubjectAllocation model using the Staff's MongoDB _id
-        const allocationRecords = await SubjectAllocation.find({ 
-            teacher: staffMongoId 
-        });
+        // 2. Query ALL Timetables where this teacher is assigned to ANY period
+        // This covers both Class Teachers and Subject-only teachers
+        const timetables = await Timetable.find({ 
+            "timetable.periods.teacher": staffMongoId 
+        }).lean();
 
-        if (!allocationRecords || allocationRecords.length === 0) {
-            console.log(`DEBUG: StaffSubjects - No subject allocations found for Mongo ID: ${staffMongoId}`);
+        if (!timetables || timetables.length === 0) {
             return res.status(200).json([]);
         }
 
-        // 3. Transform the data to the format expected by the frontend:
-        // [{ subject: 'Mathematics', standard: 8, division: 'A' }, ...]
-        
-        const assignments = [];
+        // 3. Extract unique Subject-Standard-Division combinations
+        const assignmentsMap = new Set();
+        const formattedAssignments = [];
 
-        // SubjectAllocation model stores arrays for subjects, standards, and divisions
-        allocationRecords.forEach(record => {
-            // Assuming that subjects, standards, and divisions are parallel arrays 
-            // and should be combined into separate assignment objects.
-            // This is a common but sometimes complex data structure.
-            for (let i = 0; i < record.subjects.length; i++) {
-                assignments.push({
-                    subject: record.subjects[i],
-                    standard: record.standards[i] || 'N/A', // Handle potential misalignment
-                    division: record.divisions[i] || 'N/A' // Handle potential misalignment
+        timetables.forEach(tt => {
+            tt.timetable.forEach(dayEntry => {
+                dayEntry.periods.forEach(period => {
+                    // Check if this specific period belongs to our teacher
+                    if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
+                        // Exclude placeholder labels
+                        if (period.subject !== "Empty" && period.subject !== "Class Teacher Period") {
+                            const uniqueKey = `${period.subject}-${tt.standard}-${tt.division}`;
+                            
+                            if (!assignmentsMap.has(uniqueKey)) {
+                                assignmentsMap.add(uniqueKey);
+                                formattedAssignments.push({
+                                    subject: period.subject,
+                                    standard: tt.standard,
+                                    division: tt.division
+                                });
+                            }
+                        }
+                    }
                 });
-            }
+            });
         });
 
-        console.log("DEBUG: StaffSubjects - Fetched and formatted assignments:", assignments);
-        
-        return res.status(200).json(assignments);
+        // 4. Return the consolidated list
+        return res.status(200).json(formattedAssignments);
 
     } catch (error) {
         console.error("Error fetching staff subjects:", error);
-        return res.status(500).json({ error: error.message, message: "Internal Server Error during subject fetch." });
+        return res.status(500).json({ error: error.message, message: "Internal Server Error" });
     }
 };
 
