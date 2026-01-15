@@ -1230,7 +1230,7 @@ exports.getStaff = async (req, res) => {
 };
 
 // =========================================================================
-// GET STAFF SUBJECTS (FETCH FROM TIMETABLES TO ENSURE ACCURACY) 🚀
+// GET STAFF SUBJECTS (FETCH FROM LIVE TIMETABLES) 🚀
 // =========================================================================
 exports.getStaffSubjects = async (req, res) => {
     try {
@@ -1240,7 +1240,7 @@ exports.getStaffSubjects = async (req, res) => {
             return res.status(400).json({ message: "Staff ID is required." });
         }
 
-        // 1. Find the Staff's MongoDB _id using the readable staffid string
+        // 1. Find the Staff's MongoDB _id using the human-readable staffid string
         const staffMember = await Staff.findOne({ staffid: staffid }, '_id');
 
         if (!staffMember) {
@@ -1249,8 +1249,7 @@ exports.getStaffSubjects = async (req, res) => {
 
         const staffMongoId = staffMember._id;
 
-        // 2. Query ALL Timetables where this teacher is assigned to ANY period
-        // This covers both Class Teachers and Subject-only teachers
+        // 2. Query ALL Timetables where this teacher has at least one period assigned
         const timetables = await Timetable.find({ 
             "timetable.periods.teacher": staffMongoId 
         }).lean();
@@ -1260,21 +1259,19 @@ exports.getStaffSubjects = async (req, res) => {
         }
 
         // 3. Extract unique Subject-Standard-Division combinations
-        const assignmentsMap = new Set();
-        const formattedAssignments = [];
+        const uniqueAssignments = new Map();
 
         timetables.forEach(tt => {
             tt.timetable.forEach(dayEntry => {
                 dayEntry.periods.forEach(period => {
                     // Check if this specific period belongs to our teacher
                     if (period.teacher && period.teacher.toString() === staffMongoId.toString()) {
-                        // Exclude placeholder labels
+                        // Exclude non-academic placeholders
                         if (period.subject !== "Empty" && period.subject !== "Class Teacher Period") {
-                            const uniqueKey = `${period.subject}-${tt.standard}-${tt.division}`;
+                            const key = `${period.subject}-${tt.standard}-${tt.division}`;
                             
-                            if (!assignmentsMap.has(uniqueKey)) {
-                                assignmentsMap.add(uniqueKey);
-                                formattedAssignments.push({
+                            if (!uniqueAssignments.has(key)) {
+                                uniqueAssignments.set(key, {
                                     subject: period.subject,
                                     standard: tt.standard,
                                     division: tt.division
@@ -1286,8 +1283,9 @@ exports.getStaffSubjects = async (req, res) => {
             });
         });
 
-        // 4. Return the consolidated list
-        return res.status(200).json(formattedAssignments);
+        // 4. Return the formatted list as an array
+        const result = Array.from(uniqueAssignments.values());
+        return res.status(200).json(result);
 
     } catch (error) {
         console.error("Error fetching staff subjects:", error);
