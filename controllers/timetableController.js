@@ -886,7 +886,7 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 
 exports.generateTimetable = async (req, res) => {
   const { standard, submittedby, timing } = req.body;
-  
+
   // 1. Calculate Academic Year (April to March)
   const today = new Date();
   const currentMonth = today.getMonth(); 
@@ -925,15 +925,12 @@ exports.generateTimetable = async (req, res) => {
       if (!classroomInfo) continue;
 
       // 🚀 RULE 1: One teacher per subject in one class. 
-      // If multiple teachers are allotted for a subject (e.g. English), 
-      // we filter to ensure only one is picked for THIS division.
       const divisionAllocations = [];
       const subjectsInAlloc = [...new Set(allAllocations.flatMap(a => a.subjects))];
 
       subjectsInAlloc.forEach(subName => {
         const eligibleTeachers = allAllocations.filter(a => a.subjects.includes(subName));
         if (eligibleTeachers.length > 0) {
-          // Randomly pick one teacher from the pool for this specific division
           const picked = eligibleTeachers[Math.floor(Math.random() * eligibleTeachers.length)];
           divisionAllocations.push(picked);
         }
@@ -945,10 +942,9 @@ exports.generateTimetable = async (req, res) => {
           s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
         );
 
-        // 🚀 RULE: Dynamic Lecture Counts
-        let count = 6; // Default for Compulsory: "As many as they can" (filling available slots)
-        if (config?.type === 'Optional') count = 3; // 3 per week
-        if (config?.nature?.includes('Activity')) count = 2; // 2 per week
+        let count = 6; 
+        if (config?.type === 'Optional') count = 3; 
+        if (config?.nature?.includes('Activity')) count = 2; 
 
         return {
           teacherId: alloc.teacher.toString(),
@@ -974,28 +970,22 @@ exports.generateTimetable = async (req, res) => {
         const classTrId = classroomInfo.staffid.toString();
         const slotKey = `${dayBlock.day}-${firstLec.time}`;
         
-        // 1. First, check if the teacher is actually available
         const isTeacherBusy = globalTeacherSchedule[classTrId]?.has(slotKey);
 
         if (!isTeacherBusy) {
-          // 2. Find ANY subject this teacher is allotted for in this standard
           const teacherAlloc = allAllocations.find(a => a.teacher.toString() === classTrId);
           
           firstLec.subject = teacherAlloc ? teacherAlloc.subjects[0] : "Class Teacher Period";
           firstLec.teacher = classroomInfo.staffid;
           firstLec.teacherName = teacherAlloc?.teacherName || classroomInfo.staffname;
           
-          // 3. Update global tracking
           if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
           globalTeacherSchedule[classTrId].add(slotKey);
           teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
           
-          // 4. Important: Decrement remaining count if this subject was in the requirements
           const reqItem = requirements.find(r => r.subject === firstLec.subject && r.teacherId === classTrId);
           if (reqItem) reqItem.remaining--;
-
         } else {
-          // If the teacher is genuinely busy
           firstLec.subject = "Free Lecture";
           firstLec.teacher = null;
           firstLec.teacherName = null;
@@ -1010,29 +1000,28 @@ exports.generateTimetable = async (req, res) => {
           if (period.subject !== 'Empty') continue;
 
           const candidate = requirements
-            .filter(r => r.remaining > 0 && (teacherWeeklyLoad[r.teacherId] || 0) < 40) // 🚀 RULE: 40 Lec Cap
+            .filter(r => r.remaining > 0 && (teacherWeeklyLoad[r.teacherId] || 0) < 40) 
             .sort((a, b) => b.remaining - a.remaining)
             .find(r => {
               const slotKey = `${day}-${period.time}`;
               const dayCount = dayBlock.periods.filter(p => p.subject === r.subject).length;
               
-              // 🚀 UPDATED RULE: If a subject repeats in a day, it MUST be back-to-back (Double period)
-              // If the subject has appeared today, the immediate previous period must be that subject.
-              let togetherRule = true;
-              if (dayCount > 0) {
-                const prevIndex = i - 1;
-                // Check if the immediate previous teaching period (ignoring break) matches
-                const prevSlot = dayBlock.periods[prevIndex]?.type !== 'Period' ? dayBlock.periods[prevIndex - 1] : dayBlock.periods[prevIndex];
-                togetherRule = prevSlot && prevSlot.subject === r.subject;
+              // Find the last actual period (skipping breaks if necessary)
+              let prevPeriodIndex = i - 1;
+              while (prevPeriodIndex >= 0 && (dayBlock.periods[prevPeriodIndex].subject === 'Recess' || dayBlock.periods[prevPeriodIndex].subject === 'Break')) {
+                prevPeriodIndex--;
               }
+              const prevPeriod = prevPeriodIndex >= 0 ? dayBlock.periods[prevPeriodIndex] : null;
+
+              // 🚀 UPDATED RULE: If subject exists today, it MUST be one after another
+              // If dayCount > 0, it is only allowed if the previous period was the same subject.
+              const togetherRule = dayCount === 0 || (prevPeriod && prevPeriod.subject === r.subject);
               
-              // 🚀 RULE: Optionals (3 total: 2 together, 1 separate)
               let optionalRule = true;
               if (r.type === 'Optional') {
-                 optionalRule = dayCount < 2; // Max 2 per day to allow the (2+1) split
+                 optionalRule = dayCount < 2; 
               }
 
-              // 🚀 RULE: Activity (2 per week on different days)
               if (r.nature.includes('Activity') && dayCount >= 1) return false;
 
               return !globalTeacherSchedule[r.teacherId]?.has(slotKey) && togetherRule && optionalRule;
