@@ -886,7 +886,7 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 
 exports.generateTimetable = async (req, res) => {
   const { standard, submittedby, timing } = req.body;
-
+  
   // 1. Calculate Academic Year (April to March)
   const today = new Date();
   const currentMonth = today.getMonth(); 
@@ -985,6 +985,7 @@ exports.generateTimetable = async (req, res) => {
           
           const reqItem = requirements.find(r => r.subject === firstLec.subject && r.teacherId === classTrId);
           if (reqItem) reqItem.remaining--;
+
         } else {
           firstLec.subject = "Free Lecture";
           firstLec.teacher = null;
@@ -1013,10 +1014,12 @@ exports.generateTimetable = async (req, res) => {
               }
               const prevPeriod = prevPeriodIndex >= 0 ? dayBlock.periods[prevPeriodIndex] : null;
 
-              // 🚀 UPDATED RULE: If subject exists today, it MUST be one after another
-              // If dayCount > 0, it is only allowed if the previous period was the same subject.
+              // 🚀 RULE: Back-to-back ONLY
               const togetherRule = dayCount === 0 || (prevPeriod && prevPeriod.subject === r.subject);
               
+              // 🚀 RULE: Not more than 2 lectures of same subject in a day
+              const maxDailyRule = dayCount < 2;
+
               let optionalRule = true;
               if (r.type === 'Optional') {
                  optionalRule = dayCount < 2; 
@@ -1024,7 +1027,7 @@ exports.generateTimetable = async (req, res) => {
 
               if (r.nature.includes('Activity') && dayCount >= 1) return false;
 
-              return !globalTeacherSchedule[r.teacherId]?.has(slotKey) && togetherRule && optionalRule;
+              return !globalTeacherSchedule[r.teacherId]?.has(slotKey) && togetherRule && maxDailyRule && optionalRule;
             });
 
           if (candidate) {
