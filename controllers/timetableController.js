@@ -885,10 +885,9 @@ const validateTT = async (timetableDoc, existingSchedules = {}) => {
 // };
 
 exports.generateTimetable = async (req, res) => {
-  const { standard, submittedby } = req.body;
-  const timing = "08:00 - 12:20";
-
-  // 1. Calculate Academic Year (April 1st start logic)
+  const { standard, submittedby, timing } = req.body;
+  
+  // 1. Calculate Academic Year (April to March)
   const today = new Date();
   const currentMonth = today.getMonth(); 
   const academicStartYear = currentMonth <= 2 ? today.getFullYear() - 1 : today.getFullYear();
@@ -898,13 +897,10 @@ exports.generateTimetable = async (req, res) => {
 
   try {
     const allExistingTimetables = await Timetable.find({});
-    const subjectConfigs = await Subject.findOne({ standard });
-    const allAllocations = await SubjectAllocation.find({ standards: standard });
-
     let globalTeacherSchedule = {};
-    let teacherWeeklyLoad = {}; 
+    let teacherWeeklyLoad = {}; // 🚀 TRACKER: Max 40 lectures per week
 
-    // Pre-populate global data to prevent clashes
+    // Initialize global data from existing records
     allExistingTimetables.forEach(tt => {
       tt.timetable.forEach(dayBlock => {
         dayBlock.periods.forEach(p => {
@@ -919,13 +915,16 @@ exports.generateTimetable = async (req, res) => {
       });
     });
 
+    const subjectConfigs = await Subject.findOne({ standard });
+    const allAllocations = await SubjectAllocation.find({ standards: standard });
+
     let generatedTimetables = [];
 
     for (const division of ALL_DIVISIONS) {
       const classroomInfo = await Classroom.findOne({ standard, division });
       if (!classroomInfo) continue;
 
-      // 🚀 Step 1: Assign exactly one teacher per subject for this division
+      // 🚀 RULE 1: One teacher per subject in one class. 
       const divisionAllocations = [];
       const subjectsInAlloc = [...new Set(allAllocations.flatMap(a => a.subjects))];
 
@@ -943,10 +942,11 @@ exports.generateTimetable = async (req, res) => {
           s.name === subjectName || (s.subSubjects && s.subSubjects.includes(subjectName))
         );
 
+        // 🚀 RULE: Dynamic Lecture Counts
         let count = 0;
-        if (config?.type === 'Optional') count = 3; // 🚀 strictly 3/week
-        else if (config?.nature?.includes('Activity')) count = 2; // 🚀 strictly 2/week
-        else count = 100; // Compulsory seed
+        if (config?.type === 'Optional') count = 3; // 3 per week (2 together, 1 separate)
+        else if (config?.nature?.includes('Activity')) count = 2; // 2 per week on separate days
+        else count = 100; // Compulsory: Fill remaining slots
 
         return {
           teacherId: alloc.teacher.toString(),
@@ -963,62 +963,70 @@ exports.generateTimetable = async (req, res) => {
         day,
         periods: FIXED_PERIOD_STRUCTURE.map(p => ({
           periodNumber: p.num, subject: p.type === 'Period' ? 'Empty' : p.type,
-          teacher: null, teacherName: null, time: p.time, isBreak: p.isBreak
+          teacher: null, teacherName: null, time: p.time,
         }))
       }));
 
-      // MANDATORY: Class Teacher 1st Period with proper Subject and Name
+      // MANDATORY: Class Teacher 1st Period
       newTimetableData.forEach(dayBlock => {
         const firstLec = dayBlock.periods[0];
         const classTrId = classroomInfo.staffid.toString();
-        const classTrAlloc = divisionAllocations.find(a => a.teacher.toString() === classTrId);
+        const slotKey = `${dayBlock.day}-${firstLec.time}`;
         
-        if (classTrAlloc) {
-          firstLec.subject = classTrAlloc.subjects[0]; 
-          firstLec.teacherName = classTrAlloc.teacherName;
-          const req = requirements.find(r => r.teacherId === classTrId && r.subject === firstLec.subject);
-          if (req) { req.remaining--; req.placedToday++; }
+        const isTeacherBusy = globalTeacherSchedule[classTrId]?.has(slotKey);
+
+        if (!isTeacherBusy) {
+          const teacherAlloc = allAllocations.find(a => a.teacher.toString() === classTrId);
+          
+          firstLec.subject = teacherAlloc ? teacherAlloc.subjects[0] : "Class Teacher Period";
+          firstLec.teacher = classroomInfo.staffid;
+          firstLec.teacherName = teacherAlloc?.teacherName || classroomInfo.staffname;
+          
+          if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
+          globalTeacherSchedule[classTrId].add(slotKey);
+          teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
+          
+          const reqItem = requirements.find(r => r.subject === firstLec.subject && r.teacherId === classTrId);
+          if (reqItem) {
+            reqItem.remaining--;
+            reqItem.placedToday++;
+          }
         } else {
-          firstLec.subject = "Class Teacher Period";
-          firstLec.teacherName = "Class Teacher";
+          firstLec.subject = "Free Lecture";
+          firstLec.teacher = null;
+          firstLec.teacherName = null;
         }
-        
-        firstLec.teacher = classroomInfo.staffid;
-        if (!globalTeacherSchedule[classTrId]) globalTeacherSchedule[classTrId] = new Set();
-        globalTeacherSchedule[classTrId].add(`${dayBlock.day}-${firstLec.time}`);
-        teacherWeeklyLoad[classTrId] = (teacherWeeklyLoad[classTrId] || 0) + 1;
       });
 
-      // PASS 1: Mandatory Optional (2 together + 1 separate) and Activity (2 separate days)
+      // CORE SCHEDULING (Strict Pass for Rules)
       for (let day of WEEKDAYS) {
         let dayBlock = newTimetableData.find(d => d.day === day);
-        requirements.forEach(r => {
-           const subInP1 = dayBlock.periods[0].subject === r.subject;
-           r.placedToday = subInP1 ? 1 : 0;
-        });
+        requirements.forEach(r => r.placedToday = (dayBlock.periods[0].subject === r.subject) ? 1 : 0);
 
         for (let i = 1; i < dayBlock.periods.length; i++) {
           let period = dayBlock.periods[i];
           if (period.subject !== 'Empty') continue;
 
           const candidate = requirements
-            .filter(r => r.type !== 'Compulsory' && r.remaining > 0)
+            .filter(r => r.remaining > 0 && (teacherWeeklyLoad[r.teacherId] || 0) < 40)
+            .sort((a, b) => b.remaining - a.remaining)
             .find(r => {
               const slotKey = `${day}-${period.time}`;
-              if (globalTeacherSchedule[r.teacherId]?.has(slotKey) || (teacherWeeklyLoad[r.teacherId] || 0) >= 40) return false;
+              if (globalTeacherSchedule[r.teacherId]?.has(slotKey)) return false;
 
-              // RULE: Activity (2 per week, strictly different days)
-              if (r.nature.includes('Activity')) return r.placedToday === 0;
-
-              // RULE: Optional (3 per week: 2 together, 1 separate)
-              if (r.type === 'Optional') {
-                if (r.remaining === 3 || r.remaining === 1) return r.placedToday === 0;
-                if (r.remaining === 2) {
-                  const prev = dayBlock.periods[i - 1];
-                  return prev && prev.subject === r.subject;
-                }
+              // 🚀 RULE: Repeats must be together (Index i-1 check)
+              if (r.placedToday > 0) {
+                const prev = dayBlock.periods[i - 1]?.type === 'Period' ? dayBlock.periods[i - 1] : dayBlock.periods[i - 2];
+                if (!prev || prev.subject !== r.subject) return false;
               }
-              return false;
+
+              // 🚀 RULE: Activity (2 per week on different days)
+              if (r.nature.includes('Activity') && r.placedToday >= 1) return false;
+
+              // 🚀 RULE: Optionals (3 total: 2 together, 1 separate)
+              if (r.type === 'Optional' && r.placedToday >= 2) return false;
+
+              return true;
             });
 
           if (candidate) {
@@ -1027,47 +1035,16 @@ exports.generateTimetable = async (req, res) => {
             period.teacherName = candidate.teacherName;
             candidate.remaining--;
             candidate.placedToday++;
-            if (!globalTeacherSchedule[candidate.teacherId]) globalTeacherSchedule[candidate.teacherId] = new Set();
-            globalTeacherSchedule[candidate.teacherId].add(`${day}-${period.time}`);
-            teacherWeeklyLoad[candidate.teacherId]++;
+            
+            const teacherId = candidate.teacherId;
+            if (!globalTeacherSchedule[teacherId]) globalTeacherSchedule[teacherId] = new Set();
+            globalTeacherSchedule[teacherId].add(`${day}-${period.time}`);
+            teacherWeeklyLoad[teacherId] = (teacherWeeklyLoad[teacherId] || 0) + 1;
           }
         }
       }
 
-      // PASS 2: Fill Compulsory subjects strictly maintaining back-to-back "Together" rule
-      for (let day of WEEKDAYS) {
-        let dayBlock = newTimetableData.find(d => d.day === day);
-        for (let i = 1; i < dayBlock.periods.length; i++) {
-          let period = dayBlock.periods[i];
-          if (period.subject !== 'Empty') continue;
-
-          const candidate = requirements
-            .filter(r => r.type === 'Compulsory' && (teacherWeeklyLoad[r.teacherId] || 0) < 40)
-            .find(r => {
-              const slotKey = `${day}-${period.time}`;
-              if (globalTeacherSchedule[r.teacherId]?.has(slotKey)) return false;
-              
-              const subCountToday = dayBlock.periods.filter(p => p.subject === r.subject).length;
-              if (subCountToday > 0) {
-                const prev = dayBlock.periods[i - 1]; // Check immediate previous slot
-                return prev && prev.subject === r.subject; // Strictly consecutive
-              }
-              return true;
-            });
-
-          if (candidate) {
-            period.subject = candidate.subject;
-            period.teacher = candidate.teacherId;
-            period.teacherName = candidate.teacherName;
-            candidate.placedToday++;
-            if (!globalTeacherSchedule[candidate.teacherId]) globalTeacherSchedule[candidate.teacherId] = new Set();
-            globalTeacherSchedule[candidate.teacherId].add(`${day}-${period.time}`);
-            teacherWeeklyLoad[candidate.teacherId]++;
-          }
-        }
-      }
-
-      // FINAL SAFETY FILLER: Fill any remaining gaps with available compulsory teachers
+      // 🚀 FINAL FILLER: Ensure no subject is left behind
       for (let dayBlock of newTimetableData) {
         for (let period of dayBlock.periods) {
           if (period.subject === 'Empty') {
