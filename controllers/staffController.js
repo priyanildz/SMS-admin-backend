@@ -1464,7 +1464,7 @@ exports.getRequests = async (req, res) => {
         const requests = await staffLeave.find(); 
         
         // 2. Fetch all staff (for names)
-        const staffList = await Staff.find({}, "staffid firstname lastname");
+        const staffList = await Staff.find({}, "staffid firstname middlename lastname");
         
         // 3. Fetch all roles (for department info)
         const roleList = await mongoose.model("staff_role").find({}, "staffid dept");
