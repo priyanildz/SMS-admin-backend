@@ -626,6 +626,7 @@ const ResignedStaff = require("../models/resignedStaffModel");
 const StaffAttendance = require("../models/staffAttendanceModel");
 const SubjectAllocation = require("../models/subjectAllocation");
 const Timetable = require("../models/timetableModel");
+const mongoose = require("mongoose"); // ✅ Fixes 'mongoose is not defined' crash
 
 // 🚨 IMPORTANT: Assuming a model exists for allocated subjects, often called SubjectAllotment or similar.
 // If your model is named differently, update the line below accordingly.
@@ -1416,45 +1417,96 @@ exports.addLeave = async (req, res) => {
 };
 
 // get all leave requests
-exports.getRequests = async (req, res) => {
-    try {
-        const requests = await staffLeave.find(); 
-        const staffList = await Staff.find(
-            {},
-            "staffid firstname lastname dept position _id"
-        );
-    
-        const staffMap = {};
-        staffList.forEach((staff) => {
-            if (staff.staffid) {
-                staffMap[staff.staffid.toString()] = staff;
-            }
-        });
-    
-        const merged = requests.map((r) => {
-            const staffInfo = staffMap[r.staffid] || {};
-            return {
-                _id: r._id,
-                subject: r.subject,
-                message: r.message,
-                status: r.status,
-                submitted_at: r.submitted_at,
-                from: r.from,
-                to: r.to,
-                staffid: r.staffid,
-                firstname: staffInfo.firstname || "",
-                lastname: staffInfo.lastname || "",
-                dept: staffInfo.dept || "",
-                position: staffInfo.position || "",
-            };
-        });
-    
-        return res.status(200).json(merged);
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
-};
+// exports.getRequests = async (req, res) => {
+//     try {
+//         const requests = await staffLeave.find(); 
+//         const staffList = await Staff.find(
+//             {},
+//             "staffid firstname lastname dept position _id"
+//         );
+//     
+//         const staffMap = {};
+//         staffList.forEach((staff) => {
+//             if (staff.staffid) {
+//                 staffMap[staff.staffid.toString()] = staff;
+//             }
+//         });
+//     
+//         const merged = requests.map((r) => {
+//             const staffInfo = staffMap[r.staffid] || {};
+//             return {
+//                 _id: r._id,
+//                 subject: r.subject,
+//                 message: r.message,
+//                 status: r.status,
+//                 submitted_at: r.submitted_at,
+//                 from: r.from,
+//                 to: r.to,
+//                 staffid: r.staffid,
+//                 firstname: staffInfo.firstname || "",
+//                 lastname: staffInfo.lastname || "",
+//                 dept: staffInfo.dept || "",
+//                 position: staffInfo.position || "",
+//             };
+//         });
+//     
+//         return res.status(200).json(merged);
+//     } catch (error) {
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
 
+
+// get all leave requests (Admin Side)
+exports.getRequests = async (req, res) => {
+    try {
+        // 1. Fetch all leave requests
+        const requests = await staffLeave.find(); 
+        
+        // 2. Fetch all staff (for names)
+        const staffList = await Staff.find({}, "staffid firstname lastname");
+        
+        // 3. Fetch all roles (for department info)
+        const roleList = await mongoose.model("staff_role").find({}, "staffid dept");
+
+        const staffMap = {};
+        staffList.forEach((staff) => {
+            if (staff.staffid) {
+                // Find matching role to get the dept field
+                const roleInfo = roleList.find(r => r.staffid === staff.staffid);
+                
+                staffMap[staff.staffid.toString()] = {
+                    firstname: staff.firstname || "",
+                    lastname: staff.lastname || "",
+                    dept: roleInfo ? roleInfo.dept : "None" // ✅ Gets 'teaching' instead of 'None'
+                };
+            }
+        });
+    
+        const merged = requests.map((r) => {
+            const staffInfo = staffMap[r.staffid] || {};
+            return {
+                _id: r._id,
+                subject: r.subject,
+                message: r.message,
+                status: r.status,
+                submitted_at: r.submitted_at,
+                from: r.from,
+                to: r.to,
+                staffid: r.staffid,
+                firstname: staffInfo.firstname || "",
+                lastname: staffInfo.lastname || "",
+                dept: staffInfo.dept || "None", // ✅ Displays 'teaching' in the UI
+            };
+        });
+    
+        return res.status(200).json(merged);
+    } catch (error) {
+        // Log the exact error to help debugging
+        console.error("Fetch Requests Error:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
 
 
 // update request status
