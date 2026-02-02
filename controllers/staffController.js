@@ -1458,26 +1458,80 @@ exports.addLeave = async (req, res) => {
 
 
 // get all leave requests (Admin Side)
+// exports.getRequests = async (req, res) => {
+//     try {
+//         // 1. Fetch all leave requests
+//         const requests = await staffLeave.find(); 
+        
+//         // 2. Fetch all staff (for names)
+//         const staffList = await Staff.find({}, "staffid firstname lastname");
+        
+//         // 3. Fetch all roles (for department info)
+//         const roleList = await mongoose.model("staff_role").find({}, "staffid dept");
+
+//         const staffMap = {};
+//         staffList.forEach((staff) => {
+//             if (staff.staffid) {
+//                 // Find matching role to get the dept field
+//                 const roleInfo = roleList.find(r => r.staffid === staff.staffid);
+                
+//                 staffMap[staff.staffid.toString()] = {
+//                     firstname: staff.firstname || "",
+//                     lastname: staff.lastname || "",
+//                     dept: roleInfo ? roleInfo.dept : "None" // ✅ Gets 'teaching' instead of 'None'
+//                 };
+//             }
+//         });
+    
+//         const merged = requests.map((r) => {
+//             const staffInfo = staffMap[r.staffid] || {};
+//             return {
+//                 _id: r._id,
+//                 subject: r.subject,
+//                 message: r.message,
+//                 status: r.status,
+//                 submitted_at: r.submitted_at,
+//                 from: r.from,
+//                 to: r.to,
+//                 staffid: r.staffid,
+//                 firstname: staffInfo.firstname || "",
+//                 lastname: staffInfo.lastname || "",
+//                 dept: staffInfo.dept || "None", // ✅ Displays 'teaching' in the UI
+//             };
+//         });
+    
+//         return res.status(200).json(merged);
+//     } catch (error) {
+//         // Log the exact error to help debugging
+//         console.error("Fetch Requests Error:", error);
+//         return res.status(500).json({ error: error.message });
+//     }
+// };
+
+
+// --- ADMIN BACKEND CONTROLLER ---
 exports.getRequests = async (req, res) => {
     try {
-        // 1. Fetch all leave requests
         const requests = await staffLeave.find(); 
         
-        // 2. Fetch all staff (for names)
+        // 1. ✅ Add 'middlename' to the projection
         const staffList = await Staff.find({}, "staffid firstname middlename lastname");
         
-        // 3. Fetch all roles (for department info)
         const roleList = await mongoose.model("staff_role").find({}, "staffid dept");
 
         const staffMap = {};
         staffList.forEach((staff) => {
             if (staff.staffid) {
-                // Find matching role to get the dept field
                 const roleInfo = roleList.find(r => r.staffid === staff.staffid);
                 
+                // 2. ✅ Create the full name with Middle Name included
+                const fullName = `${staff.firstname || ""} ${staff.middlename || ""} ${staff.lastname || ""}`
+                    .replace(/\s+/g, ' ') // Removes double spaces if middlename is empty
+                    .trim();
+
                 staffMap[staff.staffid.toString()] = {
-                    fullname: `${staff.firstname || ""} ${staff.middlename || ""} ${staff.lastname || ""}`.replace(/\s+/g, ' ').trim(),
-                    dept: roleInfo ? roleInfo.dept : "None" // ✅ Gets 'teaching' instead of 'None'
+                    name: fullName, 
+                    dept: roleInfo ? roleInfo.dept : "None"
                 };
             }
         });
@@ -1493,21 +1547,18 @@ exports.getRequests = async (req, res) => {
                 from: r.from,
                 to: r.to,
                 staffid: r.staffid,
-                // firstname: staffInfo.firstname || "",
-                // lastname: staffInfo.lastname || "",
-                name: staffInfo.fullname || "Unknown Staff",
-                dept: staffInfo.dept || "None", // ✅ Displays 'teaching' in the UI
+                // 3. ✅ Use the new combined 'name' field
+                firstname: staffInfo.name || "Unknown", 
+                dept: staffInfo.dept || "None",
             };
         });
     
         return res.status(200).json(merged);
     } catch (error) {
-        // Log the exact error to help debugging
         console.error("Fetch Requests Error:", error);
         return res.status(500).json({ error: error.message });
     }
 };
-
 
 // update request status
 exports.updateRequest = async (req, res) => {
