@@ -203,8 +203,7 @@ exports.addAssessment = async (req, res) => {
 //         return res.status(500).json({ error: error.message, detail: "Error during MongoDB query or population." });
 //     }
 // };
-// assessmentController.js
-
+// ✅ Fix: Use the plural name to match your routes.js line 203
 exports.getAssessments = async (req, res) => {
     try {
         const { standard, division, date, teacherId } = req.query;
@@ -226,7 +225,8 @@ exports.getAssessments = async (req, res) => {
         // ✅ IMPORTANT: Use the lowercase 'assessment' model as defined at the top of your file
         const results = await assessment.find(query)
             .populate({ path: 'teacherId', select: 'firstname lastname' })
-            .populate({ path: 'classroomId', select: 'standard division' });
+            .populate({ path: 'classroomId', select: 'standard division' })
+            .populate({ path: 'homeworkId' });
             
         res.status(200).json(results);
     } catch (error) {
