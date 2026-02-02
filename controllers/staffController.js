@@ -1494,10 +1494,8 @@ exports.getRequests = async (req, res) => {
                 from: r.from,
                 to: r.to,
                 staffid: r.staffid,
-                // firstname: staffInfo.firstname || "",
-                // lastname: staffInfo.lastname || "",
-                firstname: staffInfo.fullName || "", 
-                lastname: "", // Kept empty as fullName now contains both
+                firstname: staffInfo.firstname || "",
+                lastname: staffInfo.lastname || "",
                 dept: staffInfo.dept || "None", // ✅ Displays 'teaching' in the UI
             };
         });
