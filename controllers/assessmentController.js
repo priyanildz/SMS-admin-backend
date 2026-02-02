@@ -203,6 +203,8 @@ exports.addAssessment = async (req, res) => {
 //         return res.status(500).json({ error: error.message, detail: "Error during MongoDB query or population." });
 //     }
 // };
+// assessmentController.js
+
 exports.getAssessments = async (req, res) => {
     try {
         const { standard, division, date, teacherId } = req.query;
@@ -213,7 +215,7 @@ exports.getAssessments = async (req, res) => {
         if (teacherId) query.teacherId = teacherId;
 
         if (date) {
-            // ✅ Convert "02/02/2026" to a range for MongoDB
+            // ✅ Fix: Transform string "02/02/2026" into a 24-hour range for MongoDB
             const [day, month, year] = date.split('/');
             const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
             const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
@@ -221,9 +223,14 @@ exports.getAssessments = async (req, res) => {
             query.date = { $gte: startOfDay, $lte: endOfDay };
         }
 
-        const assessments = await Assessment.find(query);
-        res.status(200).json(assessments);
+        // ✅ IMPORTANT: Use the lowercase 'assessment' model as defined at the top of your file
+        const results = await assessment.find(query)
+            .populate({ path: 'teacherId', select: 'firstname lastname' })
+            .populate({ path: 'classroomId', select: 'standard division' });
+            
+        res.status(200).json(results);
     } catch (error) {
+        console.error("Fetch Error:", error);
         res.status(500).json({ error: error.message });
     }
 };
