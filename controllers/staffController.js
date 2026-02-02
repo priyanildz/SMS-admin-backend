@@ -1415,97 +1415,46 @@ exports.addLeave = async (req, res) => {
     }
 };
 
-// get all leave requests
-// exports.getRequests = async (req, res) => {
-//     try {
-//         const requests = await staffLeave.find(); 
-//         const staffList = await Staff.find(
-//             {},
-//             "staffid firstname lastname dept position _id"
-//         );
-//     
-//         const staffMap = {};
-//         staffList.forEach((staff) => {
-//             if (staff.staffid) {
-//                 staffMap[staff.staffid.toString()] = staff;
-//             }
-//         });
-//     
-//         const merged = requests.map((r) => {
-//             const staffInfo = staffMap[r.staffid] || {};
-//             return {
-//                 _id: r._id,
-//                 subject: r.subject,
-//                 message: r.message,
-//                 status: r.status,
-//                 submitted_at: r.submitted_at,
-//                 from: r.from,
-//                 to: r.to,
-//                 staffid: r.staffid,
-//                 firstname: staffInfo.firstname || "",
-//                 lastname: staffInfo.lastname || "",
-//                 dept: staffInfo.dept || "",
-//                 position: staffInfo.position || "",
-//             };
-//         });
-//     
-//         return res.status(200).json(merged);
-//     } catch (error) {
-//         return res.status(500).json({ error: error.message });
-//     }
-// };
-
-
-// --- Updated getRequests logic for your Admin Backend ---
+get all leave requests
 exports.getRequests = async (req, res) => {
-    try {
-        const requests = await staffLeave.find(); 
-        
-        // 1. Fetch main staff details (Names)
-        const staffList = await Staff.find({}, "staffid firstname lastname");
-        
-        // 2. ✅ NEW: Fetch all roles to get Department information
-        const roleList = await mongoose.model("staff_role").find({}, "staffid dept");
-
-        const staffMap = {};
-        staffList.forEach((staff) => {
-            if (staff.staffid) {
-                // Find matching role for this staff member to get their dept
-                const roleInfo = roleList.find(r => r.staffid === staff.staffid);
-                
-                staffMap[staff.staffid.toString()] = {
-                    firstname: staff.firstname,
-                    lastname: staff.lastname,
-                    // ✅ Map the department from the staff_roles collection
-                    dept: roleInfo ? roleInfo.dept : "N/A" 
-                };
-            }
-        });
-    
-        const merged = requests.map((r) => {
-            const staffInfo = staffMap[r.staffid] || {};
-            return {
-                _id: r._id,
-                subject: r.subject,
-                message: r.message,
-                status: r.status,
-                submitted_at: r.submitted_at,
-                from: r.from,
-                to: r.to,
-                staffid: r.staffid,
-                firstname: staffInfo.firstname || "",
-                lastname: staffInfo.lastname || "",
-                // ✅ This will now display the department (e.g., "teaching")
-                dept: staffInfo.dept || "None", 
-            };
-        });
-    
-        return res.status(200).json(merged);
-    } catch (error) {
-        console.error("Fetch Requests Error:", error);
-        return res.status(500).json({ error: error.message });
-    }
+    try {
+        const requests = await staffLeave.find(); 
+        const staffList = await Staff.find(
+            {},
+            "staffid firstname lastname dept position _id"
+        );
+    
+        const staffMap = {};
+        staffList.forEach((staff) => {
+            if (staff.staffid) {
+                staffMap[staff.staffid.toString()] = staff;
+            }
+        });
+    
+        const merged = requests.map((r) => {
+            const staffInfo = staffMap[r.staffid] || {};
+            return {
+                _id: r._id,
+                subject: r.subject,
+                message: r.message,
+                status: r.status,
+                submitted_at: r.submitted_at,
+                from: r.from,
+                to: r.to,
+                staffid: r.staffid,
+                firstname: staffInfo.firstname || "",
+                lastname: staffInfo.lastname || "",
+                dept: staffInfo.dept || "",
+                position: staffInfo.position || "",
+            };
+        });
+    
+        return res.status(200).json(merged);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 };
+
 
 
 // update request status
