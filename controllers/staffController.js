@@ -1476,8 +1476,7 @@ exports.getRequests = async (req, res) => {
                 const roleInfo = roleList.find(r => r.staffid === staff.staffid);
                 
                 staffMap[staff.staffid.toString()] = {
-                    firstname: staff.firstname || "",
-                    lastname: staff.lastname || "",
+                    fullname: `${staff.firstname || ""} ${staff.middlename || ""} ${staff.lastname || ""}`.replace(/\s+/g, ' ').trim(),
                     dept: roleInfo ? roleInfo.dept : "None" // ✅ Gets 'teaching' instead of 'None'
                 };
             }
@@ -1494,8 +1493,9 @@ exports.getRequests = async (req, res) => {
                 from: r.from,
                 to: r.to,
                 staffid: r.staffid,
-                firstname: staffInfo.firstname || "",
-                lastname: staffInfo.lastname || "",
+                // firstname: staffInfo.firstname || "",
+                // lastname: staffInfo.lastname || "",
+                name: staffInfo.fullname || "Unknown Staff",
                 dept: staffInfo.dept || "None", // ✅ Displays 'teaching' in the UI
             };
         });
