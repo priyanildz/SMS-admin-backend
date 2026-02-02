@@ -212,20 +212,13 @@ exports.getAssessments = async (req, res) => {
         if (division) query.division = division;
         if (teacherId) query.teacherId = teacherId;
 
-        // ✅ FIX: Handle date as a range to match ISO format in DB
         if (date) {
-            // Convert "02/02/2026" to a standard Date object
+            // ✅ Convert "02/02/2026" to a range for MongoDB
             const [day, month, year] = date.split('/');
-            const searchDate = new Date(year, month - 1, day);
+            const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+            const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-            // Create boundaries for the entire day
-            const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-            const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
-
-            query.date = {
-                $gte: startOfDay,
-                $lte: endOfDay
-            };
+            query.date = { $gte: startOfDay, $lte: endOfDay };
         }
 
         const assessments = await Assessment.find(query);
