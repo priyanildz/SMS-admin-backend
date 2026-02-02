@@ -203,7 +203,8 @@ exports.addAssessment = async (req, res) => {
 //         return res.status(500).json({ error: error.message, detail: "Error during MongoDB query or population." });
 //     }
 // };
-// ✅ Fix: Use the plural name to match your routes.js line 203
+// assessmentController.js
+
 exports.getAssessments = async (req, res) => {
     try {
         const { standard, division, date, teacherId } = req.query;
@@ -213,24 +214,34 @@ exports.getAssessments = async (req, res) => {
         if (division) query.division = division;
         if (teacherId) query.teacherId = teacherId;
 
+        // ✅ DATE FILTER RANGE LOGIC
         if (date) {
-            // ✅ Fix: Transform string "02/02/2026" into a 24-hour range for MongoDB
-            const [day, month, year] = date.split('/');
-            const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-            const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+            // 'date' is coming in as "YYYY-MM-DD" from frontend
+            const [year, month, day] = date.split('-').map(Number);
+            
+            // Create range covering the full day in UTC
+            const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+            const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
             query.date = { $gte: startOfDay, $lte: endOfDay };
         }
 
-        // ✅ IMPORTANT: Use the lowercase 'assessment' model as defined at the top of your file
+        // ✅ TEACHER FULL NAME POPULATION
         const results = await assessment.find(query)
-            .populate({ path: 'teacherId', select: 'firstname lastname' })
-            .populate({ path: 'classroomId', select: 'standard division' })
-            .populate({ path: 'homeworkId' });
+            .populate({ path: 'teacherId', select: 'firstname middlename lastname' })
+            .lean();
+
+        // Construct the full teacher name before sending to frontend
+        const detailedResults = results.map(item => ({
+            ...item,
+            teacherName: item.teacherId 
+                ? `${item.teacherId.firstname || ""} ${item.teacherId.middlename || ""} ${item.teacherId.lastname || ""}`.replace(/\s+/g, ' ').trim()
+                : "Unknown Teacher"
+        }));
             
-        res.status(200).json(results);
+        res.status(200).json(detailedResults);
     } catch (error) {
-        console.error("Fetch Error:", error);
+        console.error("Backend Date Filter Error:", error);
         res.status(500).json({ error: error.message });
     }
 };
