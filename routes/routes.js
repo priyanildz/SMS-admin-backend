@@ -200,7 +200,9 @@ router.post("/student", studentController.getStudentByStd);
 router.post("/add-assessment", assessmentController.addAssessment);
 
 // get all assessments
-router.get("/assessment", assessmentController.getAssessment);
+// router.get("/assessment", assessmentController.getAssessment);
+// Example of what might be causing the error
+router.get('/get-assessments', assessmentController.getAssessments);
 
 // get new staff's list
 router.post("/newstaffs", staffController.getNewStaffsDetailed);
