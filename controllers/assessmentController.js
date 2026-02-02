@@ -116,93 +116,125 @@ exports.addAssessment = async (req, res) => {
 // =================================================================================
 // 2. GET ASSESSMENT (Fetches, filters, and populates linked data)
 // =================================================================================
-exports.getAssessment = async (req, res) => {
-    try {
-        const { standard, division, teacherId, date } = req.query; // Use teacherId for filtering
-        const mainFilter = {};
-        const classroomFilter = {};
+// exports.getAssessment = async (req, res) => {
+//     try {
+//         const { standard, division, teacherId, date } = req.query; // Use teacherId for filtering
+//         const mainFilter = {};
+//         const classroomFilter = {};
 
-        // 1. Find matching Classroom IDs (Filter by standard/division)
-        if (standard) classroomFilter.standard = standard;
-        if (division) classroomFilter.division = division;
+//         // 1. Find matching Classroom IDs (Filter by standard/division)
+//         if (standard) classroomFilter.standard = standard;
+//         if (division) classroomFilter.division = division;
 
-        const matchingClassrooms = await Classroom.find(classroomFilter).select('_id');
-        const classroomIds = matchingClassrooms.map(c => c._id);
-        
-        // Apply the found classroom IDs to the main assessment filter
-        if (classroomIds.length > 0) {
-            mainFilter.classroomId = { $in: classroomIds };
-        } else if (standard || division) {
-            // If filters are present but no classrooms matched, return empty result
-            return res.status(200).json([]);
-        }
+//         const matchingClassrooms = await Classroom.find(classroomFilter).select('_id');
+//         const classroomIds = matchingClassrooms.map(c => c._id);
+//         
+//         // Apply the found classroom IDs to the main assessment filter
+//         if (classroomIds.length > 0) {
+//             mainFilter.classroomId = { $in: classroomIds };
+//         } else if (standard || division) {
+//             // If filters are present but no classrooms matched, return empty result
+//             return res.status(200).json([]);
+//         }
 
-        // 2. Apply Teacher ID Filter (if provided)
-        if (teacherId) {
-            mainFilter.teacherId = teacherId;
+//         // 2. Apply Teacher ID Filter (if provided)
+//         if (teacherId) {
+//             mainFilter.teacherId = teacherId;
+//         }
+
+//         // 3. Apply Date Filter
+//         if (date) {
+//             const startOfDay = new Date(date);
+//             const endOfDay = new Date(startOfDay);
+//             endOfDay.setDate(endOfDay.getDate() + 1);
+//             
+//             mainFilter.date = { $gte: startOfDay, $lt: endOfDay };
+//         }
+//         
+//         // 4. Execute Query and Populate related data
+//         const assessments = await assessment.find(mainFilter)
+//             .populate({
+//                 path: 'teacherId', 
+//                 select: 'firstname lastname staffid -_id'
+//             })
+//             .populate({
+//                 path: 'classroomId', 
+//                 select: 'standard division staffid -_id'
+//             })
+//             .populate({
+//                 path: 'homeworkId',
+//                 select: 'homeworkDescription deadline -_id' 
+//             })
+//             .lean();
+
+//         // 5. Map results to flatten data for the frontend
+//         const detailedAssessments = assessments.map(item => {
+//             const teacher = item.teacherId;
+//             const classroom = item.classroomId;
+//             const hw = item.homeworkId;
+
+//             return {
+//                 _id: item._id,
+//                 
+//                 // Teacher Info (Flattened)
+//                 teacherName: getTeacherFullName(teacher),
+                
+//                 // Classroom Context (Flattened for list page filters)
+//                 standard: classroom ? classroom.standard : 'N/A',
+//                 division: classroom ? classroom.division : 'N/A',
+                
+//                 // Assessment Details
+//                 subjectCovered: item.subjectCovered,
+//                 topicCovered: item.topicCovered,
+//                 keyPoints: item.keyPoints,
+//                 classActivity: item.classActivity,
+//                 date: item.date,
+                
+//                 // Homework Details (Flattened)
+//                 homeworkDescription: hw ? hw.homeworkDescription : null,
+//                 submissionDeadline: hw ? hw.deadline : null,
+//             };
+//         });
+//         
+//         return res.status(200).json(detailedAssessments);
+
+//     } catch (error) {
+//         console.error("Error in getAssessment:", error);
+//         return res.status(500).json({ error: error.message, detail: "Error during MongoDB query or population." });
+//     }
+// };
+exports.getAssessments = async (req, res) => {
+    try {
+        const { standard, division, date, teacherId } = req.query;
+        let query = {};
+
+        if (standard) query.standard = standard;
+        if (division) query.division = division;
+        if (teacherId) query.teacherId = teacherId;
+
+        // ✅ FIX: Handle date as a range to match ISO format in DB
+        if (date) {
+            // Convert "02/02/2026" to a standard Date object
+            const [day, month, year] = date.split('/');
+            const searchDate = new Date(year, month - 1, day);
+
+            // Create boundaries for the entire day
+            const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+
+            query.date = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
         }
 
-        // 3. Apply Date Filter
-        if (date) {
-            const startOfDay = new Date(date);
-            const endOfDay = new Date(startOfDay);
-            endOfDay.setDate(endOfDay.getDate() + 1);
-            
-            mainFilter.date = { $gte: startOfDay, $lt: endOfDay };
-        }
-        
-        // 4. Execute Query and Populate related data
-        const assessments = await assessment.find(mainFilter)
-            .populate({
-                path: 'teacherId', 
-                select: 'firstname lastname staffid -_id'
-            })
-            .populate({
-                path: 'classroomId', 
-                select: 'standard division staffid -_id'
-            })
-            .populate({
-                path: 'homeworkId',
-                select: 'homeworkDescription deadline -_id' 
-            })
-            .lean();
-
-        // 5. Map results to flatten data for the frontend
-        const detailedAssessments = assessments.map(item => {
-            const teacher = item.teacherId;
-            const classroom = item.classroomId;
-            const hw = item.homeworkId;
-
-            return {
-                _id: item._id,
-                
-                // Teacher Info (Flattened)
-                teacherName: getTeacherFullName(teacher),
-                
-                // Classroom Context (Flattened for list page filters)
-                standard: classroom ? classroom.standard : 'N/A',
-                division: classroom ? classroom.division : 'N/A',
-                
-                // Assessment Details
-                subjectCovered: item.subjectCovered,
-                topicCovered: item.topicCovered,
-                keyPoints: item.keyPoints,
-                classActivity: item.classActivity,
-                date: item.date,
-                
-                // Homework Details (Flattened)
-                homeworkDescription: hw ? hw.homeworkDescription : null,
-                submissionDeadline: hw ? hw.deadline : null,
-            };
-        });
-        
-        return res.status(200).json(detailedAssessments);
-
-    } catch (error) {
-        console.error("Error in getAssessment:", error);
-        return res.status(500).json({ error: error.message, detail: "Error during MongoDB query or population." });
-    }
+        const assessments = await Assessment.find(query);
+        res.status(200).json(assessments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
+
 
 // =================================================================================
 // 3. EDIT ASSESSMENT (Handles updating both Assessment and Homework)
