@@ -1415,7 +1415,7 @@ exports.addLeave = async (req, res) => {
     }
 };
 
-get all leave requests
+// get all leave requests
 exports.getRequests = async (req, res) => {
     try {
         const requests = await staffLeave.find(); 
