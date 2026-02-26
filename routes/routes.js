@@ -29,6 +29,12 @@ const eblockController = require("../controllers/eblockController");
 const recheckingController = require("../controllers/recheckingController")
 const vehicleSupController = require("../controllers/vehicleSupervisorController");
 
+
+// Add this temporarily at the top of routes.js
+console.log("DEBUG: eventController is", eventController);
+console.log("DEBUG: paymentController is", paymentController);
+
+
 router.post("/assign-recheck", recheckingController.addRechecking);
 router.get("/recheck", recheckingController.getRechecking);
 router.delete("/recheck/:id", recheckingController.deleteRechecking);
