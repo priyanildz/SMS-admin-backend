@@ -1,15 +1,45 @@
+// const Event = require("../models/eventsModel");
+// exports.addEvent = async (req, res) => {
+//   try {
+//     const response = new Event(req.body);
+//     await response.save();
+//     return res.status(200).json({ message: "added event successfully" });
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // list of all events
+// exports.getEvents = async (req, res) => {
+//   try {
+//     const response = await Event.find();
+//     return res.status(200).json(response);
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+
+
+
+
+
+
 const Event = require("../models/eventsModel");
+
+// Add a new event
 exports.addEvent = async (req, res) => {
   try {
     const response = new Event(req.body);
     await response.save();
-    return res.status(200).json({ message: "added event successfully" });
+    return res.status(200).json({ message: "Added event successfully" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
 
-// list of all events
+// Get all events
 exports.getEvents = async (req, res) => {
   try {
     const response = await Event.find();
@@ -18,6 +48,33 @@ exports.getEvents = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// UPDATE an event (This was missing!)
+exports.updateEvent = async (req, res) => {
+  try {
+    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedEvent) return res.status(404).json({ message: "Event not found" });
+    res.status(200).json(updatedEvent);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE an event (This was missing!)
+exports.deleteEvent = async (req, res) => {
+  try {
+    const deletedEvent = await Event.findByIdAndDelete(req.params.id);
+    if (!deletedEvent) return res.status(404).json({ message: "Event not found" });
+    res.status(200).json({ message: "Event deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
 
 
 
