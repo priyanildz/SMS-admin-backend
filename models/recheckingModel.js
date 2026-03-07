@@ -1,3 +1,40 @@
+// const mongoose = require("mongoose")
+// const RecheckingRequestSchema = new mongoose.Schema({
+//   assignedTo: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "staff",
+//     required: true,
+//   },
+//   standard: {
+//     type: String,
+//     required: true,
+//   },
+//   division: {
+//     type: String,
+//     required: true,
+//   },
+//   subject: {
+//     type: String,
+//     required: true,
+//   },
+//   numberOfPapers: {
+//     type: Number,
+//     required: true,
+//   },
+//   checkedBy: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "staff"
+//   },
+//   assignedBy: {
+//     type: String,
+//     default:'admin'
+//   }
+// }, { timestamps: true });
+
+// module.exports = mongoose.model("rechecking", RecheckingRequestSchema);
+
+
+
 const mongoose = require("mongoose")
 const RecheckingRequestSchema = new mongoose.Schema({
   assignedTo: {
@@ -10,6 +47,11 @@ const RecheckingRequestSchema = new mongoose.Schema({
     required: true,
   },
   division: {
+    type: String,
+    required: true,
+  },
+  // ✅ NEW FIELD
+  examtype: {
     type: String,
     required: true,
   },
@@ -28,6 +70,11 @@ const RecheckingRequestSchema = new mongoose.Schema({
   assignedBy: {
     type: String,
     default:'admin'
+  },
+  // ✅ NEW FIELD
+  status: {
+    type: String,
+    default: "Pending"
   }
 }, { timestamps: true });
 
