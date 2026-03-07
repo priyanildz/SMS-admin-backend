@@ -25,6 +25,7 @@
 // paperEvaluationController.js
 
 const paperEval = require("../models/paperEvaluation");
+const mongoose = require("mongoose");
 
 // exports.addEval = async (req, res) => {
 //   try {
@@ -48,15 +49,43 @@ exports.addEval = async (req, res) => {
   }
 };
 
+// exports.getEval = async (req, res) => {
+//   try {
+//     const papers = await paperEval.find()
+//       .populate("assignedteacher", "firstname lastname")
+//       .lean();
+//     res.json({ success: true, data: papers });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
 exports.getEval = async (req, res) => {
-  try {
-    const papers = await paperEval.find()
-      .populate("assignedteacher", "firstname lastname")
-      .lean();
-    res.json({ success: true, data: papers });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  try {
+    const db = mongoose.connection.db;
+    const papers = await paperEval.find()
+      .populate("assignedteacher", "firstname lastname")
+      .lean();
+
+    // ✅ Perform a check for each paper to see if marks exist in examresults
+    const papersWithStatus = await Promise.all(papers.map(async (paper) => {
+      const resultFound = await db.collection('examresults').findOne({
+        standard: paper.standard,
+        division: paper.division,
+        subject: paper.subject,
+        semester: paper.examtype // This matches the 'semester' field where teacher saves marks
+      });
+
+      return {
+        ...paper,
+        status: resultFound ? "Completed" : "Pending"
+      };
+    }));
+
+    res.json({ success: true, data: papersWithStatus });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // NEW: Function to delete a paper evaluation assignment
