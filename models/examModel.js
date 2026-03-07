@@ -59,7 +59,7 @@ const ExamTimetableSchema = new mongoose.Schema(
     },
     examtype: {
       type: String,
-      enum: ["mid-term", "finals", "unit test", "quarterly"],
+      enum: ["Unit Test 1", "Sem 1", "Unit Test 2", "Sem 2"],
       required: true,
     },
     startdate: {
