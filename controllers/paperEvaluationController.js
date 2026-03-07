@@ -26,15 +26,26 @@
 
 const paperEval = require("../models/paperEvaluation");
 
+// exports.addEval = async (req, res) => {
+//   try {
+//     const response = new paperEval(req.body);
+//     await response.save();
+//     // Fix for client-side success check: ensure success: true is returned
+//     return res.status(200).json({ success: true, message: "evaluation added successfully" });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, error: error.message });
+//   }
+// };
+
 exports.addEval = async (req, res) => {
-  try {
-    const response = new paperEval(req.body);
-    await response.save();
-    // Fix for client-side success check: ensure success: true is returned
-    return res.status(200).json({ success: true, message: "evaluation added successfully" });
-  } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
+  try {
+    // req.body now contains 'examtype' from the frontend
+    const response = new paperEval(req.body); 
+    await response.save();
+    return res.status(200).json({ success: true, message: "evaluation added successfully" });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 exports.getEval = async (req, res) => {
