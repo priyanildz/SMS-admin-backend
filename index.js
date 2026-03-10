@@ -39,8 +39,8 @@ app.get('/', (req, res) => {
 app.use(authMiddleware) 
 
 
-app.use(auditLogger); 
-app.use("/api", routes); // All routes inside here will now be logged
+app.use(auditLogger);    // Logs the identified user's action
+app.use("/api", routes);// All routes inside here will now be logged
 
 
 // 🛑 STEP 3: APPLY ALL OTHER ROUTES
