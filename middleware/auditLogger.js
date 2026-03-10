@@ -39,10 +39,8 @@ const AuditLog = require("../models/auditLogModel");
 const auditLogger = async (req, res, next) => {
   if (["POST", "PUT", "DELETE"].includes(req.method)) {
     res.on("finish", async () => {
-      // Only log if the operation actually succeeded
       if (res.statusCode >= 200 && res.statusCode < 300) {
         try {
-          // 1. Sanitize Payload
           let sanitizedPayload = { ...req.body };
           const sensitiveFields = ["password", "token", "otp", "accessToken", "auth"];
           
@@ -50,11 +48,10 @@ const auditLogger = async (req, res, next) => {
             if (sanitizedPayload[field]) sanitizedPayload[field] = "***REDACTED***";
           });
 
-          // 2. Create Log using the authenticated req.user
           const log = new AuditLog({
             user: {
-              username: req.user?.username || "System_User",
-              role: req.user?.role || "Staff"
+              username: req.user?.username,
+              role: req.user?.role // This will now correctly save "librarian", "clerk", etc.
             },
             action: `${req.method}_${req.path.split('/')[1]?.toUpperCase() || 'UNKNOWN'}`,
             method: req.method,
@@ -72,5 +69,3 @@ const auditLogger = async (req, res, next) => {
   }
   next();
 };
-
-module.exports = auditLogger;

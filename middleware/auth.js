@@ -16,22 +16,22 @@
 const authMiddleware = async (req, res, next) => {
     try {
         const auth = req.headers['auth'];
-        const username = req.headers['username']; // Expecting the frontend to send this
+        const username = req.headers['username']; 
+        const role = req.headers['role']; // admin, teacher, student, principal, librarian, accountant, clerk
 
         if (auth !== 'ZjVGZPUtYW1hX2FuZHJvaWRfMjAyMzY0MjU=') {
             return res.status(403).json({ message: "Authentication Failed" });
         }
 
-        // Attach user info to the request object for the logger to use
+        // Attach the specific role and username to the request object
         req.user = {
             username: username || "Unknown_User",
-            role: req.path.includes('admin') ? 'Admin' : 'Staff'
+            role: role || "Guest"
         };
 
-        next();
+        return next();
     } catch (error) {
         console.error('Auth middleware error:', error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
-module.exports = authMiddleware;
