@@ -6,6 +6,7 @@ require('dotenv').config();
 const express = require("express");
 const connectDB = require("./config/db"); // Assuming this function connects to Atlas
 const authMiddleware = require('./middleware/auth')
+const auditLogger = require("./middleware/auditLogger");
 const routes = require('./routes/routes')
 const cors = require('cors')
 const app = express();
@@ -36,6 +37,10 @@ app.get('/', (req, res) => {
 // 🛑 STEP 2: APPLY AUTH MIDDLEWARE TO EVERYTHING ELSE
 // Any requests that make it past this point (e.g., /api/users) will require the 'auth' header.
 app.use(authMiddleware) 
+
+
+app.use(auditLogger); 
+app.use("/api", routes); // All routes inside here will now be logged
 
 
 // 🛑 STEP 3: APPLY ALL OTHER ROUTES
