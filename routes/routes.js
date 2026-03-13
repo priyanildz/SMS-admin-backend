@@ -346,10 +346,7 @@ router.get("/get-supervisor", supervisiorController.getSupervisor);
 
 // router.post("/add-report", reportController.addReport);
 
-// router.get("/reports", reportController.getReport);
-
-// Change this line in your router.js
-router.post("/exam-results", reportController.getReport);
+router.get("/reports", reportController.getReport);
 
 router.post("/assign-eblock", eblockController.addeblock);
 
