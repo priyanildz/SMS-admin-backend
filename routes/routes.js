@@ -344,7 +344,7 @@ router.post("/add-supervisor", supervisiorController.addSupervisor);
 
 router.get("/get-supervisor", supervisiorController.getSupervisor);
 
-// router.post("/add-report", reportController.addReport);
+router.post("/add-report", reportController.addReport);
 
 router.get("/reports", reportController.getReport);
 
