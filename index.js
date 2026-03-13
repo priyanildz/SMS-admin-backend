@@ -19,7 +19,7 @@ app.use(cors({
   origin: true, 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization','auth']
+  allowedHeaders: ['Content-Type', 'Authorization','auth', 'username', 'role']
 }));
 
 // for body data
