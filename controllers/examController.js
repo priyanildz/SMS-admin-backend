@@ -442,85 +442,135 @@ const getStudentFullName = (student) => {
 // =================================================================================
 // ADD EXAM RESULTS (Handles POST to /save-exam-result)
 // =================================================================================
-exports.addExamResults = async (req, res) => {
-    const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
-    
-    if (resultsToSave.length === 0) {
-        return res.status(400).json({ error: "No data provided to save." });
-    }
+// exports.addExamResults = async (req, res) => {
+//     const resultsToSave = Array.isArray(req.body) ? req.body : [req.body];
+//     
+//     if (resultsToSave.length === 0) {
+//         return res.status(400).json({ error: "No data provided to save." });
+//     }
 
-    try {
-        // Save records directly to the dedicated ExamResult collection
-        const savedResults = await ExamResult.insertMany(resultsToSave); 
+//     try {
+//         // Save records directly to the dedicated ExamResult collection
+//         const savedResults = await ExamResult.insertMany(resultsToSave); 
 
-        return res.status(200).json({ 
-            message: "Exam results saved successfully.", 
-            count: savedResults.length 
-        });
-    } catch (error) {
-        console.error("Error saving exam results:", error);
-        return res.status(500).json({ error: error.message, detail: "Ensure studentId is a valid ObjectId." });
-    }
-};
+//         return res.status(200).json({ 
+//             message: "Exam results saved successfully.", 
+//             count: savedResults.length 
+//         });
+//     } catch (error) {
+//         console.error("Error saving exam results:", error);
+//         return res.status(500).json({ error: error.message, detail: "Ensure studentId is a valid ObjectId." });
+//     }
+// };
 
 
 // =================================================================================
 // GET EXAM RESULTS (Handles POST to /exam-results)
 // =================================================================================
 
+// exports.getExamResults = async (req, res) => {
+//     try {
+//         const { standard, division, semester } = req.body;
+
+//         if (!standard || !division || !semester) {
+//             return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
+//         }
+
+//         const filterQuery = {
+//             standard: standard,
+//             division: division,
+//             semester: semester 
+//         };
+//     
+//         // Fetch results and populate the linked Student data
+//         const results = await ExamResult.find(filterQuery)
+//             .populate({
+//                 path: 'studentId', 
+//                 select: 'firstname lastname -_id', 
+//                 // CRITICAL STABILITY FIX
+//                 match: { _id: { $ne: null } }
+//             })
+//             .lean(); 
+
+//         // Map results to flatten the data
+//         const mappedResults = results
+//             .filter(item => item.studentId) 
+//             .map(item => {
+//                 const student = item.studentId;
+//                 
+//                 return {
+//                     name: getStudentFullName(student),
+//                     
+//                     // Include all other score fields dynamically
+//                     ...Object.keys(item).reduce((acc, key) => {
+//                         if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
+//                             acc[key] = item[key];
+//                         }
+//                         return acc;
+//                     }, {})
+//                 };
+//             });
+
+//         if (mappedResults.length === 0) {
+//             return res.status(200).json([]);
+//         }
+
+//         return res.status(200).json(mappedResults);
+//     
+//     } catch (error) {
+//         console.error("CRITICAL SERVER ERROR IN GET EXAM RESULTS:", error);
+//         return res.status(500).json({ error: "Server failed to process query/population." });
+//     }
+// };
+
 exports.getExamResults = async (req, res) => {
-    try {
-        const { standard, division, semester } = req.body;
+    try {
+        const { standard, division, semester } = req.body;
 
-        if (!standard || !division || !semester) {
-            return res.status(400).json({ message: "Missing required filters (standard, division, semester)." });
-        }
+        // Based on your MongoDB screenshot, we match 'mode' for semester
+        const filterQuery = {
+            standard: standard,
+            division: division,
+            mode: semester 
+        };
 
-        const filterQuery = {
-            standard: standard,
-            division: division,
-            semester: semester 
-        };
-    
-        // Fetch results and populate the linked Student data
-        const results = await ExamResult.find(filterQuery)
-            .populate({
-                path: 'studentId', 
-                select: 'firstname lastname -_id', 
-                // CRITICAL STABILITY FIX
-                match: { _id: { $ne: null } }
-            })
-            .lean(); 
+        // 1. Fetch all subject results for this class/semester
+        const examDocs = await ExamResult.find(filterQuery).lean();
 
-        // Map results to flatten the data
-        const mappedResults = results
-            .filter(item => item.studentId) 
-            .map(item => {
-                const student = item.studentId;
-                
-                return {
-                    name: getStudentFullName(student),
-                    
-                    // Include all other score fields dynamically
-                    ...Object.keys(item).reduce((acc, key) => {
-                        if (key !== 'studentId' && key !== '__v' && key !== '_id' && key !== 'standard' && key !== 'division' && key !== 'semester' && key !== 'createdAt' && key !== 'updatedAt') {
-                            acc[key] = item[key];
-                        }
-                        return acc;
-                    }, {})
-                };
-            });
+        if (!examDocs || examDocs.length === 0) {
+            return res.status(200).json([]);
+        }
 
-        if (mappedResults.length === 0) {
-            return res.status(200).json([]);
-        }
+        // 2. Pivot data: Group scores by StudentId
+        const studentMap = {};
 
-        return res.status(200).json(mappedResults);
-    
-    } catch (error) {
-        console.error("CRITICAL SERVER ERROR IN GET EXAM RESULTS:", error);
-        return res.status(500).json({ error: "Server failed to process query/population." });
-    }
+        for (const doc of examDocs) {
+            const subjectName = doc.subject; // e.g., "English"
+            
+            for (const entry of doc.results) {
+                const sId = entry.studentId.toString();
+                
+                if (!studentMap[sId]) {
+                    // Try to find student name (ideally populate this, or fetch separately)
+                    const studentObj = await mongoose.model('student').findById(sId).select('firstname lastname');
+                    studentMap[sId] = {
+                        studentId: sId,
+                        name: studentObj ? `${studentObj.firstname} ${studentObj.lastname}` : 'Unknown'
+                    };
+                }
+                // Add the subject score to the student object
+                studentMap[sId][subjectName] = entry.marks;
+            }
+        }
+
+        // Convert map to array for frontend
+        const finalResults = Object.values(studentMap);
+        return res.status(200).json(finalResults);
+
+    } catch (error) {
+        console.error("Error pivotting results:", error);
+        return res.status(500).json({ error: error.message });
+    }
 };
 
 // =================================================================================
