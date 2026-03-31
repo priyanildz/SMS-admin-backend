@@ -1751,3 +1751,43 @@ getTeacherTimetable: exports.getTeacherTimetable
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+
+// Add this to your timetableController.js
+exports.updateTimetablePeriod = async (req, res) => {
+  try {
+    const { timetableId, day, lecNo, newTeacherId } = req.body;
+
+    // 1. Find the teacher's name to update the teacherName field
+    const staff = await Staff.findById(newTeacherId);
+    if (!staff) return res.status(404).json({ error: "Teacher not found" });
+    const newName = `${staff.firstname} ${staff.lastname}`;
+
+    // 2. Update the specific nested period inside the timetable array
+    // We use the $[dayElem] and $[periodElem] positional filters
+    const updatedTT = await Timetable.findOneAndUpdate(
+      { _id: timetableId },
+      { 
+        $set: { 
+          "timetable.$[dayElem].periods.$[periodElem].teacher": newTeacherId,
+          "timetable.$[dayElem].periods.$[periodElem].teacherName": newName
+        } 
+      },
+      {
+        arrayFilters: [
+          { "dayElem.day": day },
+          { "periodElem.periodNumber": lecNo }
+        ],
+        new: true
+      }
+    );
+
+    if (!updatedTT) {
+      return res.status(404).json({ error: "Timetable period update failed." });
+    }
+
+    res.status(200).json({ message: "Timetable updated successfully ✅", updatedTT });
+  } catch (error) {
+    console.error("Error updating timetable period:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
